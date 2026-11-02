@@ -65,6 +65,8 @@ export class Game {
     this.nvgGain = { night: 3.6, indoor: 2.4, dusk: 1.8, dawn: 1.6, overcast: 1.3, snow: 1.0, desert: 0.9, day: 0.95 }[lighting] ?? 1.3;
     if (this.night && Store.settings.nvgAuto) { this.nvg = true; this.nvgFx.toggle(true); this.nvgFx.amount = 1; }
     this.env = new Environment(this.scene, this.renderer, lighting, weather, q);
+    // How far anyone can see through this level's fog (feeds AI vision range).
+    this.visRange = Math.max(35, Math.min(200, 0.95 / (this.env.preset.fogDensity || 0.008)));
     if (this.night && weather === 'rain') this.env.enableLightning();
     this.effects = new Effects(this.scene, q);
     this.grenades = new Grenades(this);
@@ -469,6 +471,14 @@ export class Game {
       const th = this.weapons.stats.thermal && this.weapons.scopeInfo().active;
       a.model.setThermal(th);
     }
+    // Stealth meter: how close the nearest unalerted enemy is to spotting the player.
+    let det = 0;
+    for (const a of this.actors) {
+      if (!a.alive || a.mpBot || a.team === p.team) continue;
+      if (a.state === 'combat' && a.target === p && a.targetVisible) { det = 1; break; }
+      if (a.target === p || a.state === 'idle' || a.state === 'patrol' || a.state === 'alert') det = Math.max(det, Math.min(0.99, a.awareness));
+    }
+    p.detection = det;
     this.grenades.update(dt);
     for (const sc of this.smokeColumns) this.effects.smokeColumn(sc, dt);
     this.effects.update(dt, this.world);

@@ -35,6 +35,7 @@ export class HUD {
       <div class="compass"><div class="compass-strip" id="h-compass"></div><div class="compass-needle"></div></div>
       <div class="mode-info" id="h-mode"></div>
       <div class="timer" id="h-timer" hidden></div>
+      <div class="detect" id="h-detect" hidden><div class="det-label"></div><div class="det-bar"><div></div></div></div>
       <div class="boss" id="h-boss" hidden><div class="boss-name" id="h-boss-name"></div><div class="boss-bar"><div id="h-boss-fill"></div></div></div>
       <div class="objective" id="h-obj" hidden><div class="obj-label">OBJECTIVE</div><div class="obj-text" id="h-obj-text"></div><div class="obj-sub" id="h-obj-sub"></div></div>
       <div class="killfeed" id="h-feed"></div>
@@ -324,6 +325,18 @@ export class HUD {
     this.el.sup.style.opacity = clamp(p.suppressed ?? 0, 0, 1) * 0.6;
     const fl = p.flashed > 0 ? clamp(p.flashed / 1.5, 0, 1) : 0;
     this.el.flash.style.opacity = fl;
+
+    // Stealth meter (campaign): fills as an unalerted enemy notices you.
+    const det = game.mode.type === 'campaign' && p.alive && !game.cinematic ? (p.detection ?? 0) : 0;
+    const dEl = (this._detEl ??= this.root.querySelector('#h-detect'));
+    if (det > 0.04) {
+      dEl.hidden = false;
+      const spotted = det >= 1;
+      dEl.classList.toggle('spotted', spotted);
+      dEl.querySelector('.det-bar div').style.width = `${Math.round(det * 100)}%`;
+      const lbl = spotted ? 'SPOTTED' : det > 0.6 ? 'ALMOST SPOTTED' : 'BEING NOTICED';
+      if (dEl._l !== lbl) { dEl.querySelector('.det-label').textContent = lbl; dEl._l = lbl; }
+    } else dEl.hidden = true;
 
     // Hurt direction arcs.
     if (this.frame % 2 === 0) {

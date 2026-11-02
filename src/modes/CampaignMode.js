@@ -129,6 +129,7 @@ export class CampaignMode {
     g.cinematic = null;
     g.hud.letterbox(false);
     g.hud.fadeLocation(2.5);
+    g.stealthGrace = g.time + 6; // a moment to get your bearings before anyone can spot you
     this.frozen = false;
     Audio.playMusic('none');
     this._nextObjective();
@@ -405,6 +406,7 @@ export class CampaignMode {
     const c = this.checkpoint;
     g.player.spawn(c.pos.x, c.pos.y, c.pos.z, c.yaw);
     g.player.invulnerable = 3;
+    g.stealthGrace = g.time + 3;
     g.weapons.addAmmo(1, true);
     for (const s of this.squad) {
       if (s.pos.distanceTo(c.pos) > 15) s.pos.copy(snapGround(g.world, c.pos.x + 2, c.pos.z + 2));

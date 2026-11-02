@@ -68,7 +68,7 @@ Equipment: frag (cookable), sticky semtex, remote C4, flashbang, smoke (blocks A
 
 **Enemy AI**
 - Enemies patrol routes and stand guard.
-- Detection builds up gradually. It depends on distance, your stance, your movement, darkness and your flashlight, so stealth is possible.
+- Detection builds up gradually. It depends on distance, your stance, your movement, fog, darkness and your flashlight, so stealth is possible. In the campaign a stealth meter under the compass shows when you're being noticed, and missions start in cover with a few seconds' grace.
 - They hear unsuppressed gunfire and explosions, and investigate noises.
 - In a fight they take cover using auto-generated cover points and alternate between hiding and peeking. Behind tall cover they step out to shoot.
 - They reposition, flank, push your last known position and fire in bursts. Accuracy drops when they're moving, suppressed or have only just spotted you.

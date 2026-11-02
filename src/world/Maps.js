@@ -293,6 +293,8 @@ function blacksite(b) {
   // Corridor clutter.
   b.crate(-13, 0, 1.0, 0, 'olive'); b.crate(13.5, 4, 1.0, 0, 'olive'); b.box(0, 0, 16, 3, 1.1, 0.8, 'metalDark');
   b.box(-26, 0, 2, 0.8, 1.2, 3, 'metalDark'); b.box(26, 0, -2, 0.8, 1.2, 3, 'metalDark');
+  b.box(-36, 0, 0, 0.8, 1.2, 3.4, 'metalDark'); b.crateStack(-33, -7, 2, 1.1); b.crateStack(-33, 7, 2, 1.1); // west-end cover
+  b.box(36, 0, 0, 0.8, 1.2, 3.4, 'metalDark');
   b.box(0, 0, -16, 3, 1.1, 0.8, 'metalDark');
   b.boxMinMax(-40, 0.5, -0.3, -40 + 0.1, 3, 0.3, 'hazard', false);
   // Hazard bands on the floor at junctions.

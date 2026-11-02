@@ -230,12 +230,17 @@ export class Soldier {
     const tgt = e.isPlayer ? e.eyePos : e.chest;
     const d = eye.distanceTo(tgt);
     let range = this.diff.sight * (this.mpBot ? 1.2 : 1);
+    if (this.role === 'sniper') range *= 1.6;
+    // Fog, snow and smoke-thick air limit how far anyone can actually see.
+    range = Math.min(range, this.game.visRange ?? range);
     if (this.game.night) {
       const lit = e.isPlayer && (this.game.flashlightOn || now - (e.revealed ?? -99) < 1.5);
       range *= lit ? 1 : 0.5;
     }
-    if (this.role === 'sniper') range *= 1.6;
     if (d > range) return 0;
+    // Mission-start grace: Task Force ORION is still unseen unless it opens fire.
+    const g = this.game;
+    if (!this.mpBot && now < (g.stealthGrace ?? 0) && e.team === g.player.team && now - (e.lastShotTime ?? -99) > 0.5) return 0;
     // Vision cone.
     if (d > 3.5) {
       const ang = Math.atan2(-(tgt.x - eye.x), -(tgt.z - eye.z));
@@ -246,18 +251,29 @@ export class Soldier {
       // Try the chest too (head may be behind a ledge).
       if (!e.isPlayer || !this.game.world.los(eye, e.chest)) return 0;
     }
-    let vis = 1 - d / range;
+    // Visibility falls off steeply with distance; stance and movement matter a lot.
+    let vis = Math.pow(1 - d / range, 1.4);
     if (e.isPlayer) {
-      vis *= e.stance === 'prone' ? 0.35 : e.stance === 'crouch' ? 0.65 : 1;
-      if (e.speed > 3) vis *= 1.4;
-      if (now - e.lastShotTime < 1 && now - (e.revealed ?? -99) < 1) vis *= 2;
+      vis *= e.stance === 'prone' ? 0.25 : e.stance === 'crouch' ? 0.5 : 1;
+      vis *= e.speed < 0.5 ? 0.6 : e.speed > 5.5 ? 1.6 : 1;
+      if (now - e.lastShotTime < 1 && now - (e.revealed ?? -99) < 1) vis *= 3; // muzzle flash / report
+    } else if (e.storyChar) {
+      vis *= 0.6; // squadmates move tactically
     }
-    return Math.max(0.05, vis);
+    if (d < 6) vis *= 3; // right in front of them
+    return Math.max(0.02, vis);
   }
 
   _sense(dt, now) {
     if (this.stunT > 0) return;
-    const candidates = this.game.hostilesOf(this);
+    let candidates = this.game.hostilesOf(this);
+    if (this.storyChar) {
+      // Squadmates hold fire on unaware enemies: they only engage once the enemy is alert,
+      // the player has opened fire, or the alarm is up. No blowing the player's cover.
+      const g = this.game;
+      const loud = g.time - (g.player.lastShotTime ?? -99) < 10 || g.mode?.alarmed;
+      if (!loud) candidates = candidates.filter((e) => e.state === 'combat' || e.state === 'hunt' || e.state === 'flee' || (e.awareness ?? 0) > 0.95);
+    }
     let best = null, bestScore = -Infinity, bestVis = 0;
     for (const e of candidates) {
       const vis = this._canSee(e, now);
@@ -276,9 +292,10 @@ export class Soldier {
         this.squad?.share(best, best.pos, now);
         if (this.state !== 'combat' && this.state !== 'flee') this.state = 'combat';
       } else {
-        // Build up suspicion (stealth window).
-        this.awareness += bestVis * 0.2 * (1.3 / this.diff.reaction) * 2.5;
-        this.lookYaw = Math.atan2(-(best.pos.x - this.pos.x), -(best.pos.z - this.pos.z));
+        // Build up suspicion gradually (a few seconds in the open at mid range).
+        const alertMul = this.state === 'alert' ? 1.6 : 1;
+        this.awareness += bestVis * 0.75 * (0.8 / this.diff.reaction) * alertMul * 0.22;
+        if (this.awareness > 0.3) this.lookYaw = Math.atan2(-(best.pos.x - this.pos.x), -(best.pos.z - this.pos.z));
         if (this.awareness >= 1) {
           this._acquire(best, false);
           this.targetVisible = true;
@@ -288,7 +305,7 @@ export class Soldier {
           this.squad?.share(best, best.pos, now);
           this._alertSquad();
           if (!this.friendly && this.game.player === best) this.game.onPlayerSpotted(this);
-        } else if (this.state === 'idle' || this.state === 'patrol') {
+        } else if (this.awareness > 0.35 && (this.state === 'idle' || this.state === 'patrol')) {
           this.state = 'alert';
           this.alertT = 0;
           this.lastKnown = best.pos.clone();
@@ -297,7 +314,7 @@ export class Soldier {
       }
     } else {
       this.targetVisible = false;
-      this.awareness = Math.max(0, this.awareness - 0.04);
+      this.awareness = Math.max(0, this.awareness - 0.05);
     }
     if (this.target && !this.target.alive) {
       this.target = null;
