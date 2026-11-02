@@ -1,4 +1,4 @@
-# OPERATION: SHADOW STRIKE
+# FIELD OF HONOR
 
 A modern military first-person shooter that runs in the browser. It is built with three.js and plain JavaScript, with no build step and no asset files. Every model, texture, sound and piece of music is generated in code.
 

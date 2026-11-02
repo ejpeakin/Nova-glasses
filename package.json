@@ -1,7 +1,7 @@
 {
-  "name": "operation-shadow-strike",
+  "name": "field-of-honor",
   "version": "0.1.0",
-  "description": "Operation: Shadow Strike - a browser-based modern military first-person shooter built with three.js.",
+  "description": "Field of Honor - a browser-based modern military first-person shooter built with three.js.",
   "private": true,
   "type": "module",
   "scripts": {

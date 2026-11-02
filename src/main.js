@@ -11,7 +11,7 @@ function webglAvailable() {
 }
 
 if (!webglAvailable()) {
-  document.body.innerHTML = '<p class="noscript">Operation: Shadow Strike needs a browser with WebGL enabled.</p>';
+  document.body.innerHTML = '<p class="noscript">Field of Honor needs a browser with WebGL enabled.</p>';
 } else {
   const app = new App();
   app.boot();

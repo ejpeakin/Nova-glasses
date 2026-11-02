@@ -1,4 +1,4 @@
-// OPERATION: SHADOW STRIKE — campaign script.
+// FIELD OF HONOR — campaign script.
 // Task Force ORION hunts the MERIDIAN network after it steals HALCYON, the ground
 // key to an orbital kinetic-strike constellation.
 //
@@ -23,7 +23,7 @@ export const PROLOGUE = [
   'The attackers belong to MERIDIAN: a private army of ex-special forces, funded through shell companies on four continents.',
   'Its founder, Anton Vasko, has never been photographed. He has promised the world "a new balance of power."',
   'Task Force ORION has been activated. No flags. No press. No backup.',
-  'This is OPERATION: SHADOW STRIKE.',
+  'FIELD OF HONOR.',
 ];
 
 const SQUAD_RH = [
@@ -340,7 +340,7 @@ export const MISSIONS = [
     briefing: [
       { who: 'WATCHTOWER', text: 'HALCYON is spinning up. Three uplink terminals — servers, lab, control. Kill all three and the birds go deaf.' },
       { who: 'VASKO', text: '(intercepted) You are late, Captain. In ten minutes the world will learn what balance really means.' },
-      { who: 'REYES', text: 'Ten minutes is plenty. ORION — this is it. Shadow Strike is go.' },
+      { who: 'REYES', text: 'Ten minutes is plenty. ORION — this is it. We go now.' },
     ],
     groups: {
       west: { units: [{ pos: [-30, 3], weapon: 'rk74' }, { pos: [-24, -4] }, { pos: [-20, 6], weapon: 'breaker' }, { pos: [-30, -6] }] },
@@ -363,7 +363,7 @@ export const MISSIONS = [
         say: [{ who: 'REYES', text: 'That armor\'s rated for fifty-cal. Hit the joints! Semtex, flashbangs, everything!' }] },
       { type: 'interact', text: 'Detain Anton Vasko', target: [9.5, 0, 33], label: 'detain Anton Vasko', duration: 3, vasko: true,
         say: [{ who: 'HATCH', text: 'Cell three. He\'s hiding in a cage he built for someone else.' }],
-        doneSay: [{ who: 'VASKO', text: 'You think this ends with me? Balance always returns, Sergeant.' }, { who: 'REYES', text: 'Not today. Watchtower — Shadow Strike complete. Package secured.' }] },
+        doneSay: [{ who: 'VASKO', text: 'You think this ends with me? Balance always returns, Sergeant.' }, { who: 'REYES', text: 'Not today. Watchtower — mission complete. Package secured.' }] },
     ],
     outro: [
       { who: 'WATCHTOWER', text: 'HALCYON\'s constellation was de-orbited over the Pacific at 0400. Dr. Hart was captured at a border crossing two days later.' },

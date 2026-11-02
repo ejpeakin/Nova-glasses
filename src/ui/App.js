@@ -143,8 +143,8 @@ export class App {
     s.className = 'boot';
     s.innerHTML = `
       <div class="boot-inner">
-        <div class="boot-studio">TASK FORCE ORION // CLASSIFIED</div>
-        <h1 class="logo"><span class="logo-op">OPERATION</span><span class="logo-main">SHADOW STRIKE</span></h1>
+        <div class="boot-studio">CLASSIFIED // EYES ONLY</div>
+        <h1 class="logo"><span class="logo-op">TASK FORCE ORION</span><span class="logo-main">FIELD OF HONOR</span></h1>
         <div class="boot-press">PRESS ANY KEY OR CLICK TO BEGIN</div>
         <div class="boot-note">Keyboard and mouse required · Best in Chrome, Edge or Firefox · Headphones recommended</div>
       </div>`;
@@ -214,7 +214,7 @@ export class App {
     this.ui.innerHTML = `
       <div class="main">
         <div class="main-left">
-          <h1 class="logo small"><span class="logo-op">OPERATION</span><span class="logo-main">SHADOW STRIKE</span></h1>
+          <h1 class="logo small"><span class="logo-op">TASK FORCE ORION</span><span class="logo-main">FIELD OF HONOR</span></h1>
           <nav class="main-nav">
             <button class="nav-btn" data-go="campaign"><span>CAMPAIGN</span><small>8 missions · the HALCYON affair</small></button>
             <button class="nav-btn" data-go="multiplayer"><span>MULTIPLAYER</span><small>TDM · FFA · Domination · vs bots</small></button>
@@ -268,7 +268,7 @@ export class App {
       const m = MISSIONS[selected];
       const done = camp.completed[m.id];
       this.ui.innerHTML = `
-        ${this._header('CAMPAIGN', 'OPERATION: SHADOW STRIKE')}
+        ${this._header('CAMPAIGN', 'FIELD OF HONOR')}
         <div class="camp">
           <div class="mission-list">
             ${MISSIONS.map((mm, i) => {
@@ -869,7 +869,7 @@ export class App {
           <div class="tile"><div class="tile-v">${st.shotsFired ? Math.round((st.shotsHit / st.shotsFired) * 100) : 0}%</div><div class="tile-k">Career accuracy</div></div>
         </div>
         <div class="panel debrief"><div class="lbl">DEBRIEF</div>${(m.outro ?? []).map((l) => `<div class="bl"><b>${escapeHtml(SPEAKER[l.who] ?? l.who)}</b><span>${escapeHtml(l.text)}</span></div>`).join('')}</div>
-        ${m.finale ? `<div class="credits"><div class="lbl">OPERATION: SHADOW STRIKE</div><p>Thank you for playing. Task Force ORION will return.</p><p class="muted">${Object.values(CHARACTERS).map((c) => `${escapeHtml(c.name)} — ${escapeHtml(c.role)}`).join('<br>')}</p></div>` : ''}
+        ${m.finale ? `<div class="credits"><div class="lbl">FIELD OF HONOR</div><p>Thank you for playing. Task Force ORION will return.</p><p class="muted">${Object.values(CHARACTERS).map((c) => `${escapeHtml(c.name)} — ${escapeHtml(c.role)}`).join('<br>')}</p></div>` : ''}
         <div class="row-btns center">
           ${next ? '<button class="btn primary" id="r-next">NEXT MISSION ▸</button>' : ''}
           <button class="btn" id="r-replay">REPLAY</button>
