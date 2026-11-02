@@ -37,6 +37,7 @@ export function buildWeaponModel(def, att = {}) {
   const dark = mat(0x161718, 0.6, 0.5);
   const accent = mat(m.accent, m.accent === 0x6b4a2e || m.accent === 0x5a3f28 ? 0.8 : 0.6, m.accent === 0x6b4a2e || m.accent === 0x5a3f28 ? 0.05 : 0.4);
   const steel = mat(0x55595d, 0.35, 0.85);
+  const magMat = mat(0x34372f, 0.75, 0.25); // polymer mags read against the receiver
   const info = { group: g, sightY: 0.075, leftHand: new THREE.Vector3(0, -0.02, -0.28), ejection: new THREE.Vector3(0.03, 0.04, -0.05) };
   let recvTop = 0.06; // top of receiver/rail
   let barrelZ = -0.3; // where the barrel starts
@@ -84,11 +85,11 @@ export function buildWeaponModel(def, att = {}) {
       // Mag.
       if (m.magType === 'banana' || m.magType === 'curved') {
         const curve = m.magType === 'banana' ? 0.35 : 0.2;
-        const s1 = box(mag, 0.03, 0.1, 0.065, 0, -0.04, 0, m.magType === 'banana' ? mat(0x3a2a1e, 0.7, 0.1) : dark);
+        const s1 = box(mag, 0.03, 0.1, 0.065, 0, -0.04, 0, m.magType === 'banana' ? mat(0x4a3424, 0.7, 0.1) : magMat);
         const s2 = box(mag, 0.03, 0.08, 0.065, 0, -0.12, -0.022, s1.material);
         s2.rotation.x = curve;
       } else {
-        box(mag, 0.03, 0.13, 0.07, 0, -0.06, 0, dark);
+        box(mag, 0.03, 0.13, 0.07, 0, -0.06, 0, magMat);
       }
       magPos.set(0, -0.015, -0.11);
       info.leftHand.set(0, -0.02, -0.33);
@@ -107,7 +108,7 @@ export function buildWeaponModel(def, att = {}) {
       const grip = box(g, 0.034, 0.095, 0.042, 0, -0.07, 0.03, dark);
       grip.rotation.x = -0.25;
       action = box(g, 0.015, 0.015, 0.03, 0.028, 0.03, -0.02, steel);
-      box(mag, 0.026, 0.15, 0.04, 0, -0.07, 0, dark);
+      box(mag, 0.026, 0.15, 0.04, 0, -0.07, 0, magMat);
       magPos.set(0, -0.02, isV ? -0.15 : -0.09);
       info.leftHand.set(0, -0.03, -0.22);
       break;
@@ -132,7 +133,7 @@ export function buildWeaponModel(def, att = {}) {
       action.add(knob);
       action.position.set(0.02, 0.02, 0.06);
       g.add(action);
-      box(mag, 0.03, 0.06, 0.08, 0, -0.03, 0, dark);
+      box(mag, 0.03, 0.06, 0.08, 0, -0.03, 0, magMat);
       magPos.set(0, -0.025, -0.06);
       info.leftHand.set(0, -0.05, -0.4);
       // Folded bipod.
@@ -156,7 +157,7 @@ export function buildWeaponModel(def, att = {}) {
         box(g, 0.06, 0.06, 0.24, 0, 0.0, -0.32, body);
         box(g, 0.04, 0.08, 0.2, 0, 0.0, 0.2, dark);
         action = box(g, 0.015, 0.015, 0.03, 0.03, 0.03, -0.02, steel);
-        const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.05, 18), dark);
+        const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.05, 18), magMat);
         drum.rotation.z = Math.PI / 2;
         drum.position.set(0, -0.08, 0);
         mag.add(drum);
@@ -198,7 +199,7 @@ export function buildWeaponModel(def, att = {}) {
       box(g, 0.01, 0.025, 0.045, 0, -0.005, -0.04, dark);
       recvTop = 0.045 + sh / 2;
       barrelZ = -0.07 - sl / 2;
-      box(mag, 0.024, 0.1, 0.04, 0, -0.05, 0, dark);
+      box(mag, 0.024, 0.1, 0.04, 0, -0.05, 0, magMat);
       magPos.set(0, -0.0, 0.015);
       info.leftHand.set(-0.01, -0.06, 0.03); // two-handed grip
       break;
@@ -315,6 +316,17 @@ export function buildWeaponModel(def, att = {}) {
   }
   if (pistol && optic === 'iron') info.sightY = ry + 0.009;
 
+  // Where the left hand grips the magazine during reloads (lower third of the mag,
+  // measured with the mag at its own origin so it can follow the mag's animation).
+  mag.updateMatrixWorld(true);
+  const magBox = new THREE.Box3().setFromObject(mag);
+  if (magBox.isEmpty()) magBox.set(new THREE.Vector3(-0.02, -0.1, -0.03), new THREE.Vector3(0.02, 0, 0.03));
+  info.magGrip = new THREE.Vector3(
+    (magBox.min.x + magBox.max.x) / 2 - 0.012,
+    magBox.min.y + (magBox.max.y - magBox.min.y) * 0.3,
+    (magBox.min.z + magBox.max.z) / 2,
+  );
+
   // Mag group placement.
   mag.position.copy(magPos);
   g.add(mag);
@@ -363,7 +375,7 @@ function makeReticleSprite(kind) {
 /** Simple first-person arms (sleeves + gloves). Returns { left, right, update(leftTarget, rightTarget) }. */
 export function buildArms(sleeveColor = 0x4d5340) {
   const sleeve = mat(sleeveColor, 0.95, 0);
-  const glove = mat(0x222220, 0.8, 0.1);
+  const glove = mat(0x3d3b33, 0.85, 0.05);
   const make = () => {
     const arm = new THREE.Group();
     const fore = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.075, 0.4), sleeve);

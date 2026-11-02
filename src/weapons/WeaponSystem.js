@@ -11,6 +11,61 @@ import { clamp, damp, lerp, rand, smoothstep } from '../core/Utils.js';
 
 const DEG = Math.PI / 180;
 
+/*
+ * Magazine reload choreography (fraction of reload time -> mag offset from its home
+ * position in weapon space, plus mag pitch/roll). The left hand grips the mag from
+ * 0.10 to 0.70, so it visibly pulls the old mag out, drops it below the frame,
+ * comes back with a fresh one and seats it.
+ */
+const MAG_KEYS = [
+  [0.00, 0, 0, 0, 0, 0],
+  [0.20, 0, 0, 0, 0, 0], // hand on the mag, thumb on the release
+  [0.26, 0, -0.045, 0.005, 0.06, 0], // released, starts sliding out
+  [0.33, -0.04, -0.13, 0.06, 0.45, -0.35], // pulled clear, turned toward the camera
+  [0.38, -0.05, -0.15, 0.07, 0.55, -0.4], // brief look at the empty mag
+  [0.46, -0.16, -0.55, 0.12, 1.0, -0.6], // stowed below the frame
+  [0.51, -0.16, -0.55, 0.12, 1.0, -0.6], // grabbing a fresh mag from the pouch
+  [0.585, -0.03, -0.14, 0.04, 0.32, -0.2], // fresh mag lined up under the well
+  [0.61, -0.008, -0.1, 0.012, 0.16, -0.05],
+  [0.64, 0, -0.04, 0, 0.04, 0], // entering the well
+  [0.665, 0, 0.008, 0, 0, 0], // seated hard (tiny overshoot)
+  [0.70, 0, 0, 0, 0, 0],
+  [1.00, 0, 0, 0, 0, 0],
+];
+
+// Pistols swing the mag out to the left so it clears the gun hand's forearm.
+const PISTOL_MAG_KEYS = [
+  [0.00, 0, 0, 0, 0, 0],
+  [0.20, 0, 0, 0, 0, 0],
+  [0.26, 0, -0.04, 0, 0, 0], // dropped free of the grip
+  [0.33, -0.09, -0.1, 0.05, 0.3, -0.5], // pulled left into view
+  [0.38, -0.11, -0.12, 0.06, 0.35, -0.6],
+  [0.46, -0.22, -0.5, 0.1, 0.8, -0.9], // stowed
+  [0.51, -0.22, -0.5, 0.1, 0.8, -0.9],
+  [0.585, -0.08, -0.12, 0.04, 0.25, -0.45], // fresh mag shown left of the grip
+  [0.62, -0.02, -0.07, 0.01, 0.08, -0.1],
+  [0.645, 0, -0.03, 0, 0, 0],
+  [0.665, 0, 0.006, 0, 0, 0], // seated
+  [0.70, 0, 0, 0, 0, 0],
+  [1.00, 0, 0, 0, 0, 0],
+];
+
+function sampleKeys(keys, p) {
+  let i = 0;
+  while (i < keys.length - 2 && p > keys[i + 1][0]) i++;
+  const a = keys[i], b = keys[i + 1];
+  const k = smoothstep(clamp((p - a[0]) / Math.max(1e-6, b[0] - a[0]), 0, 1));
+  const out = [];
+  for (let j = 1; j < a.length; j++) out.push(a[j] + (b[j] - a[j]) * k);
+  return out;
+}
+
+/** 0 -> 1 -> 0 bump over [a, b]. */
+function bump(p, a, b) {
+  if (p <= a || p >= b) return 0;
+  return Math.sin(((p - a) / (b - a)) * Math.PI);
+}
+
 export class WeaponSystem {
   constructor(game, loadout) {
     this.game = game;
@@ -27,6 +82,17 @@ export class WeaponSystem {
     this.viewScene.add(this.arms.left, this.arms.right);
 
     const flashMat = new THREE.SpriteMaterial({ map: getSpriteTexture('flash'), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false });
+    // Shotgun shell held in the left hand during shell-by-shell reloads.
+    this.shell = new THREE.Group();
+    const hull = new THREE.Mesh(new THREE.CylinderGeometry(0.0105, 0.0105, 0.05, 10), new THREE.MeshStandardMaterial({ color: 0x9a1c14, roughness: 0.6 }));
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.016, 10), new THREE.MeshStandardMaterial({ color: 0xc8a040, roughness: 0.3, metalness: 0.9 }));
+    base.position.y = -0.031;
+    this.shell.add(hull, base);
+    this.shell.scale.setScalar(1.15);
+    this.shell.visible = false;
+    this.viewScene.add(this.shell);
+    this.shellPose = 0;
+
     this.flashSprite = new THREE.Sprite(flashMat);
     this.flashSprite.visible = false;
     this.flashTime = 0;
@@ -363,9 +429,10 @@ export class WeaponSystem {
         const dur = this.reloadEmpty ? s.reloadEmpty : s.reload;
         const p = this.stateT / dur;
         const ev = (name, at, fn) => { if (p >= at && !this.reloadEvents.has(name)) { this.reloadEvents.add(name); fn(); } };
-        ev('out', 0.18, () => Audio.mech('magOut'));
-        ev('in', 0.62, () => Audio.mech('magIn'));
-        if (this.reloadEmpty) ev('bolt', 0.84, () => Audio.mech(isPistol ? 'slide' : 'bolt'));
+        ev('out', 0.24, () => Audio.mech('magOut'));
+        ev('pouch', 0.48, () => Audio.mech('raise'));
+        ev('in', 0.655, () => Audio.mech('magIn'));
+        if (this.reloadEmpty) ev('bolt', 0.82, () => Audio.mech(isPistol ? 'slide' : 'bolt'));
         if (p >= 1) {
           const need = s.mag - w.ammo;
           const take = Math.min(need, w.reserve);
@@ -489,8 +556,14 @@ export class WeaponSystem {
     const t = this.stateT;
     const mag = w.model.mag, home = w.model.magHome;
     mag.position.copy(home);
+    mag.rotation.set(0, 0, 0);
     mag.visible = true;
     let leftOverride = null;
+    this._shellHand = null;
+    // Shotgun shell-loading pose (blended so interrupting it is smooth).
+    this.shellPose = damp(this.shellPose, this.state === 'reload' && s.perShell ? 1 : 0, 10, dt);
+    pos.x -= this.shellPose * 0.08; pos.y += this.shellPose * 0.13;
+    rot.x += this.shellPose * 0.3; rot.z -= this.shellPose * 0.75; rot.y += this.shellPose * 0.12;
     if (this.state === 'raise') {
       const p = 1 - smoothstep(clamp(t / (isPistol ? 0.3 : 0.45), 0, 1));
       pos.y -= p * 0.3; rot.x -= p * 0.9;
@@ -500,32 +573,79 @@ export class WeaponSystem {
     } else if (this.state === 'reload' && !s.perShell) {
       const dur = this.reloadEmpty ? s.reloadEmpty : s.reload;
       const p = clamp(t / dur, 0, 1);
-      const tilt = Math.sin(Math.min(1, p * 1.15) * Math.PI);
-      rot.z += tilt * 0.55; rot.x += tilt * 0.18; pos.y -= tilt * 0.03; pos.x -= tilt * 0.02;
-      // Mag: drop out, gone, new one comes in.
-      if (p > 0.15 && p < 0.38) {
-        const k = (p - 0.15) / 0.23;
-        mag.position.y = home.y - k * 0.35;
-        mag.rotation.x = k * 0.4;
-      } else if (p >= 0.38 && p < 0.5) {
-        mag.visible = false;
-      } else if (p >= 0.5 && p < 0.66) {
-        const k = 1 - (p - 0.5) / 0.16;
-        mag.position.y = home.y - k * 0.2;
-        mag.rotation.x = k * 0.2;
-      } else mag.rotation.x = 0;
-      // Left hand follows the mag.
-      if (p > 0.12 && p < 0.7) {
-        leftOverride = new THREE.Vector3().copy(mag.position).add(new THREE.Vector3(0, -0.06, 0));
+      // Gun pose: lift and cant the rifle so the magwell faces the screen centre.
+      const outStart = this.reloadEmpty ? 0.9 : 0.8;
+      const env = Math.min(smoothstep(clamp(p / 0.13, 0, 1)), 1 - smoothstep(clamp((p - outStart) / (1 - outStart), 0, 1)));
+      if (isPistol) {
+        // Turn the pistol so the bottom of the grip faces the camera.
+        pos.x -= env * 0.11; pos.y += env * 0.12; pos.z += env * 0.02;
+        rot.x += env * 0.34; rot.z -= env * 0.6; rot.y += env * 0.32;
+      } else {
+        pos.x -= env * 0.08; pos.y += env * 0.15; pos.z += env * 0.01;
+        rot.x += env * 0.33; rot.z -= env * 0.5; rot.y += env * 0.1;
       }
-      if (this.reloadEmpty && w.model.action && p > 0.78 && p < 0.92) {
-        const k = Math.sin(((p - 0.78) / 0.14) * Math.PI);
-        w.model.action.position.z = w.model.actionHome.z + k * 0.06;
+      // Small physical jolts: mag release, seating the fresh mag, charging.
+      rot.x -= bump(p, 0.2, 0.3) * 0.035;
+      rot.x += bump(p, 0.645, 0.72) * 0.06; pos.y += bump(p, 0.645, 0.72) * 0.012;
+      // Magazine path.
+      const [mx, my, mz, mrx, mrz] = sampleKeys(isPistol ? PISTOL_MAG_KEYS : MAG_KEYS, p);
+      mag.position.set(home.x + mx, home.y + my, home.z + mz);
+      mag.rotation.set(mrx, 0, mrz);
+      // Left hand: foregrip -> mag -> (pull mag out, fetch new one, seat it) -> charge -> foregrip.
+      const gripOnMag = (w.model.magGrip ?? new THREE.Vector3(0, -0.06, 0)).clone().applyEuler(mag.rotation).add(mag.position);
+      const rest = w.model.leftHand;
+      const act = w.model.action;
+      if (act) {
+        act.position.copy(w.model.actionHome);
+        act.rotation.set(0, 0, 0);
+        // An empty pistol's slide stays locked back until it is racked.
+        if (isPistol && this.reloadEmpty && p < 0.83) act.position.z += 0.04;
+      }
+      if (p < 0.12) {
+        leftOverride = rest.clone().lerp(gripOnMag, smoothstep(p / 0.12));
+      } else if (p < 0.7) {
+        leftOverride = gripOnMag;
+      } else if (this.reloadEmpty && act && !isPistol && p < 0.9) {
+        // Rack the charging handle / slide / bolt.
+        const handle = act.position.clone().add(
+          isPistol ? new THREE.Vector3(0, 0.022, 0.085) : w.mode === 'bolt' ? new THREE.Vector3(0.06, -0.005, 0) : new THREE.Vector3(-0.04, -0.035, -0.12),
+        );
+        const reach = smoothstep(clamp((p - 0.7) / 0.08, 0, 1));
+        const pull = bump(p, 0.78, 0.88);
+        if (w.mode === 'bolt') {
+          act.rotation.z = Math.min(1, pull * 2) * 1.1;
+          act.position.z = w.model.actionHome.z + Math.max(0, pull - 0.3) * 0.12;
+        } else {
+          act.position.z = Math.max(act.position.z, w.model.actionHome.z + pull * (isPistol ? 0.045 : 0.07));
+        }
+        const handNow = isPistol || w.mode === 'bolt'
+          ? act.position.clone().add(handle.sub(w.model.actionHome))
+          : handle.add(new THREE.Vector3(0, 0, pull * 0.015)); // slap the bolt release
+        leftOverride = gripOnMag.clone().lerp(handNow, reach);
+        rot.z -= pull * 0.06;
+      } else {
+        const racked = this.reloadEmpty && act && !isPistol;
+        const from = racked ? 0.9 : 0.7;
+        const k = smoothstep(clamp((p - from) / (racked ? 0.08 : 0.14), 0, 1));
+        // Empty pistol: slide stop pressed, slide slams home with a kick.
+        if (isPistol && this.reloadEmpty) { rot.x += bump(p, 0.82, 0.9) * 0.08; pos.z += bump(p, 0.82, 0.9) * 0.01; }
+        const start = racked
+          ? act.position.clone().add(isPistol ? new THREE.Vector3(0, 0.022, 0.085) : w.mode === 'bolt' ? new THREE.Vector3(0.06, -0.005, 0) : new THREE.Vector3(-0.04, -0.035, -0.12))
+          : gripOnMag;
+        leftOverride = start.lerp(rest, k);
       }
     } else if (this.state === 'reload' && s.perShell) {
-      rot.z += 0.35; rot.x += 0.15;
-      const k = (t / s.reload);
-      leftOverride = new THREE.Vector3(0, -0.08 - Math.sin(k * Math.PI) * 0.05, -0.15);
+      // Shell by shell: hand brings a shell up from the belt and thumbs it into the loading port.
+      const k = clamp(t / s.reload, 0, 1);
+      const port = new THREE.Vector3(0, -0.04, -0.07);
+      const below = new THREE.Vector3(-0.06, -0.26, 0.02);
+      let hand;
+      if (k < 0.45) hand = below.clone().lerp(port.clone().add(new THREE.Vector3(0, -0.035, 0.03)), smoothstep(k / 0.45));
+      else if (k < 0.7) hand = port.clone().add(new THREE.Vector3(0, -0.035, 0.03)).lerp(port, smoothstep((k - 0.45) / 0.25));
+      else hand = port.clone().lerp(below, smoothstep((k - 0.7) / 0.3));
+      leftOverride = hand;
+      this._shellHand = k < 0.7 ? hand : null;
+      rot.x += bump(k, 0.6, 0.78) * 0.03;
     } else if (this.state === 'cycle') {
       const dur = s.boltTime ?? 0.6;
       const k = Math.sin(clamp(t / dur, 0, 1) * Math.PI);
@@ -551,7 +671,7 @@ export class WeaponSystem {
       w.model.action.rotation.z = 0;
     }
     // Pistol slide lock-back when empty.
-    if (isPistol && w.model.action) {
+    if (isPistol && w.model.action && this.state !== 'reload') {
       const back = w.ammo === 0 && this.state !== 'reload' ? 0.04 : this.game.time - this.lastFire < 0.06 ? 0.035 : 0;
       w.model.action.position.z = w.model.actionHome.z + back;
     }
@@ -573,6 +693,13 @@ export class WeaponSystem {
     if (this.cooking || this.state === 'throw') lh.set(-0.15, -0.25, -0.35);
     this.arms.place(this.arms.right, new THREE.Vector3(0.28, -0.42, 0.05), grip);
     this.arms.place(this.arms.left, new THREE.Vector3(-0.22, -0.45, -0.05), lh);
+    if (this._shellHand && !scope.active) {
+      this.shell.visible = true;
+      this.shell.position.copy(this._shellHand).add(new THREE.Vector3(0.012, 0.02, -0.01)).applyMatrix4(this.rig.matrixWorld);
+      this.shell.quaternion.copy(this.rig.quaternion).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0)));
+    } else {
+      this.shell.visible = false;
+    }
 
     // Muzzle flash decay.
     if (this.flashTime > 0) {
