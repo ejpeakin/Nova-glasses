@@ -480,6 +480,70 @@ class AudioEngine {
     }
   }
 
+  // ---------- vehicle loops ----------
+
+  /**
+   * Continuous loops whose level the game drives every frame.
+   * kind: 'rotor' (blade slap + turbine whine) | 'rope' (friction hiss while fast-roping)
+   */
+  startLoop(name, kind) {
+    if (!this.ready) return;
+    this.loops = this.loops || new Map();
+    if (this.loops.has(name)) return;
+    const c = this.ctx;
+    const out = c.createGain();
+    out.gain.value = 0;
+    out.connect(this.sfx);
+    const nodes = [];
+    if (kind === 'rotor') {
+      // Low thump: brown noise amplitude-modulated at the blade-pass rate.
+      const src = c.createBufferSource();
+      src.buffer = this.brown; src.loop = true;
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 260;
+      const am = c.createGain(); am.gain.value = 0.55;
+      const lfo = c.createOscillator(); lfo.frequency.value = 5.2;
+      const lfoG = c.createGain(); lfoG.gain.value = 0.5;
+      lfo.connect(lfoG); lfoG.connect(am.gain);
+      src.connect(lp); lp.connect(am); am.connect(out);
+      const boost = c.createGain(); boost.gain.value = 2.2; am.disconnect(); am.connect(boost); boost.connect(out);
+      // Turbine whine.
+      const osc = c.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 410;
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 3;
+      const og = c.createGain(); og.gain.value = 0.035;
+      osc.connect(bp); bp.connect(og); og.connect(out);
+      // Rotor wash hiss.
+      const hiss = c.createBufferSource(); hiss.buffer = this.noise; hiss.loop = true;
+      const hp = c.createBiquadFilter(); hp.type = 'bandpass'; hp.frequency.value = 1800; hp.Q.value = 0.5;
+      const hg = c.createGain(); hg.gain.value = 0.09;
+      hiss.connect(hp); hp.connect(hg); hg.connect(out);
+      for (const n of [src, lfo, osc, hiss]) { n.start(); nodes.push(n); }
+    } else {
+      const src = c.createBufferSource();
+      src.buffer = this.noise; src.loop = true;
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 0.7;
+      src.connect(bp); bp.connect(out);
+      src.start();
+      nodes.push(src);
+      out._filter = bp;
+    }
+    this.loops.set(name, { out, nodes });
+  }
+
+  setLoop(name, gain, pitch = 1) {
+    const l = this.loops?.get(name);
+    if (!l) return;
+    l.out.gain.setTargetAtTime(Math.max(0, gain), this.now, 0.08);
+    if (l.out._filter) l.out._filter.frequency.setTargetAtTime(1000 + pitch * 1200, this.now, 0.1);
+  }
+
+  stopLoop(name) {
+    const l = this.loops?.get(name);
+    if (!l) return;
+    this.loops.delete(name);
+    l.out.gain.setTargetAtTime(0, this.now, 0.3);
+    setTimeout(() => { for (const n of l.nodes) { try { n.stop(); } catch { /* ignored */ } } l.out.disconnect(); }, 1500);
+  }
+
   // ---------- music ----------
 
   /** Procedural ambient score. mood: menu | tension | victory | none */

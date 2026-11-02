@@ -45,6 +45,8 @@ export const MISSIONS = [
     loadout: { primary: 'wasp', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { wasp: { muzzle: 'suppressor', optic: 'reflex' }, p11: { muzzle: 'suppressor' } } },
     start: { pos: [-64, -30], yaw: -Math.PI / 2 },
     squad: SQUAD_RH,
+    insertion: { lz: [-62, -30], from: [-1, -0.25], hover: 12,
+      lines: { approach: { who: 'PILOT', text: 'Raven Two-One, running dark. Thirty seconds to the west yard.' }, ropes: { who: 'REYES', text: 'Ropes out. Wraith, you\'re first. Go!' } } },
     stealth: true,
     alarmGroup: 'response',
     briefing: [
@@ -89,6 +91,8 @@ export const MISSIONS = [
     loadout: { primary: 'vx4', secondary: 'p11', lethal: 'frag', tactical: 'smoke', attachments: { vx4: { optic: 'holo', underbarrel: 'vgrip' } } },
     start: { pos: [0, -62], yaw: Math.PI },
     squad: SQUAD_FULL,
+    insertion: { lz: [-44, -60], from: [-0.55, -1], hover: 13,
+      lines: { approach: { who: 'PILOT', text: 'Thirty seconds! Compound is hot, expect fire from the towers!' }, ropes: { who: 'REYES', text: 'Ropes! Go, go, go!' } } },
     briefing: [
       { who: 'WATCHTOWER', text: 'Satellite confirms Dr. Lena Hart — HALCYON\'s lead engineer — is held at a MERIDIAN outpost in the basin.' },
       { who: 'WATCHTOWER', text: 'Without her, the key is useless to them. With her, they can fire it. Get her out.' },
@@ -128,6 +132,8 @@ export const MISSIONS = [
     loadout: { primary: 'rk74', secondary: 'raptor', lethal: 'semtex', tactical: 'flash', attachments: { rk74: { optic: 'reflex', muzzle: 'compensator' } } },
     start: { pos: [-56, 0], yaw: -Math.PI / 2 },
     squad: SQUAD_FULL,
+    insertion: { lz: [-54, -2], from: [-1, 0.15], hover: 12,
+      lines: { approach: { who: 'PILOT', text: 'Coming in low over the avenue. AA is still up, so this is a quick drop!' }, ropes: { who: 'HATCH', text: 'Ropes out! Move it, Wraith!' } } },
     smoke: [[-30, -3], [20, -3.5], [-44, 3], [-3, 24]],
     briefing: [
       { who: 'WATCHTOWER', text: 'The buyer never showed. Instead MERIDIAN turned Vel Harat into a fortress. Two AA batteries are keeping our air cover out.' },
@@ -289,6 +295,8 @@ export const MISSIONS = [
     loadout: { primary: 'hx30', secondary: 'raptor', lethal: 'frag', tactical: 'flash', attachments: { hx30: { optic: 'acog', underbarrel: 'vgrip' } } },
     start: { pos: [-64, -30], yaw: -Math.PI / 2 },
     squad: [{ name: 'Hatch', weapon: 'juggernaut' }, { name: 'Tex', weapon: 'specter' }],
+    insertion: { lz: [-62, -30], from: [-1, -0.3], hover: 12,
+      lines: { approach: { who: 'PILOT', text: 'Port Kaval in thirty. Last ride, gentlemen.' }, ropes: { who: 'HATCH', text: 'Ropes out! Let\'s finish this!' } } },
     smoke: [[-6, 30], [40, 30]],
     briefing: [
       { who: 'WATCHTOWER', text: 'The cargo ship *Meridian Star* sails in forty minutes with the HALCYON core aboard.' },

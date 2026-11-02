@@ -79,7 +79,7 @@ Equipment: frag (cookable), sticky semtex, remote C4, flashbang, smoke (blocks A
 - In the campaign, friendly squadmates follow you in formation and fight alongside you.
 
 **Game modes**
-- **Campaign:** 8 missions with briefings, an intro cinematic for each mission, location and time cards, radio dialogue with subtitles, objective markers and a compass, checkpoints, stealth alarms, defend waves, boss fights and a final mission against a countdown.
+- **Campaign:** 8 missions with briefings, helicopter fast-rope insertions (press E to rope down) or intro cinematics, location and time cards, radio dialogue with subtitles, objective markers and a compass, checkpoints, stealth alarms, defend waves, boss fights and a final mission against a countdown.
 - **Team Deathmatch:** up to 16 players (you plus bots) in two teams.
 - **Free For All:** every player for themselves.
 - **Domination:** capture flags A, B and C. Capture progress can be contested, and points tick while you hold flags.

@@ -5,6 +5,7 @@ import { Squad } from '../ai/Soldier.js';
 import { Humanoid } from '../ai/Humanoid.js';
 import { spawnSoldier, snapGround, Cinematic, introKeys } from './Common.js';
 import { MISSIONS } from '../campaign/Story.js';
+import { Insertion } from './Insertion.js';
 import { Audio } from '../core/Audio.js';
 import { Store } from '../core/Storage.js';
 import { formatTime } from '../core/Utils.js';
@@ -93,14 +94,34 @@ export class CampaignMode {
     const firstTarget = m.objectives[0].target;
     const focus = firstTarget ? new THREE.Vector3(firstTarget[0], 0, firstTarget.length === 3 ? firstTarget[2] : firstTarget[1]) : null;
     this.frozen = true;
-    game.cinematic = new Cinematic(introKeys(sp, m.start.yaw, focus), 8, () => this._beginPlay());
-    game.hud.letterbox(true);
+    if (m.insertion) {
+      // Ride in on a helicopter and fast-rope onto the LZ.
+      const ins = m.insertion;
+      this.insertion = new Insertion(game, {
+        lz: new THREE.Vector3(ins.lz[0], 0, ins.lz[1]),
+        from: new THREE.Vector3(ins.from[0], 0, ins.from[1]),
+        hover: ins.hover ?? 13,
+        squad: this.squad,
+        lines: ins.lines,
+        onLanded: () => {
+          this.checkpoint = { pos: game.player.pos.clone(), yaw: game.player.yaw };
+          game.hud.insertion(false);
+          this._beginPlay();
+        },
+      });
+      game.cinematic = this.insertion;
+      game.hud.insertion(true);
+    } else {
+      game.cinematic = new Cinematic(introKeys(sp, m.start.yaw, focus), 8, () => this._beginPlay());
+      game.hud.letterbox(true);
+    }
     game.hud.locationCard([m.title.toUpperCase(), m.location, m.time, 'Sgt. Elias "Wraith" Cole — Task Force ORION']);
     Audio.playMusic('tension');
   }
 
   skipCinematic() {
-    this.game.cinematic?.finish();
+    const c = this.game.cinematic;
+    if (c?.skip) c.skip(); else c?.finish();
   }
 
   _beginPlay() {
@@ -265,6 +286,8 @@ export class CampaignMode {
 
   update(dt) {
     const g = this.game;
+    // Helicopter keeps flying (squad roping, departure) after the player is down.
+    if (this.insertion && g.cinematic !== this.insertion) this.insertion.tick(dt);
     if (this.frozen) {
       if (g.cinematic && (g.input.pressed('Space') || g.input.pressed('Enter') || g.input.mousePressed[0])) this.skipCinematic();
       this.markers = [];
@@ -419,6 +442,7 @@ export class CampaignMode {
   hudInfo() { return null; }
 
   dispose() {
+    this.insertion?.dispose();
     this.vaskoModel?.dispose();
   }
 }

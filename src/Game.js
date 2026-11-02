@@ -87,8 +87,8 @@ export class Game {
 
   hostilesOf(actor) {
     const out = [];
-    if (this.player.alive && this.hostile(actor, this.player)) out.push(this.player);
-    for (const a of this.actors) if (a.alive && this.hostile(actor, a)) out.push(a);
+    if (this.player.alive && !this.player.hidden && this.hostile(actor, this.player)) out.push(this.player);
+    for (const a of this.actors) if (a.alive && !a.hidden && this.hostile(actor, a)) out.push(a);
     return out;
   }
 
@@ -491,6 +491,9 @@ export class Game {
     if (!this.cinematic && this.player.alive) {
       r.clearDepth();
       r.render(this.weapons.viewScene, this.weapons.viewCam);
+    } else if (this.cinematic?.showHands && this.cinematic.viewScene) {
+      r.clearDepth();
+      r.render(this.cinematic.viewScene, this.cinematic.viewCam);
     }
   }
 

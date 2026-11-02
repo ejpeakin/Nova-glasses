@@ -256,6 +256,9 @@ blockquote cite { display: block; font-size: 15px; color: var(--muted); margin-t
 .hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; font-family: var(--font); text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 .hud.cinematic > :not(.letterbox):not(.location-card):not(.subtitles) { opacity: 0; }
 .hud > * { transition: opacity 0.4s; }
+.hud.insertion .crosshair, .hud.insertion .weapon-panel, .hud.insertion .vitals, .hud.insertion .minimap,
+.hud.insertion .compass, .hud.insertion .markers, .hud.insertion .objective, .hud.insertion .mode-info,
+.hud.insertion .hitmarker, .hud.insertion .hint { opacity: 0; }
 .hud-vignette { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(120, 0, 0, 0.55) 80%, rgba(90, 0, 0, 0.9) 100%); transition: opacity 0.25s; }
 .hud-suppress { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.75) 100%); }
 .hud-flash { position: absolute; inset: 0; background: #fff; opacity: 0; }

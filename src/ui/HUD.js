@@ -9,7 +9,7 @@ import { Store } from '../core/Storage.js';
 import { escapeHtml, clamp } from '../core/Utils.js';
 
 const SPEAKER = {
-  REYES: 'Capt. Reyes', HATCH: 'Sgt. Sorokin', TEX: 'Cpl. Hale', WATCHTOWER: 'Watchtower', HART: 'Dr. Hart',
+  PILOT: 'Raven 2-1', REYES: 'Capt. Reyes', HATCH: 'Sgt. Sorokin', TEX: 'Cpl. Hale', WATCHTOWER: 'Watchtower', HART: 'Dr. Hart',
   VASKO: 'Anton Vasko', KESSLER: 'Kessler', COLE: 'Cole',
 };
 
@@ -173,6 +173,11 @@ export class HUD {
     c.innerHTML = `<b>${escapeHtml(name)}:</b> ${escapeHtml(text)}`;
     this.el.callouts.appendChild(c);
     setTimeout(() => c.remove(), 2200);
+  }
+
+  /** Ride-in mode: hide combat HUD, keep subtitles, prompts and the location card. */
+  insertion(on) {
+    this.root.classList.toggle('insertion', on);
   }
 
   letterbox(on) {

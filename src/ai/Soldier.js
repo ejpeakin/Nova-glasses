@@ -116,7 +116,7 @@ export class Soldier {
     this.lastHit = -99;
 
     const faction = o.faction ?? (this.team === 'a' ? 'orion' : 'meridian');
-    this.model = new Humanoid(this.role === 'boss' || this.role === 'heavy' ? 'heavy' : faction, this.weaponId, { colorIndex: o.colorIndex });
+    this.model = new Humanoid(this.role === 'boss' || this.role === 'heavy' ? 'heavy' : faction, this.weaponId, { colorIndex: o.colorIndex, seed: this.id * 7 + (o.name?.length ?? 0) });
     this.model.root.position.copy(this.pos);
     this.model.root.rotation.y = this.yaw;
     game.scene.add(this.model.root);
@@ -506,6 +506,15 @@ export class Soldier {
     if (!this.alive) {
       this.deadT += dt;
       this.model.update(dt, 0, 0, 0, false);
+      return;
+    }
+    if (this.scripted) {
+      // Driven by a cutscene (e.g. riding in / fast-roping from a helicopter).
+      this.vel.set(0, 0, 0);
+      this.lookYaw = this.yaw;
+      this.model.root.position.copy(this.pos);
+      this.model.root.rotation.y = this.yaw;
+      this.model.update(dt, 0, this.scriptCrouch ?? 0, 0, false);
       return;
     }
     const now = this.game.time;
