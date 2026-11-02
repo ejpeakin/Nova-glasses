@@ -72,6 +72,10 @@ export class App {
     this.input = new Input(this.canvas);
     if (this.testMode) Object.defineProperty(this.input, 'locked', { get: () => true });
     this.input.onPointerLockChange = (locked) => this._lockChange(locked);
+    this.input.onFallback = () => this._lockFallback();
+    this.input.onEscape = () => {
+      if (this.game && !this.game.paused && !this.game.over && !this.overlayOpen) { this.input.fallback = false; this.pause(); }
+    };
     this.hud = new HUD(document.getElementById('hud'));
     this.game = null;
     this.menu = null;
@@ -682,7 +686,7 @@ export class App {
     this.screen = 'loading';
     if (Store.settings.fullscreen && !this.testMode && !document.fullscreenElement) {
       document.documentElement.requestFullscreen?.().then(() => {
-        try { navigator.keyboard?.lock?.(); } catch { /* not supported */ }
+        try { navigator.keyboard?.lock?.()?.catch?.(() => {}); } catch { /* not supported */ }
       }).catch(() => {});
     }
     this.input.lock();
@@ -699,6 +703,7 @@ export class App {
         this.input.enabled = true;
         this.hideUI();
         if (!this.input.locked) this._showClickToPlay();
+        else if (this.input.fallback) this._fallbackHint();
         window.__game = game;
       } catch (err) {
         console.error(err);
@@ -727,6 +732,20 @@ export class App {
     } else if (!g.over && !this.overlayOpen && g.player.alive) {
       this.pause();
     }
+  }
+
+  /** Mouse capture was refused: keep playing with plain mouse-move look. */
+  _lockFallback() {
+    const g = this.game;
+    if (!g) return; // launch() checks the flag once the game is built
+    if (this.screen === 'click' || this.screen === 'pause') this.hideUI();
+    g.paused = false;
+    this.input.enabled = true;
+    this._fallbackHint();
+  }
+
+  _fallbackHint() {
+    this.hud.hint('Mouse capture is unavailable here, so the cursor stays visible. Move the mouse to look; Esc pauses.', 8);
   }
 
   pause() {

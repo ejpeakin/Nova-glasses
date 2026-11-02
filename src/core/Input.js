@@ -22,7 +22,14 @@ export class Input {
     this.enabled = false; // only capture game keys while in a match
     this.onPointerLockChange = null;
 
+    // Fallback when the page may not capture the mouse (e.g. a sandboxed frame):
+    // look follows plain mouse movement and Esc pauses instead of releasing the lock.
+    this.fallback = false;
+    this.onFallback = null;
+    this.onEscape = null;
+
     window.addEventListener('keydown', (e) => {
+      if (e.code === 'Escape' && this.fallback) this.onEscape?.();
       if (this.enabled && (GAME_KEYS.has(e.code) || e.ctrlKey)) e.preventDefault();
       if (!this.down.has(e.code)) this.edges.add(e.code);
       this.down.add(e.code);
@@ -55,29 +62,50 @@ export class Input {
       if (this.locked) this.wheel += Math.sign(e.deltaY);
     }, { passive: true });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    // A click is a fresh user gesture: use it to upgrade from fallback to real capture.
+    canvas.addEventListener('click', () => { if (this.fallback && this.enabled) this.lock(); });
     document.addEventListener('pointerlockchange', () => {
+      if (this.realLocked) this.fallback = false;
       if (!this.locked) this.reset();
       this.onPointerLockChange?.(this.locked);
     });
+    // Browsers without a promise-returning requestPointerLock report failure here.
+    document.addEventListener('pointerlockerror', () => setTimeout(() => this._fail(), 1600));
   }
 
-  get locked() {
+  get realLocked() {
     return document.pointerLockElement === this.canvas;
   }
 
+  get locked() {
+    return this.realLocked || this.fallback;
+  }
+
   lock() {
-    if (this.locked) return;
-    try {
-      const p = this.canvas.requestPointerLock({ unadjustedMovement: true });
-      // Some platforms reject unadjustedMovement; retry without it.
-      if (p && p.catch) p.catch(() => { try { this.canvas.requestPointerLock(); } catch { /* ignored */ } });
-    } catch {
-      try { this.canvas.requestPointerLock(); } catch { /* ignored */ }
-    }
+    if (this.realLocked) return;
+    const attempt = (opts) => {
+      try {
+        const p = opts ? this.canvas.requestPointerLock(opts) : this.canvas.requestPointerLock();
+        return p && typeof p.then === 'function' ? p : Promise.resolve();
+      } catch (err) {
+        return Promise.reject(err);
+      }
+    };
+    attempt({ unadjustedMovement: true })
+      .catch(() => attempt()) // some platforms reject unadjustedMovement
+      .catch(() => new Promise((r) => setTimeout(r, 1100)).then(() => attempt())) // re-lock cooldown after Esc
+      .catch(() => this._fail());
+  }
+
+  _fail() {
+    if (this.realLocked || this.fallback) return;
+    this.fallback = true;
+    this.onFallback?.();
   }
 
   unlock() {
-    if (this.locked) document.exitPointerLock();
+    this.fallback = false;
+    if (this.realLocked) document.exitPointerLock();
   }
 
   isDown(code) { return this.down.has(code); }
