@@ -85,7 +85,8 @@ export class MenuScene {
     const ny = -(((r.top + r.height / 2) / H) * 2 - 1);
     this.showPivot.position.set(nx * visW / 2, ny * visH / 2, 0);
     const want = Math.min((r.width / W) * visW * 0.85, (r.height / H) * visH * 2.2);
-    this.showPivot.scale.setScalar(want / this.modelLen);
+    // Short guns (pistols) are shown as if 0.5 m long so they don't fill the frame.
+    this.showPivot.scale.setScalar(want / Math.max(this.modelLen, 0.5));
   }
 
   resize() {

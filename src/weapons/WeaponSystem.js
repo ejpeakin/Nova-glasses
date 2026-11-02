@@ -687,7 +687,7 @@ export class WeaponSystem {
 
     // Arms: elbows fixed below-outside the view, hands on grip / foregrip.
     this.rig.updateMatrixWorld(true);
-    const grip = new THREE.Vector3(0, -0.04, 0.03).applyMatrix4(this.rig.matrixWorld);
+    const grip = (w.model.rightHand ?? new THREE.Vector3(0, -0.04, 0.03)).clone().applyMatrix4(this.rig.matrixWorld);
     const leftLocal = leftOverride ?? w.model.leftHand;
     const lh = leftLocal.clone().applyMatrix4(this.rig.matrixWorld);
     if (this.cooking || this.state === 'throw') lh.set(-0.15, -0.25, -0.35);

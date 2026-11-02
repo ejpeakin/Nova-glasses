@@ -7,6 +7,7 @@ import { MapBuilder } from './world/MapBuilder.js';
 import { buildMap, MAP_INFO } from './world/Maps.js';
 import { Environment } from './world/Environment.js';
 import { Effects } from './world/Effects.js';
+import { NightVision } from './world/NightVision.js';
 import { Player } from './player/Player.js';
 import { WeaponSystem } from './weapons/WeaponSystem.js';
 import { Grenades } from './weapons/Grenades.js';
@@ -58,6 +59,11 @@ export class Game {
     const lighting = mode.lighting ?? this.mapInfo.lighting;
     const weather = mode.weather ?? this.mapInfo.weather;
     this.night = lighting === 'night';
+    this.lighting = lighting;
+    // Night-vision goggles: light amplification tuned to how dark the level is.
+    this.nvgFx = new NightVision(this.renderer);
+    this.nvgGain = { night: 3.6, indoor: 2.4, dusk: 1.8, dawn: 1.6, overcast: 1.3, snow: 1.0, desert: 0.9, day: 0.95 }[lighting] ?? 1.3;
+    if (this.night && Store.settings.nvgAuto) { this.nvg = true; this.nvgFx.toggle(true); this.nvgFx.amount = 1; }
     this.env = new Environment(this.scene, this.renderer, lighting, weather, q);
     if (this.night && weather === 'rain') this.env.enableLightning();
     this.effects = new Effects(this.scene, q);
@@ -77,6 +83,12 @@ export class Game {
     mode.setup(this);
     this.resize();
     this.renderer.compile(this.scene, this.camera);
+    this.renderer.compile(this.weapons.viewScene, this.weapons.viewCam);
+    // Night vision renders into an HDR target (a different shader variant): warm those up too.
+    this.renderer.setRenderTarget(this.nvgFx.rt);
+    this.renderer.compile(this.scene, this.camera);
+    this.renderer.compile(this.weapons.viewScene, this.weapons.viewCam);
+    this.renderer.setRenderTarget(null);
   }
 
   // ---------- relations ----------
@@ -442,12 +454,14 @@ export class Game {
       p.update(dt, input, this.weapons);
       this.weapons.update(dt, input, p);
       if (input.pressed('KeyF')) { this.flashlightOn = !this.flashlightOn; Audio.ui('click'); }
-      if (input.pressed('KeyN')) { this.nvg = !this.nvg; Audio.ui('beep'); this.app.setNightVision(this.nvg); }
       this._updateInteraction(dt);
     } else {
       p.update(dt, { isDown: () => false, pressed: () => false, anyDown: () => false, anyPressed: () => false, mouseDown: [], mousePressed: [] }, this.weapons);
       this.hud?.prompt(null);
     }
+    if (input.pressed('KeyN') && p.alive && !this.over) this.setNvg(!this.nvg);
+    this.nvgFx.update(dt);
+    this.hud?.nvg(this.nvg);
     this.flashlight.intensity = this.flashlightOn ? 60 : 0;
     for (const a of this.actors) {
       a.update(dt);
@@ -483,9 +497,19 @@ export class Game {
     return 2 * Math.atan(Math.tan(h / 2) / aspect) * 180 / Math.PI;
   }
 
+  /** Flip the night-vision goggles down (on) or up (off). */
+  setNvg(on) {
+    if (this.nvg === on) return;
+    this.nvg = on;
+    this.nvgFx.toggle(on);
+    Audio.nvg(on);
+  }
+
   render() {
     const r = this.renderer;
     r.autoClear = false;
+    const nvg = this.nvgFx?.active;
+    if (nvg) r.setRenderTarget(this.nvgFx.rt);
     r.clear();
     r.render(this.scene, this.camera);
     if (!this.cinematic && this.player.alive) {
@@ -495,6 +519,7 @@ export class Game {
       r.clearDepth();
       r.render(this.cinematic.viewScene, this.cinematic.viewCam);
     }
+    if (nvg) this.nvgFx.present(this.time, this.nvgGain, Store.settings.nvgPhosphor);
   }
 
   resize() {
@@ -504,6 +529,7 @@ export class Game {
     this.weapons.viewCam.aspect = w / h;
     this.weapons.viewCam.updateProjectionMatrix();
     this.effects.resize(h * this.renderer.getPixelRatio(), this.verticalFov());
+    this.nvgFx?.setSize();
   }
 
   dispose() {
@@ -515,6 +541,7 @@ export class Game {
     this.effects.dispose();
     this.env.dispose();
     this.weapons.dispose();
+    this.nvgFx.dispose();
     this.scene.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
     });

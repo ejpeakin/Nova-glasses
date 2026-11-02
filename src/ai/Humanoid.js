@@ -290,7 +290,7 @@ function bakedGun(weaponId) {
   info.group.updateMatrixWorld(true);
   const p = new Parts();
   info.group.traverse((o) => {
-    if (!o.isMesh || o.material.transparent || o.material.map) return;
+    if (!o.isMesh || o.material.transparent || o.material.isMeshBasicMaterial) return;
     const g = o.geometry.clone().applyMatrix4(o.matrixWorld);
     p.add(g, o.material.color.getHex(), PLAIN);
   });
@@ -298,7 +298,7 @@ function bakedGun(weaponId) {
     geo: p.build(),
     muzzle: info.muzzle.position.clone(),
     left: info.leftHand.clone(),
-    right: new THREE.Vector3(0, -0.04, 0.03),
+    right: info.rightHand ? info.rightHand.clone() : new THREE.Vector3(0, -0.04, 0.03),
   };
   gunCache.set(weaponId, entry);
   return entry;

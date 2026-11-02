@@ -36,7 +36,7 @@ Use a desktop browser (Chrome, Edge or Firefox) with a keyboard and mouse. Headp
 | V | Melee |
 | B | Toggle fire mode |
 | F | Flashlight |
-| N | Night vision |
+| N | Night vision goggles (flip down / up) |
 | Tab | Scoreboard |
 | Esc | Pause |
 
@@ -97,6 +97,9 @@ Equipment: frag (cookable), sticky semtex, remote C4, flashbang, smoke (blocks A
 - Weather: rain with lightning, snow, dust and ash.
 - Fog, soft shadows, ACES tone mapping and a sky-based environment map.
 - Particle explosions, smoke columns, smoke grenades, muzzle flashes, tracers, sparks, impact dust, bullet-hole and scorch decals, and ejected brass.
+- Night-vision goggles: a light-amplification pass with phosphor bloom, grain and a dual-tube view that flips down. Green or white phosphor; optionally on automatically for night missions (Settings).
+- Weapons are built from real side profiles with bevelled edges: picatinny rails, slotted handguards, flash hiders, ejection ports, charging handles, open-tube red dots, holographic sights and turreted scopes, with anodised-metal, stippled-polymer and wood-grain finishes.
+- Maps are dressed with building facades (window frames, glass, door frames, rooftop units), vegetation, road markings, street furniture, power lines, wire, debris, puddles, tyre tracks and distant backdrops.
 
 **Interface**
 - An animated main menu over a live 3D map.

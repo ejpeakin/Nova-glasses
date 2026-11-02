@@ -578,6 +578,10 @@ export class App {
           ${toggle('crosshair', 'Show crosshair')}
           ${toggle('showFps', 'Show FPS counter')}
           ${toggle('fullscreen', 'Fullscreen on deploy (recommended: stops Ctrl+W closing the tab)')}
+          <div class="lbl">NIGHT VISION</div>
+          ${toggle('nvgAuto', 'Goggles down at the start of night missions')}
+          <div class="field"><label>Phosphor</label><div class="seg" id="phosphor">${['green', 'white'].map((q) => `<button class="${q === s.nvgPhosphor ? 'on' : ''}" data-ph="${q}">${q === 'green' ? 'GREEN (P43)' : 'WHITE (P45)'}</button>`).join('')}</div>
+          <small class="muted">Press N in game to flip the goggles down or up.</small></div>
         </div>
         <div class="panel"><div class="lbl">GRAPHICS</div>
           ${slider('fov', 'Field of view (horizontal)', 65, 110, 1, (v) => v + '°')}
@@ -610,6 +614,11 @@ export class App {
       t.classList.toggle('on', s[k]);
       t.textContent = s[k] ? 'ON' : 'OFF';
       Store.save();
+    });
+    for (const b of this.ui.querySelectorAll('#phosphor button')) b.addEventListener('click', () => {
+      s.nvgPhosphor = b.dataset.ph;
+      Store.save();
+      for (const x of this.ui.querySelectorAll('#phosphor button')) x.classList.toggle('on', x === b);
     });
     for (const b of this.ui.querySelectorAll('#quality button')) b.addEventListener('click', () => {
       s.quality = b.dataset.q;
@@ -663,6 +672,7 @@ export class App {
             <button class="nav-btn" id="p-resume"><span>RESUME</span></button>
             ${isCamp && g.player.alive ? '<button class="nav-btn" id="p-check"><span>RESTART FROM CHECKPOINT</span></button>' : ''}
             <button class="nav-btn" id="p-restart"><span>${isCamp ? 'RESTART MISSION' : 'RESTART MATCH'}</span></button>
+            <button class="nav-btn" id="p-nvg"><span>NIGHT VISION: ${g.nvg ? 'ON' : 'OFF'}</span><small>N in game</small></button>
             <button class="nav-btn" id="p-settings"><span>SETTINGS</span></button>
             <button class="nav-btn" id="p-quit"><span>QUIT TO MAIN MENU</span></button>
           </nav>
@@ -673,6 +683,7 @@ export class App {
     this.ui.querySelector('#p-resume').addEventListener('click', () => this.resume());
     this.ui.querySelector('#p-check')?.addEventListener('click', () => { g.mode.respawnAtCheckpoint(); this.resume(); });
     this.ui.querySelector('#p-restart').addEventListener('click', () => this.restart());
+    this.ui.querySelector('#p-nvg').addEventListener('click', () => { g.setNvg(!g.nvg); g.nvgFx.amount = g.nvg ? 1 : 0; this.show('pause'); });
     this.ui.querySelector('#p-settings').addEventListener('click', () => this.show('settings', { back: 'pause' }));
     this.ui.querySelector('#p-quit').addEventListener('click', () => this.quitToMenu());
   }
@@ -797,9 +808,8 @@ export class App {
   }
 
   setNightVision(on) {
+    // Night vision is a render pass in Game (NightVision.js); kept for callers.
     this.nvgOn = on;
-    this._applyFilters();
-    document.body.classList.toggle('nvg', on);
   }
 
   setThermal(on) {
@@ -811,7 +821,6 @@ export class App {
   _applyFilters() {
     let f = '';
     if (this.thermalOn) f = 'grayscale(1) contrast(1.6) brightness(0.75)';
-    else if (this.nvgOn) f = 'brightness(2.6) contrast(1.2) grayscale(1) sepia(1) hue-rotate(55deg) saturate(3)';
     this.canvas.style.filter = f;
   }
 

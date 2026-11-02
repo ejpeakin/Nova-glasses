@@ -18,6 +18,8 @@ const DEFAULTS = {
     fullscreen: true,
     crosshair: true,
     subtitles: true,
+    nvgPhosphor: 'green', // green | white
+    nvgAuto: true, // goggles down at the start of night missions
     difficulty: 'regular', // recruit | regular | hardened | veteran
   },
   stats: {

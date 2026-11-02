@@ -398,6 +398,17 @@ class AudioEngine {
     this._tone(out, t + 0.22, 0.1, { freq: 50, freqEnd: 38, gain: 0.7 });
   }
 
+  /** Goggles flipping down (tube spin-up whine) or up. */
+  nvg(on) {
+    if (!this.ready) return;
+    const t = this.now;
+    const out = this._out(null, { gain: 0.5 });
+    this._noise(out, t, 0.05, { type: 'bandpass', freq: 1800, q: 2, gain: 0.7 });
+    this._noise(out, t + 0.05, 0.06, { type: 'bandpass', freq: 900, q: 1.5, gain: 0.5 });
+    if (on) this._tone(out, t + 0.08, 0.9, { type: 'sine', freq: 2400, freqEnd: 9500, gain: 0.05, attack: 0.08 });
+    else this._tone(out, t, 0.35, { type: 'sine', freq: 8000, freqEnd: 1500, gain: 0.03 });
+  }
+
   ui(kind = 'click') {
     if (!this.ready) return;
     const out = this._out(null, { gain: 0.25, bus: this.music });

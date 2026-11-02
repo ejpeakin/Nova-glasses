@@ -1,6 +1,7 @@
 // The five original battlegrounds. Each builder lays out geometry through MapBuilder
 // and registers spawns, Domination flags and named points used by campaign scripts.
 import * as THREE from '../lib/three.js';
+import { dressMap } from './Dressing.js';
 
 export const MAP_INFO = {
   desert: {
@@ -373,6 +374,7 @@ const BUILDERS = { desert, downtown, snowfall, blacksite, harbor };
 
 export function buildMap(id, builder) {
   const info = BUILDERS[id](builder);
+  dressMap(id, builder);
   builder.finalize();
   return info;
 }

@@ -48,7 +48,7 @@ export class HUD {
       <div class="cook" id="h-cook" hidden></div>
       <div class="minimap"><canvas id="h-map" width="200" height="200"></canvas><div class="mm-north">N</div></div>
       <div class="vitals">
-        <div class="stance" id="h-stance"></div>
+        <div class="stance" id="h-stance"></div><div class="nvg-tag" id="h-nvgtag" hidden>NVG</div>
         <div class="hp"><div class="hp-label">HEALTH</div><div class="hp-bar"><div id="h-hp-fill"></div></div><div class="hp-num" id="h-hp-num">100</div></div>
       </div>
       <div class="weapon-panel">
@@ -178,6 +178,12 @@ export class HUD {
   /** Ride-in mode: hide combat HUD, keep subtitles, prompts and the location card. */
   insertion(on) {
     this.root.classList.toggle('insertion', on);
+  }
+
+  nvg(on) {
+    if (this._nvg === on) return;
+    this._nvg = on;
+    this.root.querySelector('#h-nvgtag').hidden = !on;
   }
 
   letterbox(on) {

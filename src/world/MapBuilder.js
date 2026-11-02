@@ -50,7 +50,24 @@ const MATS = {
   lightPanel: { color: 0xffffff, emissive: 0xf4f8ff, emissiveIntensity: 2.2, rough: 0.4, sound: 'metal', noShadow: true },
   lightWarm: { color: 0xffe0b0, emissive: 0xffc080, emissiveIntensity: 2.5, rough: 0.4, sound: 'metal', noShadow: true },
   lightRed: { color: 0xff3030, emissive: 0xff2020, emissiveIntensity: 2.5, rough: 0.4, sound: 'metal', noShadow: true },
-  screen: { color: 0x0a2016, emissive: 0x22cc70, emissiveIntensity: 0.5, rough: 0.3, sound: 'metal' },
+  roadPaint: { color: 0xdedbd0, rough: 0.85, sound: 'concrete' },
+  roadYellow: { color: 0xd9b23a, rough: 0.85, sound: 'concrete' },
+  tracks: { tex: 'dirt', color: 0xc9ad80, scale: 3, rough: 1, sound: 'sand' },
+  puddle: { color: 0x0b1117, rough: 0.04, metal: 0.85, sound: 'soft', noShadow: true },
+  tarp: { tex: 'fabric', color: 0x6a6e4c, scale: 2.5, rough: 1, sound: 'soft' },
+  scrub: { color: 0x6f6d42, rough: 1, sound: 'soft' },
+  mesa: { tex: 'rock', color: 0xc49b6c, scale: 22, rough: 1, sound: 'concrete' },
+  rust: { tex: 'corrugated', color: 0x7a4a2a, scale: 2, rough: 0.9, metal: 0.3, sound: 'metal' },
+  pipeRed: { tex: 'metal', color: 0x8a2a20, scale: 2, rough: 0.6, metal: 0.4, sound: 'metal' },
+  pipeYellow: { tex: 'metal', color: 0xb8902a, scale: 2, rough: 0.6, metal: 0.4, sound: 'metal' },
+  signRed: { color: 0xa8261e, rough: 0.6, sound: 'metal' },
+  signBlue: { color: 0x1d4f9a, rough: 0.6, sound: 'metal' },
+  signGreen: { color: 0x1f6a3a, rough: 0.6, sound: 'metal' },
+  signWhite: { color: 0xe8e8e0, rough: 0.6, sound: 'metal' },
+  lightGreen: { color: 0x40ff60, emissive: 0x20ff40, emissiveIntensity: 2.2, rough: 0.4, sound: 'metal', noShadow: true },
+  lightAmber: { color: 0xffb030, emissive: 0xff9a10, emissiveIntensity: 2.2, rough: 0.4, sound: 'metal', noShadow: true },
+  windowLit: { color: 0xffd9a0, emissive: 0xffc070, emissiveIntensity: 1.6, rough: 0.4, sound: 'metal', noShadow: true },
+  screen: { color: 0x0b1a12, emissive: 0x1a6a3a, emissiveIntensity: 0.12, rough: 0.3, sound: 'metal' },
   screenBlue: { color: 0x0a1420, emissive: 0x2a70c0, emissiveIntensity: 0.45, rough: 0.3, sound: 'metal' },
 };
 
@@ -282,6 +299,7 @@ export class MapBuilder {
       this.wall('x', x0, x1, z0 + t / 2, y0, fh, t, mat, sides.s.map((p) => ({ ...p, at: x + p.at })), wr);
       this.wall('z', z0 + t, z1 - t, x1 - t / 2, y0, fh, t, mat, sides.e.map((p) => ({ ...p, at: z + p.at })), wr);
       this.wall('z', z0 + t, z1 - t, x0 + t / 2, y0, fh, t, mat, sides.w.map((p) => ({ ...p, at: z + p.at })), wr);
+      this._facade({ x, z, x0, x1, z0, z1, y0, fh, sides, ruined: wr || ruined, floor: f, top });
       const [sx0, sx1] = lane(f);
       const hole = hasStairs && f < stairFloors;
       if (hole) {
@@ -330,7 +348,99 @@ export class MapBuilder {
         }
       }
     }
+    if (roof && !ruined) this._roofClutter(x, z, w, d, totalH, roofAccess);
+    if (!ruined) {
+      // Downpipes on two corners.
+      for (const [cx, cz] of [[x0 - 0.07, z0 - 0.07], [x1 + 0.07, z1 + 0.07]]) {
+        this.mesh(new THREE.CylinderGeometry(0.05, 0.05, totalH + 0.3, 6), 'metalDark', cx, (totalH + 0.3) / 2, cz);
+      }
+    } else {
+      this.debris(x, z0 - 1.5, 10, w * 0.5);
+      this.debris(x1 + 1.5, z, 8, d * 0.4);
+    }
     return { x0, x1, z0, z1, height: totalH, roofY: totalH };
+  }
+
+  /** Window frames, sills, glass, door frames and steps, plinth and floor bands. */
+  _facade(o) {
+    const trim = o.ruined ? 'concreteDark' : 'concrete';
+    const faces = {
+      n: { axis: 'x', c: o.z1, n: 1, base: o.x, a0: o.x0, a1: o.x1 },
+      s: { axis: 'x', c: o.z0, n: -1, base: o.x, a0: o.x0, a1: o.x1 },
+      e: { axis: 'z', c: o.x1, n: 1, base: o.z, a0: o.z0, a1: o.z1 },
+      w: { axis: 'z', c: o.x0, n: -1, base: o.z, a0: o.z0, a1: o.z1 },
+    };
+    for (const [side, f] of Object.entries(faces)) {
+      // along: centre along the wall; out: offset from the outer face; depth: size along the normal.
+      const place = (along, y, len, h, out, depth, m = trim) => {
+        const cx = f.axis === 'x' ? along : f.c + f.n * out;
+        const cz = f.axis === 'x' ? f.c + f.n * out : along;
+        this.box(cx, y, cz, f.axis === 'x' ? len : depth, h, f.axis === 'x' ? depth : len, m, false);
+      };
+      const doors = [];
+      for (const op of o.sides[side]) {
+        const a = f.base + op.at;
+        if (op.bottom > 0) {
+          place(a, o.y0 + op.bottom - 0.07, op.w + 0.22, 0.07, 0.06, 0.16); // sill
+          if (!o.ruined) place(a, o.y0 + op.top, op.w + 0.16, 0.13, 0.03, 0.1); // lintel
+          for (const sg of [-1, 1]) place(a + sg * (op.w / 2 + 0.04), o.y0 + op.bottom, 0.08, op.top - op.bottom, 0.02, 0.07);
+          if (!o.ruined && this.rng() < 0.55) {
+            place(a, o.y0 + op.bottom, op.w, op.top - op.bottom, -0.16, 0.02, this.rng() < 0.12 ? 'windowLit' : 'glass');
+            place(a, o.y0 + (op.bottom + op.top) / 2 - 0.02, op.w, 0.04, -0.15, 0.04, 'metalDark'); // transom bar
+          }
+          if (o.floor > 0 && this.rng() < 0.12) place(a + op.w * 0.3, o.y0 + op.bottom - 0.75, 0.75, 0.48, 0.2, 0.4, 'metal'); // wall AC unit
+        } else {
+          for (const sg of [-1, 1]) place(a + sg * (op.w / 2 + 0.06), o.y0, 0.12, op.top + 0.12, 0.03, 0.09);
+          place(a, o.y0 + op.top, op.w + 0.24, 0.15, 0.03, 0.1);
+          place(a, o.y0, op.w + 0.6, 0.06, 0.32, 0.7, 'concreteDark'); // step
+          doors.push([a - op.w / 2 - 0.15, a + op.w / 2 + 0.15]);
+        }
+      }
+      if (o.floor === 0 && !o.ruined) {
+        // Plinth along the base, broken at doorways.
+        let cur = f.a0;
+        for (const [d0, d1] of doors.sort((p, q) => p[0] - q[0])) {
+          if (d0 > cur) place((cur + d0) / 2, 0, d0 - cur, 0.4, 0.035, 0.07, 'concreteDark');
+          cur = Math.max(cur, d1);
+        }
+        if (f.a1 > cur) place((cur + f.a1) / 2, 0, f.a1 - cur, 0.4, 0.035, 0.07, 'concreteDark');
+      }
+      if (o.floor > 0) place((f.a0 + f.a1) / 2, o.y0 - 0.08, f.a1 - f.a0 + 0.12, 0.15, 0.04, 0.08); // floor band
+    }
+  }
+
+  _roofClutter(x, z, w, d, y, walkable) {
+    const r = this.rng;
+    const n = 1 + Math.floor(r() * 3);
+    for (let i = 0; i < n; i++) {
+      const px = x + (r() - 0.5) * (w - 3), pz = z + (r() - 0.5) * (d - 3);
+      const k = r();
+      if (k < 0.45) {
+        this.box(px, y, pz, 1.3, 0.95, 0.9, 'metal', walkable);
+        this.mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.04, 14), 'metalDark', px, y + 0.97, pz);
+      } else if (k < 0.7) {
+        for (const lx of [-0.5, 0.5]) for (const lz of [-0.5, 0.5]) this.box(px + lx, y, pz + lz, 0.08, 1.0, 0.08, 'metalDark', false);
+        this.mesh(new THREE.CylinderGeometry(0.75, 0.75, 1.3, 14), 'metal', px, y + 1.65, pz);
+        if (walkable) this.world.add(px - 0.75, y, pz - 0.75, px + 0.75, y + 2.3, pz + 0.75, 'metal');
+      } else if (k < 0.85) {
+        this.box(px, y, pz, 0.1, 1.0, 0.1, 'metalDark', false);
+        this.mesh(new THREE.SphereGeometry(0.55, 14, 8, 0, Math.PI * 2, 0, Math.PI / 3), 'signWhite', px, y + 1.25, pz, r() * 6, -0.9, 0);
+      } else {
+        this.mesh(new THREE.CylinderGeometry(0.03, 0.05, 4.5, 6), 'metalDark', px, y + 2.25, pz);
+        for (let j = 0; j < 3; j++) this.box(px, y + 2.6 + j * 0.6, pz, 0.7 - j * 0.15, 0.03, 0.03, 'metalDark', false);
+      }
+    }
+    // Vent stacks.
+    for (let i = 0; i < 2; i++) this.mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.7, 8), 'metalDark', x + (r() - 0.5) * (w - 2), y + 0.35, z + (r() - 0.5) * (d - 2));
+  }
+
+  /** Non-blocking scattered rubble and litter. */
+  debris(x, z, n = 10, spread = 3) {
+    for (let i = 0; i < n; i++) {
+      const s = 0.12 + this.rng() * 0.35;
+      this.mesh(new THREE.BoxGeometry(1, 1, 1), this.rng() < 0.6 ? 'concreteDark' : 'concrete', x + (this.rng() - 0.5) * spread * 2, s * 0.25, z + (this.rng() - 0.5) * spread * 2,
+        this.rng() * 3, this.rng(), this.rng(), s, s * 0.5, s * 1.3);
+    }
   }
 
   table(x, z, y0 = 0) {
