@@ -459,7 +459,8 @@ export class WeaponSystem {
     this.kickSide = damp(this.kickSide, 0, 12, dt);
 
     const a = smoothstep(this.ads);
-    const hip = isPistol ? new THREE.Vector3(0.16, -0.17, -0.38) : new THREE.Vector3(0.17, -0.19, -0.44);
+    const long = s.class === 'sniper' || s.class === 'lmg' || s.class === 'marksman';
+    const hip = isPistol ? new THREE.Vector3(0.16, -0.17, -0.38) : long ? new THREE.Vector3(0.19, -0.215, -0.52) : new THREE.Vector3(0.17, -0.19, -0.45);
     const adsPos = new THREE.Vector3(0, -w.model.sightY, isPistol ? -0.34 : -0.3 + (s.sight === 'iron' ? 0.02 : 0));
     const pos = hip.clone().lerp(adsPos, a);
     const rot = new THREE.Euler(0, 0, 0);

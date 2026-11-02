@@ -187,10 +187,11 @@ export class HUD {
     const divs = [...el.children];
     let li = 0, ci = 0;
     clearInterval(this._locT);
+    clearTimeout(this._locFade);
     this._locT = setInterval(() => {
       if (li >= lines.length) {
         clearInterval(this._locT);
-        setTimeout(() => el.classList.add('fade'), 3500);
+        this.fadeLocation(3.5);
         return;
       }
       ci++;
@@ -199,6 +200,11 @@ export class HUD {
       if (ci >= lines[li].length) { li++; ci = 0; }
     }, 38);
     el.classList.remove('fade');
+  }
+
+  fadeLocation(delay = 0) {
+    clearTimeout(this._locFade);
+    this._locFade = setTimeout(() => this.el.loc.classList.add('fade'), delay * 1000);
   }
 
   say(lines) {
@@ -282,8 +288,8 @@ export class HUD {
     this.el.res.textContent = `/ ${wi.reserve}`;
     this.el.fire.textContent = wi.mode.toUpperCase();
     const L = w.lethal, T = w.tactical;
-    this.el.lethal.textContent = `G ${EQUIPMENT[L.id].name.split(' ').pop()} ×${L.count}`;
-    this.el.tactical.textContent = `Q ${EQUIPMENT[T.id].name.split(' ').pop()} ×${T.count}`;
+    this.el.lethal.textContent = `[G] ${EQUIPMENT[L.id].short} ×${L.count}`;
+    this.el.tactical.textContent = `[Q] ${EQUIPMENT[T.id].short} ×${T.count}`;
     let rl = '';
     if (w.isReloading()) rl = 'RELOADING';
     else if (wi.ammo === 0 && wi.reserve === 0) rl = 'NO AMMO';

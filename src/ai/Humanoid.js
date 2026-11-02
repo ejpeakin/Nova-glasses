@@ -234,7 +234,9 @@ export class Humanoid {
       for (const l of this.legs) { l.thigh.rotation.x = damp(l.thigh.rotation.x, 0.4 * l.side, 5, dt); l.shin.rotation.x = damp(l.shin.rotation.x, -0.6, 5, dt); }
       this.armR.rotation.x = damp(this.armR.rotation.x, -1.2, 4, dt);
       this.armL.rotation.x = damp(this.armL.rotation.x, -1.4, 4, dt);
-      this.gunPivot.rotation.z = damp(this.gunPivot.rotation.z, 1.2, 4, dt);
+      // Rifle settles flat along the body instead of pointing at the sky.
+      this.gunPivot.rotation.x = damp(this.gunPivot.rotation.x, -this.deathDir * 1.45, 5, dt);
+      this.gunPivot.rotation.z = damp(this.gunPivot.rotation.z, 0.5, 4, dt);
       return;
     }
     this.crouch = damp(this.crouch, crouch, 10, dt);

@@ -107,6 +107,7 @@ export class CampaignMode {
     const g = this.game;
     g.cinematic = null;
     g.hud.letterbox(false);
+    g.hud.fadeLocation(2.5);
     this.frozen = false;
     Audio.playMusic('none');
     this._nextObjective();
