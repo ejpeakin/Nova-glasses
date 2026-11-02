@@ -56,6 +56,9 @@ export class Player {
     this.holdBreath = 0;
     this.breath = 1;
     this.deathRoll = 0;
+    this.mantle = null; // active vault/mantle move
+    this.vaultPlan = null; // what Space would climb right now
+    this.vaultCheckT = 0;
   }
 
   spawn(x, y, z, yaw = 0) {
@@ -72,6 +75,8 @@ export class Player {
     this.flashed = 0;
     this.invulnerable = 2;
     this.deathRoll = 0;
+    this.mantle = null;
+    this.vaultPlan = null;
     this.hurtDirs.length = 0;
   }
 
@@ -80,6 +85,78 @@ export class Player {
   get chest() { return new THREE.Vector3(this.pos.x, this.pos.y + this.height * 0.7, this.pos.z); }
   get forward() {
     return new THREE.Vector3(-Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch));
+  }
+
+  /**
+   * Can we vault over / mantle onto what is directly ahead? Low cover (sandbags,
+   * barriers, crates, sills) up to 1.65 m. Returns { to, over, crouch, vault } or null.
+   */
+  _planVault() {
+    if (!this.onGround || this.stance === 'prone' || this.sliding > 0) return null;
+    const w = this.world, y = this.pos.y;
+    const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
+    // Probe a few distances ahead for the nearest face we could climb.
+    let px = 0, pz = 0, top = 0, rise = 0, found = false;
+    for (const reach of [R + 0.12, R + 0.28, R + 0.45]) {
+      px = this.pos.x + fx * reach; pz = this.pos.z + fz * reach;
+      top = w.groundHeight(px, pz, y + 1.65, 0, 0.1);
+      rise = top - y;
+      // There must be an actual face in front of us (not just stairs or a slope).
+      if (rise >= 0.45 && rise <= 1.65 && w.overlaps(px - 0.08, y + 0.25, pz - 0.08, px + 0.08, top - 0.05, pz + 0.08)) { found = true; break; }
+      if (w.overlaps(px - 0.08, y + 1.66, pz - 0.08, px + 0.08, y + 1.75, pz + 0.08)) return null; // a wall too tall to climb is in the way
+    }
+    if (!found) return null;
+    // Room to pass over the top (diving through a window counts).
+    if (this._blocked(px, top, pz, 1.05)) return null;
+    // Thin obstacle: vault over and land on the far side.
+    if (rise <= 1.3) {
+      for (const d of [0.75, 1.1, 1.5]) {
+        const qx = px + fx * d, qz = pz + fz * d;
+        const g = w.groundHeight(qx, qz, top + 0.05, 0, R - 0.02);
+        if (g >= top - 0.05) break; // obstacle keeps going: mantle onto it instead
+        if (g < top - 0.3 && !this._blocked(qx, g, qz, STANCE.stand.h) && !this._blocked((px + qx) / 2, top, (pz + qz) / 2, 1.05)) {
+          return { to: new THREE.Vector3(qx, g, qz), over: top, crouch: false, vault: true };
+        }
+      }
+    }
+    // Deep obstacle: climb up and stand (or crouch) on top.
+    const mx = this.pos.x + fx * (R + 0.55), mz = this.pos.z + fz * (R + 0.55);
+    if (this._blocked(mx, top, mz, STANCE.crouch.h)) return null;
+    return { to: new THREE.Vector3(mx, top, mz), over: top, crouch: this._blocked(mx, top, mz, STANCE.stand.h), vault: false };
+  }
+
+  _startMantle(plan) {
+    const dur = plan.vault ? 0.55 : 0.5 + (plan.over - this.pos.y) * 0.15;
+    this.mantle = { t: 0, dur, from: this.pos.clone(), plan, fx: -Math.sin(this.yaw), fz: -Math.cos(this.yaw) };
+    this.vel.set(0, 0, 0);
+    this.vaultPlan = null;
+    Audio.mech('raise');
+    Audio.footstep(this.world.groundMat, null, 1.4);
+  }
+
+  _updateMantle(dt) {
+    const m = this.mantle;
+    m.t += dt;
+    const k = Math.min(1, m.t / m.dur);
+    const { from, plan } = m;
+    // Up first, then over (quadratic arc through a point just above the top edge).
+    const apex = new THREE.Vector3(from.x + (plan.to.x - from.x) * (plan.vault ? 0.5 : 0.35), plan.over + (plan.vault ? 0.35 : 0.08), from.z + (plan.to.z - from.z) * (plan.vault ? 0.5 : 0.35));
+    const a = 1 - k;
+    this.pos.set(
+      a * a * from.x + 2 * a * k * apex.x + k * k * plan.to.x,
+      a * a * from.y + 2 * a * k * apex.y + k * k * plan.to.y,
+      a * a * from.z + 2 * a * k * apex.z + k * k * plan.to.z,
+    );
+    this.mantleRoll = Math.sin(k * Math.PI) * (plan.vault ? 0.09 : 0.04);
+    if (k >= 1) {
+      this.mantle = null;
+      this.mantleRoll = 0;
+      this.onGround = true;
+      this.vel.set(m.fx * (plan.vault ? 3 : 0.5), 0, m.fz * (plan.vault ? 3 : 0.5));
+      if (plan.crouch) this.stance = 'crouch';
+      this.landDip = plan.vault ? 0.08 : 0.04;
+      Audio.footstep(this.world.groundMat, null, 1.6);
+    }
   }
 
   _blocked(x, y, z, h) {
@@ -167,6 +244,18 @@ export class Player {
     if (input.anyPressed('ControlLeft', 'ControlRight', 'KeyZ')) {
       if (this.stance === 'prone') this.setStance('crouch');
       else if (this.onGround) this.setStance('prone');
+    }
+    if (this.mantle) {
+      this._updateMantle(dt);
+      this.speed = 0;
+      this.eye = damp(this.eye, STANCE[this.stance].eye, 12, dt);
+      return;
+    }
+    this.vaultCheckT -= dt;
+    if (this.vaultCheckT <= 0) { this.vaultCheckT = 0.1; this.vaultPlan = this._planVault(); }
+    if (input.pressed('Space') && this.onGround && this.stance !== 'prone') {
+      const plan = this._planVault();
+      if (plan) { this._startMantle(plan); return; }
     }
     if (input.pressed('Space')) {
       if (this.stance !== 'stand') {
@@ -321,7 +410,7 @@ export class Player {
     cam.rotation.order = 'YXZ';
     cam.rotation.y = this.yaw + (Math.random() - 0.5) * sh * 0.04;
     cam.rotation.x = this.pitch + (Math.random() - 0.5) * sh * 0.04;
-    cam.rotation.z = bobX * 0.3 + (this.sliding > 0 ? 0.06 : 0) + this.deathRoll;
+    cam.rotation.z = bobX * 0.3 + (this.sliding > 0 ? 0.06 : 0) + this.deathRoll + (this.mantleRoll ?? 0);
     if (weaponOffset) { cam.rotation.x += weaponOffset.x; cam.rotation.y += weaponOffset.y; }
     if (cam.fov !== fov) { cam.fov = fov; cam.updateProjectionMatrix(); }
     cam.updateMatrixWorld();

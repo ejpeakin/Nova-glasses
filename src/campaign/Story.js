@@ -193,7 +193,8 @@ export const MISSIONS = [
     },
     objectives: [
       { type: 'goto', text: 'Get through the perimeter fence', target: [0, -42], radius: 7,
-        say: [{ who: 'TEX', text: 'Gate guards are chatting. Sniper in the east tower. Take him first if you go loud.' }] },
+        hints: [[-25.5, -50, 'GAP'], [25.5, -50, 'GAP']],
+        say: [{ who: 'TEX', text: 'Our recon team cut the wire on both flanks. Slip through a gap, or take the gate if you go loud.' }, { who: 'TEX', text: 'Gate guards are chatting. Sniper in the east tower. Take him first if you go loud.' }] },
       { type: 'goto', text: 'Reach the radar station', target: [20, 11], radius: 5,
         say: [{ who: 'TEX', text: 'Radar building\'s north of the bunkers. Door on the south side.' }] },
       { type: 'interact', text: 'Sabotage the uplink console', target: [22, 0, 19], label: 'sabotage the uplink', duration: 5,

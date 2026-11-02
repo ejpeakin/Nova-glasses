@@ -317,6 +317,7 @@ export class CampaignMode {
       case 'goto':
       case 'extract': {
         markers.push({ pos: tpos, label: o.type === 'extract' ? 'EXFIL' : 'GO', kind: 'goto' });
+        for (const [hx, hz, hl] of o.hints ?? []) markers.push({ pos: new THREE.Vector3(hx, 1.2, hz), label: hl, kind: 'interact' });
         const d = Math.hypot(p.pos.x - tpos.x, p.pos.z - tpos.z);
         if (d < o.radius && p.alive) this._complete();
         break;

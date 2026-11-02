@@ -426,6 +426,7 @@ export class Game {
         it.progress = 0;
       }
     }
+    if (!prompt && p.vaultPlan && !p.mantle) prompt = `Press <b>SPACE</b> to ${p.vaultPlan.vault ? 'vault over' : 'climb up'}`;
     this.hud?.prompt(prompt, progress);
   }
 

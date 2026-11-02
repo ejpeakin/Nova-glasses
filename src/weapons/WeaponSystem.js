@@ -225,7 +225,7 @@ export class WeaponSystem {
     }
 
     // ADS.
-    const adsBlocked = player.sprinting || this.state === 'switchOut' || this.state === 'raise' || this.state === 'melee' || this.state === 'throw' || (this.state === 'reload' && !s.perShell);
+    const adsBlocked = player.sprinting || !!player.mantle || this.state === 'switchOut' || this.state === 'raise' || this.state === 'melee' || this.state === 'throw' || (this.state === 'reload' && !s.perShell);
     const wantAds = canAct && input.mouseDown[2] && !adsBlocked;
     const adsRate = 1 / Math.max(0.08, s.ads);
     this.ads = clamp(this.ads + (wantAds ? adsRate : -adsRate * 1.4) * dt, 0, 1);
@@ -256,7 +256,7 @@ export class WeaponSystem {
     const trigger = canAct && input.mouseDown[0];
     const triggerPressed = canAct && input.mousePressed[0];
     this.firing = false;
-    if (this.state === 'idle' && !player.sprinting) {
+    if (this.state === 'idle' && !player.sprinting && !player.mantle) {
       const mode = w.mode;
       if (mode === 'auto') {
         if (trigger) this._tryFire(player);
@@ -666,6 +666,9 @@ export class WeaponSystem {
     if (this.cooking) {
       pos.y -= 0.12; rot.x -= 0.3; pos.x += 0.05;
     }
+    // Climbing: gun swings down and aside while the hands are busy.
+    this.mantleBlend = damp(this.mantleBlend ?? 0, player.mantle ? 1 : 0, 14, dt);
+    pos.y -= this.mantleBlend * 0.16; pos.x += this.mantleBlend * 0.04; rot.x -= this.mantleBlend * 0.5; rot.z -= this.mantleBlend * 0.4;
     if (!(this.state === 'cycle' && w.mode === 'bolt') && w.model.action && this.state !== 'reload') {
       w.model.action.position.copy(w.model.actionHome);
       w.model.action.rotation.z = 0;

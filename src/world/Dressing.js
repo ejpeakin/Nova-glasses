@@ -401,8 +401,7 @@ function snowfall(b, free) {
   for (const [x, z] of [[-36, 12], [-37, 14]]) if (free(x, z, 0.4)) b.barrel(x, z, 'olive');
   if (free(-36, 8, 1.2)) generator(b, -36, 8, Math.PI / 2);
   for (const [x, z] of [[8, -22], [-8, 22], [16, 2], [-14, -10]]) if (free(x, z, 0.9)) pallet(b, x, z, 1);
-  concertina(b, -40, -50, 40, -50, 2.2);
-  concertina(b, -40, 55, 40, 55, 2.2);
+  for (const fz of [-50, 55]) for (const [a, c] of [[-40, -26.3], [-24.7, -3.6], [3.6, 24.7], [26.3, 40]]) concertina(b, a, fz, c, fz, 2.2);
 }
 
 function blacksite(b, free) {

@@ -173,7 +173,22 @@ function snowfall(b) {
     b.world.add(x - 2.6, 0, z - 2.6, x + 2.6, 6, z + 2.6, 'metal');
   }
   // Perimeter fences & sandbag positions.
-  b.fenceLine(-40, -50, 40, -50); b.fenceLine(-40, 55, 40, 55);
+  // Perimeter fences: a guarded gate in the middle and a cut gap in the wire on each flank.
+  for (const fz of [-50, 55]) {
+    for (const [a, c] of [[-40, -26.3], [-24.7, -3.6], [3.6, 24.7], [26.3, 40]]) b.fenceLine(a, fz, c, fz);
+    for (const gx of [-3.6, 3.6]) b.box(gx, 0, fz, 0.3, 2.6, 0.3, 'metalDark'); // gate posts
+    b.box(-3.4, 0, fz + (fz < 0 ? 1.8 : -1.8), 0.06, 2.2, 3.4, 'metalDark', false); // gate leaf swung open
+    b.box(0, 2.4, fz, 7.2, 0.12, 0.12, 'hazard', false); // overhead sign bar
+    for (const gx of [-25.5, 25.5]) {
+      b.box(gx - 0.75, 0, fz, 0.1, 2.2, 0.1, 'metalDark', false);
+      b.box(gx + 0.75, 0, fz, 0.1, 1.6, 0.1, 'metalDark', false, 0);
+      b.debris(gx, fz + (fz < 0 ? -0.8 : 0.8), 3, 0.4);
+    }
+  }
+  [[-25.5, -50], [25.5, -50], [0, -50], [-25.5, 55], [25.5, 55], [0, 55]].forEach(([gx, gz], i) => b.point(`fenceGap${i}`, gx, gz));
+  b.box(-6.5, 0, -47, 2.2, 2.6, 2.2, 'concreteDark'); // gate booth
+  b.box(-6.5, 2.6, -47, 2.6, 0.15, 2.6, 'metalDark', false);
+  b.box(4.6, 1.0, -50.6, 0.15, 0.15, 3.6, 'hazard', false); // raised boom barrier
   b.sandbags(-6, -12, 4, 'x'); b.sandbags(6, -12, 4, 'x'); b.sandbags(0, 12, 5, 'x');
   b.sandbags(-40, 0, 4, 'z'); b.sandbags(42, 2, 4, 'z');
   b.barrier(-4, -35, 4, 'x'); b.barrier(5, 28, 4, 'x');

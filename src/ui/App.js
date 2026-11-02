@@ -36,7 +36,7 @@ export function rankOf(xp) {
 
 const CONTROLS = [
   ['W A S D', 'Move'], ['Mouse', 'Look / aim'], ['Left click', 'Fire'], ['Right click', 'Aim down sights'],
-  ['R', 'Reload'], ['Shift', 'Sprint · hold breath (scoped)'], ['Space', 'Jump · stand up'], ['C', 'Crouch · slide while sprinting'],
+  ['R', 'Reload'], ['Shift', 'Sprint · hold breath (scoped)'], ['Space', 'Jump · vault / climb · stand up'], ['C', 'Crouch · slide while sprinting'],
   ['Ctrl / Z', 'Prone'], ['E', 'Interact · pick up'], ['1 / 2 · wheel', 'Switch weapon'], ['G', 'Lethal (hold to cook)'],
   ['Q', 'Tactical'], ['V', 'Melee'], ['B', 'Fire mode'], ['F', 'Flashlight'], ['N', 'Night vision'], ['Tab', 'Scoreboard'], ['Esc', 'Pause'],
 ];

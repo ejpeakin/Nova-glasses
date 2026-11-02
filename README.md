@@ -26,7 +26,7 @@ Use a desktop browser (Chrome, Edge or Firefox) with a keyboard and mouse. Headp
 | Right click | Aim down sights |
 | R | Reload |
 | Shift | Sprint. While scoped with a sniper, hold breath |
-| Space | Jump, or stand up |
+| Space | Jump, vault over or climb onto low cover, or stand up |
 | C | Crouch. While sprinting, slide |
 | Ctrl / Z | Prone |
 | E | Interact, pick up, swap weapon |
