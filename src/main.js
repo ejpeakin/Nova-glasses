@@ -1,23 +1,18 @@
-import { Game } from './Game.js';
+// Entry point.
+import { App } from './ui/App.js';
 
-// Entry point. Exposes the game on window for the browser console, and hooks into
-// the artifact viewer's hot-update bridge when present so a page update resumes the
-// running island instead of dropping back to the menu.
-
-function start(data = {}) {
-  const game = new Game();
-  window.game = game;
-  const hot = window.claude?.hot;
-  hot?.snapshot?.(() => (game.scene && game.state !== 'menu' && game.state !== 'loading' ? { save: game.serialize() } : null));
-  if (data?.save?.v === 1) {
-    game.loadWorld(data.save.seed, data.save).then(() => game.pause());
+function webglAvailable() {
+  try {
+    const c = document.createElement('canvas');
+    return !!(c.getContext('webgl2') || c.getContext('webgl'));
+  } catch {
+    return false;
   }
 }
 
-function boot() {
-  const hot = window.claude?.hot;
-  if (hot?.ready) hot.ready(start);
-  else start(hot?.data ?? {});
+if (!webglAvailable()) {
+  document.body.innerHTML = '<p class="noscript">Operation: Shadow Strike needs a browser with WebGL enabled.</p>';
+} else {
+  const app = new App();
+  app.boot();
 }
-
-boot();

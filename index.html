@@ -3,154 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Rustbound</title>
-  <meta name="description" content="A single-player survival sandbox in the browser: gather, craft, build a base and survive the night.">
+  <title>Operation: Shadow Strike</title>
+  <meta name="description" content="A modern military first-person shooter that runs in the browser: an 8-mission campaign, Team Deathmatch, Free For All, Domination and Survival against AI.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Barlow+Condensed:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&family=Black+Ops+One&display=swap">
   <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-  <div id="app">
-    <canvas id="game-canvas" aria-label="Game view"></canvas>
-
-    <div id="hud" class="hud" hidden></div>
-    <div id="inventory" class="overlay inventory" hidden></div>
-    <div id="map" class="overlay map-screen" hidden></div>
-    <div id="radial" class="radial" hidden></div>
-
-    <section id="menu" class="screen menu" aria-labelledby="menu-title">
-      <div class="menu-inner">
-        <p class="eyebrow">Single-player survival · Island seed based</p>
-        <h1 id="menu-title" class="logo">Rust<span>bound</span></h1>
-        <p class="tagline">You wash up on a beach with a rock and a torch. Gather, craft, build walls before dark, and raid the outpost if you dare.</p>
-        <div class="menu-actions">
-          <button id="btn-continue" class="btn btn-primary btn-continue" type="button" hidden>
-            <span>Continue</span><small id="continue-meta"></small>
-          </button>
-          <div class="new-game">
-            <label for="seed-input">Island seed</label>
-            <div class="seed-row">
-              <input id="seed-input" type="text" inputmode="numeric" autocomplete="off" maxlength="12" spellcheck="false">
-              <button id="btn-reseed" class="btn btn-ghost btn-icon" type="button" aria-label="Pick a random seed" title="Random seed">↻</button>
-            </div>
-            <button id="btn-new" class="btn btn-primary" type="button">Wash ashore</button>
-          </div>
-          <div class="menu-links">
-            <button class="btn btn-ghost" type="button" data-open="controls">Controls</button>
-            <button class="btn btn-ghost" type="button" data-open="settings">Settings</button>
-          </div>
-        </div>
-        <p class="device-note">Rustbound needs a keyboard and mouse. Saves stay in this browser.</p>
-      </div>
-      <aside class="menu-card" aria-label="How the first night goes">
-        <h2>Your first night</h2>
-        <ol>
-          <li><span><b>Gather.</b> Rock on trees for wood, on stone for stone. E picks up hemp.</span></li>
-          <li><span><b>Craft.</b> Stone hatchet and pickaxe, then a building plan and hammer.</span></li>
-          <li><span><b>Build.</b> Foundations, walls, a doorway and a wooden door.</span></li>
-          <li><span><b>Settle.</b> Sleeping bag, campfire for meat, a box for your loot.</span></li>
-          <li><span><b>Push out.</b> Furnace, workbench, then the outpost's military crates.</span></li>
-        </ol>
-        <dl class="menu-facts">
-          <div><dt>Island</dt><dd>640 m</dd></div>
-          <div><dt>Day</dt><dd>~13 min</dd></div>
-          <div><dt>Recipes</dt><dd>28</dd></div>
-        </dl>
-      </aside>
-    </section>
-
-    <section id="pause" class="screen pause" hidden aria-labelledby="pause-title">
-      <div class="panel pause-card">
-        <h2 id="pause-title" class="screen-title">Paused</h2>
-        <button id="btn-resume" class="btn btn-primary" type="button">Resume</button>
-        <button id="btn-save" class="btn" type="button">Save game</button>
-        <p id="save-status" class="save-status" role="status"></p>
-        <button class="btn btn-ghost" type="button" data-open="controls">Controls</button>
-        <button class="btn btn-ghost" type="button" data-open="settings">Settings</button>
-        <button id="btn-quit" class="btn btn-ghost" type="button">Save and quit to menu</button>
-      </div>
-    </section>
-
-    <section id="death" class="screen death" hidden aria-labelledby="death-title">
-      <div class="death-card">
-        <h2 id="death-title" class="screen-title">You died</h2>
-        <p id="death-cause" class="death-cause"></p>
-        <dl id="death-stats" class="death-stats"></dl>
-        <p class="muted">Your items are in a backpack where you fell. It is marked on the map.</p>
-        <div class="respawn">
-          <button id="btn-respawn-beach" class="btn btn-primary" type="button">Respawn on a beach</button>
-          <div id="respawn-bags" class="respawn-bags"></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="loading" class="screen loading" hidden>
-      <div class="loading-inner">
-        <p class="logo logo-small">Rust<span>bound</span></p>
-        <p id="loading-text" class="loading-text" role="status">Shaping the island</p>
-        <div class="loading-track"><i id="loading-bar"></i></div>
-      </div>
-    </section>
-
-    <div id="dialog-controls" class="dialog" hidden role="dialog" aria-modal="true" aria-labelledby="controls-title">
-      <div class="panel dialog-card">
-        <h2 id="controls-title" class="screen-title">Controls</h2>
-        <div class="controls-grid">
-          <dl>
-            <div><dt>W A S D</dt><dd>Move</dd></div>
-            <div><dt>Shift</dt><dd>Sprint</dd></div>
-            <div><dt>Ctrl / C</dt><dd>Crouch, dive</dd></div>
-            <div><dt>Space</dt><dd>Jump, swim up</dd></div>
-            <div><dt>Mouse</dt><dd>Look</dd></div>
-            <div><dt>1–6 / Wheel</dt><dd>Select belt slot</dd></div>
-            <div><dt>E</dt><dd>Use, pick up, open, drink</dd></div>
-          </dl>
-          <dl>
-            <div><dt>Left mouse</dt><dd>Attack, gather, place, eat</dd></div>
-            <div><dt>Right mouse</dt><dd>Aim, or hold for build menu</dd></div>
-            <div><dt>R</dt><dd>Reload, rotate placement</dd></div>
-            <div><dt>Tab</dt><dd>Inventory</dd></div>
-            <div><dt>Q</dt><dd>Crafting</dd></div>
-            <div><dt>M</dt><dd>Map</dd></div>
-            <div><dt>H</dt><dd>Survival tips</dd></div>
-            <div><dt>Esc</dt><dd>Close panel, pause</dd></div>
-          </dl>
-        </div>
-        <button class="btn btn-primary" type="button" data-close>Got it</button>
-      </div>
-    </div>
-
-    <div id="dialog-settings" class="dialog" hidden role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <div class="panel dialog-card">
-        <h2 id="settings-title" class="screen-title">Settings</h2>
-        <div class="settings">
-          <label for="set-sensitivity">Mouse sensitivity <output id="set-sensitivity-out"></output></label>
-          <input id="set-sensitivity" type="range" min="0.2" max="3" step="0.05">
-          <label for="set-fov">Field of view <output id="set-fov-out"></output></label>
-          <input id="set-fov" type="range" min="60" max="100" step="1">
-          <label for="set-volume">Volume <output id="set-volume-out"></output></label>
-          <input id="set-volume" type="range" min="0" max="1" step="0.05">
-          <label for="set-view">View distance <output id="set-view-out"></output></label>
-          <input id="set-view" type="range" min="150" max="450" step="10">
-          <label class="check" for="set-shadows"><input id="set-shadows" type="checkbox"> Shadows</label>
-          <label class="check" for="set-invert"><input id="set-invert" type="checkbox"> Invert mouse Y</label>
-        </div>
-        <button class="btn btn-primary" type="button" data-close>Done</button>
-      </div>
-    </div>
-
-    <div id="confirm-new" class="dialog" hidden role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-      <div class="panel dialog-card">
-        <h2 id="confirm-title" class="screen-title">Start a new island?</h2>
-        <p>Your saved game will be replaced the first time the new island saves.</p>
-        <div class="dialog-actions">
-          <button id="btn-confirm-new" class="btn btn-primary" type="button">Start new island</button>
-          <button class="btn btn-ghost" type="button" data-close>Keep my save</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <canvas id="game" aria-label="Game view"></canvas>
+  <div id="nvg-overlay" aria-hidden="true"></div>
+  <div id="hud" class="hud" hidden></div>
+  <div id="ui" class="ui" hidden></div>
+  <noscript><p class="noscript">Operation: Shadow Strike needs JavaScript and WebGL.</p></noscript>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

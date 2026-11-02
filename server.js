@@ -1,8 +1,8 @@
-// Zero-dependency static file server for local play: `npm start` or `node server.js`.
+// Zero-dependency static file server: `npm start` or `node server.js`.
 // ES modules must be served over HTTP, so opening index.html from disk will not work.
 import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
-import { extname, join, normalize, resolve } from 'node:path';
+import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(fileURLToPath(new URL('.', import.meta.url)));
@@ -21,7 +21,7 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
     let path = normalize(join(ROOT, decodeURIComponent(url.pathname)));
-    if (!path.startsWith(ROOT)) {
+    if (path !== ROOT && !path.startsWith(ROOT + sep)) {
       res.writeHead(403).end('Forbidden');
       return;
     }
@@ -35,5 +35,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Rustbound running at http://localhost:${PORT}`);
+  console.log(`Operation: Shadow Strike running at http://localhost:${PORT}`);
 });

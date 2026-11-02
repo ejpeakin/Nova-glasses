@@ -1,171 +1,112 @@
-// Keyboard and mouse state, polled once per frame by the game loop.
-// Mouse look uses pointer lock; when the browser refuses it, the player can
-// hold the right mouse button and drag to look instead.
+// Keyboard + mouse input with pointer lock. Game code polls state each frame:
+// isDown() for held keys, pressed() for edges that happened since the last frame.
 
 const GAME_KEYS = new Set([
-  'Tab', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-  'KeyQ', 'KeyE', 'KeyR', 'KeyM', 'ControlLeft', 'ShiftLeft',
+  'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight',
+  'KeyC', 'KeyZ', 'KeyE', 'KeyR', 'KeyG', 'KeyQ', 'KeyF', 'KeyV', 'KeyN', 'KeyB', 'Tab', 'Digit1', 'Digit2',
+  'Digit3', 'Digit4', 'KeyX',
 ]);
-
-function isTypingTarget(target) {
-  if (!target) return false;
-  const tag = target.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
-}
 
 export class Input {
   constructor(canvas) {
     this.canvas = canvas;
     this.down = new Set();
-    this.pressed = new Set();
-    this.released = new Set();
-    this.buttons = [false, false, false];
-    this.buttonsPressed = [false, false, false];
-    this.buttonsReleased = [false, false, false];
+    this.edges = new Set();
+    this.releases = new Set();
+    this.mouseDown = [false, false, false];
+    this.mousePressed = [false, false, false];
+    this.mouseReleased = [false, false, false];
     this.dx = 0;
     this.dy = 0;
     this.wheel = 0;
-    this.locked = false;
-    this.lockUnavailable = false;
-    this.captureKeys = false;
-    this.lockListeners = new Set();
-    this.bind();
-  }
+    this.enabled = false; // only capture game keys while in a match
+    this.onPointerLockChange = null;
 
-  bind() {
     window.addEventListener('keydown', (e) => {
-      if (isTypingTarget(e.target)) return;
-      if (this.captureKeys && (GAME_KEYS.has(e.code) || e.code.startsWith('Digit'))) e.preventDefault();
-      if (!this.down.has(e.code)) this.pressed.add(e.code);
+      if (this.enabled && (GAME_KEYS.has(e.code) || e.ctrlKey)) e.preventDefault();
+      if (!this.down.has(e.code)) this.edges.add(e.code);
       this.down.add(e.code);
     });
     window.addEventListener('keyup', (e) => {
       this.down.delete(e.code);
-      this.released.add(e.code);
+      this.releases.add(e.code);
+      if (this.enabled && GAME_KEYS.has(e.code)) e.preventDefault();
     });
     window.addEventListener('blur', () => this.reset());
 
-    document.addEventListener('mousedown', (e) => {
-      if (e.button > 2 || !this.isGameMouse(e)) return;
-      this.buttons[e.button] = true;
-      this.buttonsPressed[e.button] = true;
+    canvas.addEventListener('mousedown', (e) => {
+      if (!this.locked) return;
+      this.mouseDown[e.button] = true;
+      this.mousePressed[e.button] = true;
+      e.preventDefault();
     });
-    document.addEventListener('mouseup', (e) => {
-      if (e.button > 2) return;
-      if (this.buttons[e.button]) {
-        this.buttons[e.button] = false;
-        this.buttonsReleased[e.button] = true;
-      }
+    window.addEventListener('mouseup', (e) => {
+      if (this.mouseDown[e.button]) this.mouseReleased[e.button] = true;
+      this.mouseDown[e.button] = false;
     });
-    document.addEventListener('mousemove', (e) => {
-      const lookDrag = this.lockUnavailable && this.buttons[2];
-      if (!this.locked && !lookDrag) return;
-      // Some browsers report a huge spike on the first event after locking.
-      const mx = Math.max(-250, Math.min(250, e.movementX || 0));
-      const my = Math.max(-250, Math.min(250, e.movementY || 0));
-      this.dx += mx;
-      this.dy += my;
+    window.addEventListener('mousemove', (e) => {
+      if (!this.locked) return;
+      // Guard against the occasional huge spike some browsers emit on lock.
+      if (Math.abs(e.movementX) > 400 || Math.abs(e.movementY) > 400) return;
+      this.dx += e.movementX;
+      this.dy += e.movementY;
     });
-    document.addEventListener('wheel', (e) => {
-      if (this.locked || (this.lockUnavailable && e.target === this.canvas)) this.wheel += Math.sign(e.deltaY);
+    window.addEventListener('wheel', (e) => {
+      if (this.locked) this.wheel += Math.sign(e.deltaY);
     }, { passive: true });
-    document.addEventListener('contextmenu', (e) => {
-      if (this.locked || e.target === this.canvas) e.preventDefault();
-    });
-
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('pointerlockchange', () => {
-      this.locked = document.pointerLockElement === this.canvas;
-      if (!this.locked) this.releaseButtons();
-      for (const fn of this.lockListeners) fn(this.locked);
+      if (!this.locked) this.reset();
+      this.onPointerLockChange?.(this.locked);
     });
-    document.addEventListener('pointerlockerror', () => this.markLockUnavailable());
   }
 
-  isGameMouse(e) {
-    return this.locked || (this.lockUnavailable && e.target === this.canvas);
+  get locked() {
+    return document.pointerLockElement === this.canvas;
   }
 
-  markLockUnavailable() {
-    if (this.lockUnavailable) return;
-    this.lockUnavailable = true;
-    for (const fn of this.lockListeners) fn(false);
-  }
-
-  onLockChange(fn) {
-    this.lockListeners.add(fn);
-  }
-
-  requestLock() {
-    if (this.locked || !this.canvas.requestPointerLock) {
-      if (!this.canvas.requestPointerLock) this.markLockUnavailable();
-      return;
-    }
+  lock() {
+    if (this.locked) return;
     try {
-      const result = this.canvas.requestPointerLock();
-      if (result && typeof result.catch === 'function') result.catch(() => this.markLockUnavailable());
+      const p = this.canvas.requestPointerLock({ unadjustedMovement: true });
+      // Some platforms reject unadjustedMovement; retry without it.
+      if (p && p.catch) p.catch(() => { try { this.canvas.requestPointerLock(); } catch { /* ignored */ } });
     } catch {
-      this.markLockUnavailable();
+      try { this.canvas.requestPointerLock(); } catch { /* ignored */ }
     }
   }
 
-  exitLock() {
-    if (document.pointerLockElement) document.exitPointerLock();
+  unlock() {
+    if (this.locked) document.exitPointerLock();
   }
 
-  get hasLook() {
-    return this.locked || this.lockUnavailable;
-  }
+  isDown(code) { return this.down.has(code); }
+  pressed(code) { return this.edges.has(code); }
+  released(code) { return this.releases.has(code); }
+  anyDown(...codes) { return codes.some((c) => this.down.has(c)); }
+  anyPressed(...codes) { return codes.some((c) => this.edges.has(c)); }
 
-  isDown(code) {
-    return this.down.has(code);
-  }
-
-  wasPressed(code) {
-    return this.pressed.has(code);
-  }
-
-  wasReleased(code) {
-    return this.released.has(code);
-  }
-
-  mouseDown(button = 0) {
-    return this.buttons[button];
-  }
-
-  mousePressed(button = 0) {
-    return this.buttonsPressed[button];
-  }
-
-  mouseReleased(button = 0) {
-    return this.buttonsReleased[button];
-  }
-
-  consumeLook() {
-    const out = { dx: this.dx, dy: this.dy };
+  consumeMouse() {
+    const d = { x: this.dx, y: this.dy };
     this.dx = 0;
     this.dy = 0;
-    return out;
+    return d;
   }
 
-  releaseButtons() {
-    for (let i = 0; i < 3; i++) {
-      if (this.buttons[i]) this.buttonsReleased[i] = true;
-      this.buttons[i] = false;
-    }
+  /** Call once at the end of every frame. */
+  endFrame() {
+    this.edges.clear();
+    this.releases.clear();
+    this.mousePressed[0] = this.mousePressed[1] = this.mousePressed[2] = false;
+    this.mouseReleased[0] = this.mouseReleased[1] = this.mouseReleased[2] = false;
+    this.wheel = 0;
   }
 
   reset() {
     this.down.clear();
-    this.releaseButtons();
-    this.dx = 0;
-    this.dy = 0;
-  }
-
-  endFrame() {
-    this.pressed.clear();
-    this.released.clear();
-    this.buttonsPressed.fill(false);
-    this.buttonsReleased.fill(false);
-    this.wheel = 0;
+    this.edges.clear();
+    this.releases.clear();
+    this.mouseDown = [false, false, false];
+    this.dx = this.dy = 0;
   }
 }

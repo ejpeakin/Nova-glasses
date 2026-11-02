@@ -1,7 +1,7 @@
 {
-  "name": "rustbound",
-  "version": "1.0.0",
-  "description": "Single-player Rust-style survival game for the browser, built with three.js.",
+  "name": "operation-shadow-strike",
+  "version": "0.1.0",
+  "description": "Operation: Shadow Strike - a browser-based modern military first-person shooter built with three.js.",
   "private": true,
   "type": "module",
   "scripts": {

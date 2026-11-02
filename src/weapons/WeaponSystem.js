@@ -1,0 +1,638 @@
+// The player's weapons: firing, fire modes, recoil, spread, ADS, reloads (mag and
+// per-shell), bolt/pump cycling, switching, melee, equipment throws and the
+// animated first-person viewmodel rendered in its own scene.
+import * as THREE from '../lib/three.js';
+import { WEAPONS, EQUIPMENT, computeStats, resolveAttachments } from './WeaponData.js';
+import { buildWeaponModel, buildArms } from './WeaponModel.js';
+import { getSpriteTexture } from '../world/Textures.js';
+import { Audio } from '../core/Audio.js';
+import { Store } from '../core/Storage.js';
+import { clamp, damp, lerp, rand, smoothstep } from '../core/Utils.js';
+
+const DEG = Math.PI / 180;
+
+export class WeaponSystem {
+  constructor(game, loadout) {
+    this.game = game;
+    this.viewScene = new THREE.Scene();
+    this.viewCam = new THREE.PerspectiveCamera(54, 1, 0.01, 10);
+    this.viewHemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+    this.viewSun = new THREE.DirectionalLight(0xffffff, 2);
+    this.viewScene.add(this.viewHemi, this.viewSun, this.viewSun.target);
+    this.viewFlashLight = new THREE.PointLight(0xffb060, 0, 3, 2);
+    this.viewScene.add(this.viewFlashLight);
+    this.rig = new THREE.Group(); // weapon root in camera space
+    this.viewScene.add(this.rig);
+    this.arms = buildArms(game.mode?.sleeveColor ?? 0x4d5340);
+    this.viewScene.add(this.arms.left, this.arms.right);
+
+    const flashMat = new THREE.SpriteMaterial({ map: getSpriteTexture('flash'), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false });
+    this.flashSprite = new THREE.Sprite(flashMat);
+    this.flashSprite.visible = false;
+    this.flashTime = 0;
+
+    this.slots = [];
+    this.current = 0;
+    this.setLoadout(loadout);
+
+    this.state = 'raise';
+    this.stateT = 0;
+    this.ads = 0;
+    this.fireTimer = 0;
+    this.burstLeft = 0;
+    this.shotsInRow = 0;
+    this.triggerHeld = false;
+    this.firing = false;
+    this.lastFire = -1;
+    this.kickZ = 0;
+    this.kickRot = 0;
+    this.kickSide = 0;
+    this.swayX = 0;
+    this.swayY = 0;
+    this.time = 0;
+    this.scopeSway = new THREE.Vector2();
+    this.cooking = null;
+    this.c4 = null;
+    this.reloadEvents = new Set();
+    this.lastSwitch = 0;
+    this.bloom = 0;
+  }
+
+  setLoadout(lo) {
+    for (const s of this.slots) s.model.group.removeFromParent();
+    this.slots = [lo.primary, lo.secondary].filter(Boolean).map((id) => this._makeInstance(id, lo.attachments?.[id]));
+    this.lethal = { id: lo.lethal ?? 'frag', count: EQUIPMENT[lo.lethal ?? 'frag'].count };
+    this.tactical = { id: lo.tactical ?? 'flash', count: EQUIPMENT[lo.tactical ?? 'flash'].count };
+    this.current = 0;
+    this._show();
+    this.state = 'raise';
+    this.stateT = 0;
+  }
+
+  _makeInstance(id, chosenAtt) {
+    const att = resolveAttachments(id, chosenAtt ?? Store.getAttachments(id));
+    const stats = computeStats(id, att);
+    const model = buildWeaponModel(WEAPONS[id], att);
+    return { id, att, stats, model, ammo: stats.mag, reserve: stats.reserve, modeIndex: 0, mode: stats.modes[0] };
+  }
+
+  /** Swap the active slot's weapon (e.g. picking up an enemy gun). */
+  replaceCurrent(id) {
+    const inst = this._makeInstance(id, {});
+    inst.reserve = Math.floor(inst.stats.reserve * 0.5);
+    this.slots[this.current].model.group.removeFromParent();
+    this.slots[this.current] = inst;
+    this._show();
+    this.state = 'raise';
+    this.stateT = 0;
+    Audio.mech('raise');
+  }
+
+  get weapon() { return this.slots[this.current]; }
+  get stats() { return this.weapon.stats; }
+
+  _show() {
+    for (const s of this.slots) s.model.group.removeFromParent();
+    const w = this.weapon;
+    this.rig.add(w.model.group);
+    this.flashSprite.removeFromParent();
+    w.model.muzzle.add(this.flashSprite);
+    this.flashSprite.position.set(0, 0, -0.06);
+  }
+
+  // ---- queries used by Player / HUD ----
+  blocksSprint() { return this.state === 'throw' || this.cooking !== null || this.firing; }
+  cancelAds() { this.adsHeldBlocked = true; }
+  isFiring() { return this.game.time - this.lastFire < 0.12; }
+  recoverRate() { return this.stats.recoil.recover; }
+  moveMult() { return this.stats.move * (1 - this.ads * 0.35); }
+  isReloading() { return this.state === 'reload'; }
+
+  scopeInfo() {
+    const s = this.stats;
+    const overlay = s.scope || s.sight === 'acog';
+    return { active: overlay && this.ads > 0.86, kind: s.thermal ? 'thermal' : s.sight === 'acog' ? 'acog' : 'sniper' };
+  }
+
+  currentFov(base) {
+    const z = lerp(1, this.stats.zoom, smoothstep(this.ads));
+    return base / z;
+  }
+
+  spreadDeg() {
+    const s = this.stats.spread;
+    const p = this.game.player;
+    let sp = lerp(s.hip, s.ads, smoothstep(this.ads));
+    const moveF = clamp(p.speed / 5, 0, 1.4);
+    sp += s.move * moveF * (1 - this.ads * 0.6);
+    if (!p.onGround) sp += 3;
+    if (p.stance === 'crouch') sp *= 0.8;
+    if (p.stance === 'prone') sp *= 0.6;
+    sp += this.bloom * (1 - this.ads * 0.8);
+    return sp;
+  }
+
+  onJump() { this.kickRot += 0.05; }
+
+  // ---- main update ----
+  update(dt, input, player) {
+    this.time += dt;
+    const w = this.weapon;
+    const s = w.stats;
+    this.stateT += dt;
+    this.fireTimer -= dt;
+    this.bloom = Math.max(0, this.bloom - dt * 6);
+
+    const canAct = player.alive && !this.game.paused;
+    // Weapon switching.
+    if (canAct && this.state !== 'switchOut' && this.state !== 'throw' && this.cooking === null && this.slots.length > 1) {
+      let target = -1;
+      if (input.pressed('Digit1')) target = 0;
+      if (input.pressed('Digit2')) target = 1;
+      if (input.wheel !== 0 || input.pressed('KeyX')) target = (this.current + 1) % this.slots.length;
+      if (target >= 0 && target !== this.current) {
+        this.nextSlot = target;
+        this.state = 'switchOut';
+        this.stateT = 0;
+        this.burstLeft = 0;
+      }
+    }
+
+    // ADS.
+    const adsBlocked = player.sprinting || this.state === 'switchOut' || this.state === 'raise' || this.state === 'melee' || this.state === 'throw' || (this.state === 'reload' && !s.perShell);
+    const wantAds = canAct && input.mouseDown[2] && !adsBlocked;
+    const adsRate = 1 / Math.max(0.08, s.ads);
+    this.ads = clamp(this.ads + (wantAds ? adsRate : -adsRate * 1.4) * dt, 0, 1);
+
+    // Fire mode toggle.
+    if (canAct && input.pressed('KeyB') && s.modes.length > 1) {
+      w.modeIndex = (w.modeIndex + 1) % s.modes.length;
+      w.mode = s.modes[w.modeIndex];
+      Audio.mech('slide');
+      this.game.hud?.toast(`FIRE MODE: ${w.mode.toUpperCase()}`);
+    }
+
+    // Reload.
+    if (canAct && input.pressed('KeyR')) this.startReload();
+
+    // Melee.
+    if (canAct && input.pressed('KeyV') && (this.state === 'idle' || this.state === 'reload')) {
+      this.state = 'melee';
+      this.stateT = 0;
+      this.meleeDone = false;
+      this.ads = 0;
+    }
+
+    // Equipment.
+    if (canAct) this._equipment(input, player);
+
+    // Firing.
+    const trigger = canAct && input.mouseDown[0];
+    const triggerPressed = canAct && input.mousePressed[0];
+    this.firing = false;
+    if (this.state === 'idle' && !player.sprinting) {
+      const mode = w.mode;
+      if (mode === 'auto') {
+        if (trigger) this._tryFire(player);
+      } else if (mode === 'burst') {
+        if (triggerPressed && this.burstLeft <= 0 && this.fireTimer <= 0) this.burstLeft = 3;
+        if (this.burstLeft > 0 && this._tryFire(player, 1.25)) this.burstLeft--;
+      } else if (triggerPressed) {
+        this._tryFire(player);
+      }
+      if (!trigger) this.shotsInRow = Math.max(0, this.shotsInRow - dt * 20);
+    } else if (this.state === 'reload' && s.perShell && triggerPressed && w.ammo > 0) {
+      // Interrupt shell-by-shell reload to fire.
+      this.state = 'idle';
+      this.stateT = 0;
+    } else if (player.sprinting && triggerPressed) {
+      player.sprinting = false;
+    }
+    this.firing = trigger && this.state === 'idle';
+
+    this._updateStates(dt, player);
+    this._animate(dt, input, player);
+  }
+
+  _tryFire(player, rateMult = 1) {
+    const w = this.weapon, s = w.stats;
+    if (this.fireTimer > 0) return false;
+    if (w.ammo <= 0) {
+      if (this.game.input.mousePressed[0]) Audio.dryFire();
+      if (w.reserve > 0) this.startReload();
+      this.burstLeft = 0;
+      return false;
+    }
+    w.ammo--;
+    this.fireTimer = 60 / (s.rpm * rateMult);
+    this.lastFire = this.game.time;
+    this.shotsInRow = Math.floor(this.shotsInRow) + 1;
+    const cam = this.game.camera;
+    const origin = cam.getWorldPosition(new THREE.Vector3());
+    const fwd = cam.getWorldDirection(new THREE.Vector3());
+    const right = new THREE.Vector3().crossVectors(fwd, cam.up).normalize();
+    const up = new THREE.Vector3().crossVectors(right, fwd).normalize();
+    const pellets = s.pellets ?? 1;
+    const spread = this.spreadDeg();
+    const muzzleWorld = this.muzzleWorld();
+    let anyHit = false;
+    for (let i = 0; i < pellets; i++) {
+      const cone = pellets > 1 ? lerp(s.spread.pelletSpread, s.spread.pelletSpread * 0.8, this.ads) : spread;
+      const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * Math.tan(cone * DEG * 0.5);
+      const dir = fwd.clone().addScaledVector(right, Math.cos(a) * r).addScaledVector(up, Math.sin(a) * r).normalize();
+      const hit = this.game.fireBullet(origin, dir, {
+        shooter: player, weaponId: w.id, damage: s.damage, range: s.range, headMult: s.headMult, maxDist: 400,
+      });
+      if (hit?.actor) anyHit = true;
+      const end = hit ? hit.point : origin.clone().addScaledVector(dir, 200);
+      if (i === 0 && (this.shotsInRow % 2 === 1 || pellets > 1) && !s.suppressed) this.game.effects.tracer(muzzleWorld, end, 420);
+    }
+    Store.stats.shotsFired++;
+    if (anyHit) Store.stats.shotsHit++;
+    // Recoil.
+    const r = s.recoil;
+    const stanceM = player.stance === 'prone' ? 0.55 : player.stance === 'crouch' ? 0.82 : 1;
+    const adsM = lerp(1, 0.72, this.ads);
+    const pat = r.pattern[(this.shotsInRow - 1) % r.pattern.length] ?? 0;
+    const v = r.v * stanceM * adsM * rand(0.85, 1.12) * (1 + Math.min(this.shotsInRow, 12) * 0.015);
+    const h = (pat * r.h + rand(-0.5, 0.5) * r.h * 0.7) * stanceM * adsM;
+    player.kick(v, h);
+    this.kickZ += r.kick * (1 - this.ads * 0.5);
+    this.kickRot += r.kick * 1.6;
+    this.kickSide += h * 0.003;
+    this.bloom = Math.min(this.bloom + s.spread.hip * 0.12, s.spread.hip * 0.8);
+    // Feedback.
+    Audio.gunshot(s.sound, null, s.suppressed);
+    if (!s.noFlash) {
+      this.flashSprite.visible = true;
+      this.flashSprite.material.rotation = Math.random() * Math.PI;
+      const fs = (s.suppressed ? 0.06 : 0.16) * (s.class === 'shotgun' || s.class === 'sniper' ? 1.4 : 1) * rand(0.8, 1.2);
+      this.flashSprite.scale.set(fs, fs, fs);
+      this.flashTime = 0.045;
+      this.viewFlashLight.intensity = s.suppressed ? 0.5 : 3;
+    }
+    this.game.effects.muzzle(muzzleWorld, fwd, 1, !s.suppressed && !s.noFlash);
+    if (s.class !== 'shotgun' && s.mode !== 'bolt') {
+      this.game.effects.casing(muzzleWorld.clone().addScaledVector(fwd, -0.4).addScaledVector(right, 0.05), right);
+      Audio.shellCasing();
+    }
+    this.game.emitNoise(player.pos, s.suppressed ? 9 : 75, player);
+    player.lastShotTime = this.game.time;
+    if (!s.suppressed) player.revealed = this.game.time;
+    // Bolt / pump cycle.
+    if (w.mode === 'bolt' || w.mode === 'pump') {
+      if (w.ammo > 0) { this.state = 'cycle'; this.stateT = 0; this.cycleSounded = false; }
+    }
+    if (w.ammo === 0 && w.reserve > 0 && w.mode !== 'auto') {
+      setTimeout(() => { if (this.weapon === w && w.ammo === 0 && this.state === 'idle') this.startReload(); }, 250);
+    }
+    return true;
+  }
+
+  muzzleWorld() {
+    // Map the viewmodel muzzle (camera space, own FOV) into world space.
+    const m = this.weapon.model.muzzle;
+    this.rig.updateMatrixWorld();
+    const local = m.getWorldPosition(new THREE.Vector3());
+    // Compensate the different FOV: scale x/y toward the centre.
+    const k = Math.tan((this.game.camera.fov * DEG) / 2) / Math.tan((this.viewCam.fov * DEG) / 2);
+    local.x *= k; local.y *= k;
+    return local.applyMatrix4(this.game.camera.matrixWorld);
+  }
+
+  startReload() {
+    const w = this.weapon;
+    if (this.state !== 'idle' && this.state !== 'cycle') return;
+    if (w.ammo >= w.stats.mag || w.reserve <= 0) return;
+    this.state = 'reload';
+    this.stateT = 0;
+    this.reloadEmpty = w.ammo === 0;
+    this.reloadEvents.clear();
+    this.burstLeft = 0;
+  }
+
+  _updateStates(dt, player) {
+    const w = this.weapon, s = w.stats;
+    const isPistol = s.class === 'pistol';
+    switch (this.state) {
+      case 'raise': {
+        const dur = isPistol ? 0.3 : 0.45;
+        if (this.stateT === dt) Audio.mech('raise');
+        if (this.stateT >= dur) { this.state = 'idle'; this.stateT = 0; }
+        break;
+      }
+      case 'switchOut': {
+        const dur = isPistol ? 0.2 : 0.28;
+        if (this.stateT >= dur) {
+          this.current = this.nextSlot;
+          this._show();
+          this.state = 'raise';
+          this.stateT = 0;
+          this.ads = 0;
+        }
+        break;
+      }
+      case 'cycle': {
+        const dur = s.boltTime ?? 0.6;
+        if (!this.cycleSounded && this.stateT > dur * 0.25) {
+          Audio.mech(w.mode === 'pump' ? 'pump' : 'bolt');
+          this.cycleSounded = true;
+          if (s.class === 'shotgun' || w.mode === 'bolt') {
+            this.game.effects.casing(this.muzzleWorld().addScaledVector(this.game.camera.getWorldDirection(new THREE.Vector3()), -0.5), new THREE.Vector3(1, 0, 0).applyQuaternion(this.game.camera.quaternion));
+          }
+        }
+        if (this.stateT >= dur) { this.state = 'idle'; this.stateT = 0; }
+        break;
+      }
+      case 'reload': {
+        if (s.perShell) {
+          const per = s.reload;
+          if (this.stateT >= per) {
+            this.stateT = 0;
+            if (w.reserve > 0 && w.ammo < s.mag) {
+              w.ammo++; w.reserve--;
+              Audio.mech('shell');
+            }
+            if (w.ammo >= s.mag || w.reserve <= 0) {
+              this.state = this.reloadEmpty ? 'cycle' : 'idle';
+              this.cycleSounded = false;
+            }
+          }
+          break;
+        }
+        const dur = this.reloadEmpty ? s.reloadEmpty : s.reload;
+        const p = this.stateT / dur;
+        const ev = (name, at, fn) => { if (p >= at && !this.reloadEvents.has(name)) { this.reloadEvents.add(name); fn(); } };
+        ev('out', 0.18, () => Audio.mech('magOut'));
+        ev('in', 0.62, () => Audio.mech('magIn'));
+        if (this.reloadEmpty) ev('bolt', 0.84, () => Audio.mech(isPistol ? 'slide' : 'bolt'));
+        if (p >= 1) {
+          const need = s.mag - w.ammo;
+          const take = Math.min(need, w.reserve);
+          w.ammo += take;
+          w.reserve -= take;
+          this.state = 'idle';
+          this.stateT = 0;
+        }
+        break;
+      }
+      case 'melee': {
+        if (!this.meleeDone && this.stateT > 0.14) {
+          this.meleeDone = true;
+          this.game.melee(player);
+        }
+        if (this.stateT > 0.55) { this.state = 'idle'; this.stateT = 0; }
+        break;
+      }
+      case 'throw': {
+        if (this.stateT > 0.45) { this.state = 'raise'; this.stateT = 0; }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  _equipment(input, player) {
+    const busy = this.state === 'switchOut' || this.state === 'throw' || this.state === 'melee';
+    // Lethal (G).
+    const L = this.lethal, ld = EQUIPMENT[L.id];
+    if (input.pressed('KeyG') && !busy) {
+      if (ld.remote && this.c4 && !this.c4.dead) {
+        this.c4.detonate = true;
+        Audio.ui('beep');
+        this.c4 = null;
+      } else if (L.count > 0 && this.cooking === null) {
+        this.cooking = { id: L.id, t: 0, slot: 'lethal' };
+        Audio.mech('pin');
+      }
+    }
+    // Tactical (Q).
+    const T = this.tactical, td = EQUIPMENT[T.id];
+    if (input.pressed('KeyQ') && !busy && T.count > 0 && this.cooking === null) {
+      if (td.stim) {
+        T.count--;
+        player.heal(true);
+        Audio.mech('pin');
+        this.game.hud?.toast('STIM APPLIED');
+      } else {
+        this.cooking = { id: T.id, t: 0, slot: 'tactical' };
+        Audio.mech('pin');
+      }
+    }
+    if (this.cooking) {
+      const c = this.cooking;
+      const def = EQUIPMENT[c.id];
+      c.t += this.game.dt;
+      const key = c.slot === 'lethal' ? 'KeyG' : 'KeyQ';
+      const cooked = def.cook && c.t >= def.fuse - 0.05;
+      if (!input.isDown(key) || cooked || !def.cook) {
+        if (c.t < 0.12 && input.isDown(key) && !def.cook) return; // brief wind-up
+        const slot = c.slot === 'lethal' ? this.lethal : this.tactical;
+        slot.count--;
+        const cam = this.game.camera;
+        const dir = cam.getWorldDirection(new THREE.Vector3());
+        const origin = cam.getWorldPosition(new THREE.Vector3()).addScaledVector(dir, 0.4);
+        const vel = dir.multiplyScalar(17).add(new THREE.Vector3(0, 3, 0)).add(player.vel.clone().multiplyScalar(0.5));
+        const g = this.game.grenades.throw(c.id, origin, vel, player, def.cook ? c.t : 0);
+        if (def.remote) this.c4 = g;
+        this.cooking = null;
+        this.state = 'throw';
+        this.stateT = 0;
+        this.ads = 0;
+      }
+    }
+  }
+
+  _animate(dt, input, player) {
+    const w = this.weapon, s = w.stats;
+    const isPistol = s.class === 'pistol';
+    const mi = this.game.input;
+    void mi;
+    // Sway from mouse movement.
+    const md = this.game.lastMouse ?? { x: 0, y: 0 };
+    const swayAmt = lerp(1, 0.2, this.ads);
+    this.swayX = damp(this.swayX, clamp(-md.x * 0.0009, -0.06, 0.06) * swayAmt, 10, dt);
+    this.swayY = damp(this.swayY, clamp(md.y * 0.0009, -0.06, 0.06) * swayAmt, 10, dt);
+    this.kickZ = damp(this.kickZ, 0, 16, dt);
+    this.kickRot = damp(this.kickRot, 0, 14, dt);
+    this.kickSide = damp(this.kickSide, 0, 12, dt);
+
+    const a = smoothstep(this.ads);
+    const hip = isPistol ? new THREE.Vector3(0.16, -0.17, -0.38) : new THREE.Vector3(0.17, -0.19, -0.44);
+    const adsPos = new THREE.Vector3(0, -w.model.sightY, isPistol ? -0.34 : -0.3 + (s.sight === 'iron' ? 0.02 : 0));
+    const pos = hip.clone().lerp(adsPos, a);
+    const rot = new THREE.Euler(0, 0, 0);
+
+    // Bob.
+    const bobA = player.bob * (1 - a * 0.85);
+    const bp = player.bobPhase;
+    pos.x += Math.cos(bp) * 0.012 * bobA * (player.sprinting ? 2 : 1);
+    pos.y += Math.abs(Math.sin(bp)) * 0.014 * bobA * (player.sprinting ? 2 : 1);
+    // Idle breathing.
+    pos.y += Math.sin(this.time * 1.6) * 0.0025 * (1 - a * 0.7);
+    // Sprint pose.
+    this.sprintBlend = damp(this.sprintBlend ?? 0, player.sprinting ? 1 : 0, 10, dt);
+    const sb = this.sprintBlend;
+    pos.x += -0.05 * sb; pos.y += -0.06 * sb; pos.z += 0.04 * sb;
+    rot.x += -0.25 * sb; rot.y += 0.75 * sb; rot.z += 0.35 * sb;
+    // Stance tilt (prone/crouch cant).
+    // Kick.
+    pos.z += this.kickZ;
+    pos.x += this.kickSide;
+    rot.x += this.kickRot;
+    pos.x += this.swayX; pos.y += this.swayY;
+    rot.y += this.swayX * 2; rot.x += this.swayY * 1.5;
+
+    // State animations.
+    const t = this.stateT;
+    const mag = w.model.mag, home = w.model.magHome;
+    mag.position.copy(home);
+    mag.visible = true;
+    let leftOverride = null;
+    if (this.state === 'raise') {
+      const p = 1 - smoothstep(clamp(t / (isPistol ? 0.3 : 0.45), 0, 1));
+      pos.y -= p * 0.3; rot.x -= p * 0.9;
+    } else if (this.state === 'switchOut') {
+      const p = smoothstep(clamp(t / 0.28, 0, 1));
+      pos.y -= p * 0.3; rot.x -= p * 0.9;
+    } else if (this.state === 'reload' && !s.perShell) {
+      const dur = this.reloadEmpty ? s.reloadEmpty : s.reload;
+      const p = clamp(t / dur, 0, 1);
+      const tilt = Math.sin(Math.min(1, p * 1.15) * Math.PI);
+      rot.z += tilt * 0.55; rot.x += tilt * 0.18; pos.y -= tilt * 0.03; pos.x -= tilt * 0.02;
+      // Mag: drop out, gone, new one comes in.
+      if (p > 0.15 && p < 0.38) {
+        const k = (p - 0.15) / 0.23;
+        mag.position.y = home.y - k * 0.35;
+        mag.rotation.x = k * 0.4;
+      } else if (p >= 0.38 && p < 0.5) {
+        mag.visible = false;
+      } else if (p >= 0.5 && p < 0.66) {
+        const k = 1 - (p - 0.5) / 0.16;
+        mag.position.y = home.y - k * 0.2;
+        mag.rotation.x = k * 0.2;
+      } else mag.rotation.x = 0;
+      // Left hand follows the mag.
+      if (p > 0.12 && p < 0.7) {
+        leftOverride = new THREE.Vector3().copy(mag.position).add(new THREE.Vector3(0, -0.06, 0));
+      }
+      if (this.reloadEmpty && w.model.action && p > 0.78 && p < 0.92) {
+        const k = Math.sin(((p - 0.78) / 0.14) * Math.PI);
+        w.model.action.position.z = w.model.actionHome.z + k * 0.06;
+      }
+    } else if (this.state === 'reload' && s.perShell) {
+      rot.z += 0.35; rot.x += 0.15;
+      const k = (t / s.reload);
+      leftOverride = new THREE.Vector3(0, -0.08 - Math.sin(k * Math.PI) * 0.05, -0.15);
+    } else if (this.state === 'cycle') {
+      const dur = s.boltTime ?? 0.6;
+      const k = Math.sin(clamp(t / dur, 0, 1) * Math.PI);
+      if (w.mode === 'pump' && w.model.action) w.model.action.position.z = w.model.actionHome.z + k * 0.1;
+      if (w.mode === 'bolt' && w.model.action) {
+        w.model.action.rotation.z = k * 1.1;
+        w.model.action.position.z = w.model.actionHome.z + Math.max(0, k - 0.3) * 0.12;
+        if (this.ads < 0.5) { rot.z += k * 0.25; }
+      }
+      rot.x += k * 0.05;
+    } else if (this.state === 'melee') {
+      const k = Math.sin(clamp(t / 0.5, 0, 1) * Math.PI);
+      pos.x -= k * 0.12; pos.z -= k * 0.18; rot.y += k * 0.9; rot.z -= k * 0.4;
+    } else if (this.state === 'throw') {
+      const k = Math.sin(clamp(t / 0.45, 0, 1) * Math.PI);
+      pos.y -= k * 0.25; rot.x -= k * 0.6;
+    }
+    if (this.cooking) {
+      pos.y -= 0.12; rot.x -= 0.3; pos.x += 0.05;
+    }
+    if (!(this.state === 'cycle' && w.mode === 'bolt') && w.model.action && this.state !== 'reload') {
+      w.model.action.position.copy(w.model.actionHome);
+      w.model.action.rotation.z = 0;
+    }
+    // Pistol slide lock-back when empty.
+    if (isPistol && w.model.action) {
+      const back = w.ammo === 0 && this.state !== 'reload' ? 0.04 : this.game.time - this.lastFire < 0.06 ? 0.035 : 0;
+      w.model.action.position.z = w.model.actionHome.z + back;
+    }
+
+    this.rig.position.copy(pos);
+    this.rig.rotation.copy(rot);
+    w.model.group.position.set(0, 0, 0);
+
+    // Scope hides the model.
+    const scope = this.scopeInfo();
+    this.rig.visible = !scope.active;
+    this.arms.left.visible = this.arms.right.visible = !scope.active;
+
+    // Arms: elbows fixed below-outside the view, hands on grip / foregrip.
+    this.rig.updateMatrixWorld(true);
+    const grip = new THREE.Vector3(0, -0.04, 0.03).applyMatrix4(this.rig.matrixWorld);
+    const leftLocal = leftOverride ?? w.model.leftHand;
+    const lh = leftLocal.clone().applyMatrix4(this.rig.matrixWorld);
+    if (this.cooking || this.state === 'throw') lh.set(-0.15, -0.25, -0.35);
+    this.arms.place(this.arms.right, new THREE.Vector3(0.28, -0.42, 0.05), grip);
+    this.arms.place(this.arms.left, new THREE.Vector3(-0.22, -0.45, -0.05), lh);
+
+    // Muzzle flash decay.
+    if (this.flashTime > 0) {
+      this.flashTime -= dt;
+      if (this.flashTime <= 0) { this.flashSprite.visible = false; this.viewFlashLight.intensity = 0; }
+    }
+    const mw = w.model.muzzle.getWorldPosition(new THREE.Vector3());
+    this.viewFlashLight.position.copy(mw);
+
+    // Viewmodel FOV narrows slightly with ADS so optics look right.
+    const vf = lerp(54, s.scope ? 30 : 44, a);
+    if (Math.abs(this.viewCam.fov - vf) > 0.01) { this.viewCam.fov = vf; this.viewCam.updateProjectionMatrix(); }
+  }
+
+  /** Scoped sway (radians) applied to the camera; Shift holds breath. */
+  scopeOffset(dt, input, player) {
+    const sc = this.scopeInfo();
+    if (!sc.active || sc.kind === 'acog') {
+      player.breath = Math.min(1, player.breath + dt * 0.3);
+      return { x: 0, y: 0 };
+    }
+    const holding = input.anyDown('ShiftLeft', 'ShiftRight') && player.breath > 0;
+    if (holding) player.breath = Math.max(0, player.breath - dt / 4);
+    else player.breath = Math.min(1, player.breath + dt * 0.25);
+    const amp = holding ? 0.0004 : player.breath <= 0 ? 0.012 : 0.006;
+    const st = player.stance === 'prone' ? 0.35 : player.stance === 'crouch' ? 0.7 : 1;
+    const t = this.time;
+    this.scopeSway.x = damp(this.scopeSway.x, Math.sin(t * 0.9) * amp * st + Math.sin(t * 2.3) * amp * 0.3 * st, 6, dt);
+    this.scopeSway.y = damp(this.scopeSway.y, Math.sin(t * 1.3 + 1) * amp * st, 6, dt);
+    return { x: this.scopeSway.y, y: this.scopeSway.x };
+  }
+
+  /** Refill ammo; returns true if anything was added. */
+  addAmmo(fraction = 0.5, refillEquipment = true) {
+    let any = false;
+    for (const s of this.slots) {
+      const max = s.stats.reserve;
+      if (s.reserve < max) { s.reserve = Math.min(max, s.reserve + Math.ceil(max * fraction)); any = true; }
+    }
+    if (refillEquipment) {
+      const lmax = EQUIPMENT[this.lethal.id].count, tmax = EQUIPMENT[this.tactical.id].count;
+      if (this.lethal.count < lmax) { this.lethal.count++; any = true; }
+      if (this.tactical.count < tmax) { this.tactical.count++; any = true; }
+    }
+    return any;
+  }
+
+  updateLighting(env, camera) {
+    if (!env) return;
+    if (this.viewScene.environment !== env.envMap) this.viewScene.environment = env.envMap;
+    this.viewHemi.color.copy(env.hemi.color);
+    this.viewHemi.groundColor.copy(env.hemi.groundColor);
+    this.viewHemi.intensity = Math.max(0.7, env.hemi.intensity * 0.9); // keep the gun readable at night
+    this.viewSun.color.copy(env.sun.color);
+    this.viewSun.intensity = env.sun.intensity * 0.6;
+    // Sun direction into camera space.
+    const d = env.sunDir.clone().applyQuaternion(camera.quaternion.clone().invert());
+    this.viewSun.position.copy(d.multiplyScalar(5));
+  }
+
+  dispose() {
+    this.viewScene.traverse((o) => { if (o.isMesh) o.geometry.dispose(); });
+  }
+}

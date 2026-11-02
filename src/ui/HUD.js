@@ -1,318 +1,597 @@
-import { ITEMS, itemName } from '../items/ItemDatabase.js';
-import { getIcon } from '../items/IconRenderer.js';
-import { MAX_VITALS } from '../player/Vitals.js';
-import { formatClock } from '../core/MathUtils.js';
-import { renderSlot } from './SlotView.js';
+// In-game heads-up display (DOM overlay): ammo, health, crosshair, hitmarkers,
+// damage direction, minimap/radar, compass, objective markers, killfeed,
+// subtitles, prompts, scoreboard and scope overlays.
+import * as THREE from '../lib/three.js';
+import { EQUIPMENT, WEAPONS } from '../weapons/WeaponData.js';
+import { CHARACTERS } from '../campaign/Story.js';
+import { Audio } from '../core/Audio.js';
+import { Store } from '../core/Storage.js';
+import { escapeHtml, clamp } from '../core/Utils.js';
 
-// In-game overlay: vitals, hotbar, compass, clock, interaction prompt, crafting
-// queue, pickup feed, status chips, hit markers and damage feedback.
-
-const ICONS = {
-  health: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1h4v5h5v4h-5v5H6v-5H1V6h5z"/></svg>',
-  calories: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4c-2-3-7-2-7 3 0 4 3 8 7 8s7-4 7-8c0-5-5-6-7-3zm.5-1.5C9 1 10.5 0 12 .5 11 1.5 10 2.5 8.5 2.5z"/></svg>',
-  hydration: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 .5S2.5 7 2.5 10.5a5.5 5.5 0 0 0 11 0C13.5 7 8 .5 8 .5z"/></svg>',
+const SPEAKER = {
+  REYES: 'Capt. Reyes', HATCH: 'Sgt. Sorokin', TEX: 'Cpl. Hale', WATCHTOWER: 'Watchtower', HART: 'Dr. Hart',
+  VASKO: 'Anton Vasko', KESSLER: 'Kessler', COLE: 'Cole',
 };
 
-const TIPS = [
-  'Hit trees and rocks with your rock to gather wood and stone.',
-  'Press Tab for your inventory and Q to craft. A stone hatchet and pickaxe come first.',
-  'Press E to pick up hemp for cloth, then craft a building plan and a hammer.',
-  'Wolves hunt at night. Build walls and a door, and place a sleeping bag inside.',
-  'Furnaces smelt ore. Monuments hold crates, a recycler and armed scientists.',
-];
-
-const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-const PX_PER_DEG = 3;
-
 export class HUD {
-  constructor(game) {
-    this.game = game;
-    this.root = document.getElementById('hud');
-    this.root.innerHTML = `
-      <div class="hud-clock"><span class="hud-sun"></span><span class="hud-time">09:00</span><span class="hud-day">Day 1</span></div>
-      <div class="hud-compass" aria-hidden="true"><div class="compass-track"></div><div class="compass-mark"></div></div>
-      <div class="crosshair"></div>
-      <div class="hitmarker"></div>
-      <div class="interact" hidden><kbd>E</kbd><span class="interact-label"></span></div>
-      <div class="look-label" hidden></div>
-      <div class="hint" hidden></div>
-      <div class="controls-hint" hidden></div>
-      <div class="pickups"></div>
-      <div class="craft-queue"></div>
-      <div class="vitals">
-        <div class="status"></div>
-        ${['health', 'calories', 'hydration'].map((v) => `
-          <div class="vital vital-${v}">
-            <span class="vital-icon">${ICONS[v]}</span>
-            <div class="vital-bar"><i></i></div>
-            <b class="vital-value">0</b>
-          </div>`).join('')}
+  constructor(root) {
+    this.root = root;
+    root.innerHTML = `
+      <div class="hud-vignette" id="h-vig"></div>
+      <div class="hud-suppress" id="h-sup"></div>
+      <div class="hud-flash" id="h-flash"></div>
+      <div class="scope" id="h-scope" hidden>
+        <div class="scope-mask"></div>
+        <svg class="scope-reticle" viewBox="-100 -100 200 200" id="h-scope-svg"></svg>
+        <div class="scope-breath" id="h-breath"><span></span></div>
+        <div class="scope-tag" id="h-scope-tag"></div>
       </div>
-      <div class="belt">${Array.from({ length: 6 }, (_, i) => `<div class="slot belt-slot" data-key="${i + 1}"></div>`).join('')}</div>
-      <div class="ammo" hidden></div>
-      <div class="vignette"></div>
-      <div class="underwater"></div>
-      <div class="click-to-play" hidden><strong>Click to play</strong><span>Mouse look needs the pointer. Press Esc to pause.</span></div>
-      <div class="fallback-hint" hidden>Pointer lock is unavailable here: hold the right mouse button and drag to look around.</div>
-      <div class="tips" hidden></div>
+      <div class="letterbox top" id="h-lb1"></div><div class="letterbox bottom" id="h-lb2"></div>
+      <div class="location-card" id="h-loc"></div>
+      <div class="markers" id="h-markers"></div>
+      <div class="crosshair" id="h-cross"><i class="c-t"></i><i class="c-b"></i><i class="c-l"></i><i class="c-r"></i><b></b></div>
+      <div class="hitmarker" id="h-hit"><i></i><i></i><i></i><i></i></div>
+      <div class="hurt-dirs" id="h-hurt"></div>
+      <div class="compass"><div class="compass-strip" id="h-compass"></div><div class="compass-needle"></div></div>
+      <div class="mode-info" id="h-mode"></div>
+      <div class="timer" id="h-timer" hidden></div>
+      <div class="boss" id="h-boss" hidden><div class="boss-name" id="h-boss-name"></div><div class="boss-bar"><div id="h-boss-fill"></div></div></div>
+      <div class="objective" id="h-obj" hidden><div class="obj-label">OBJECTIVE</div><div class="obj-text" id="h-obj-text"></div><div class="obj-sub" id="h-obj-sub"></div></div>
+      <div class="killfeed" id="h-feed"></div>
+      <div class="big-msg" id="h-big"><div class="big-title"></div><div class="big-sub"></div></div>
+      <div class="toasts" id="h-toasts"></div>
+      <div class="prompt" id="h-prompt" hidden><div class="prompt-text"></div><div class="prompt-bar"><div></div></div></div>
+      <div class="subtitles" id="h-subs"></div>
+      <div class="callouts" id="h-callouts"></div>
+      <div class="hint" id="h-hint"></div>
+      <div class="grenade-warn" id="h-gren" hidden>✹</div>
+      <div class="cook" id="h-cook" hidden></div>
+      <div class="minimap"><canvas id="h-map" width="200" height="200"></canvas><div class="mm-north">N</div></div>
+      <div class="vitals">
+        <div class="stance" id="h-stance"></div>
+        <div class="hp"><div class="hp-label">HEALTH</div><div class="hp-bar"><div id="h-hp-fill"></div></div><div class="hp-num" id="h-hp-num">100</div></div>
+      </div>
+      <div class="weapon-panel">
+        <div class="wp-name" id="h-wname"></div>
+        <div class="wp-ammo"><span id="h-mag">30</span><small id="h-res">/ 180</small></div>
+        <div class="wp-meta"><span id="h-mode-fire"></span><span class="eq" id="h-lethal"></span><span class="eq" id="h-tactical"></span></div>
+        <div class="wp-reload" id="h-reload"></div>
+      </div>
+      <div class="death-card" id="h-death" hidden><div class="dc-title"></div><div class="dc-sub"></div><div class="dc-timer"></div></div>
+      <div class="scoreboard" id="h-score" hidden></div>
+      <div class="fps" id="h-fps" hidden></div>
     `;
-    const q = (s) => this.root.querySelector(s);
+    const $ = (id) => root.querySelector(id);
     this.el = {
-      time: q('.hud-time'),
-      day: q('.hud-day'),
-      sun: q('.hud-sun'),
-      compassTrack: q('.compass-track'),
-      crosshair: q('.crosshair'),
-      hitmarker: q('.hitmarker'),
-      interact: q('.interact'),
-      interactLabel: q('.interact-label'),
-      interactKey: q('.interact kbd'),
-      look: q('.look-label'),
-      hint: q('.hint'),
-      controls: q('.controls-hint'),
-      pickups: q('.pickups'),
-      queue: q('.craft-queue'),
-      status: q('.status'),
-      belt: [...this.root.querySelectorAll('.belt-slot')],
-      ammo: q('.ammo'),
-      vignette: q('.vignette'),
-      underwater: q('.underwater'),
-      clickToPlay: q('.click-to-play'),
-      fallback: q('.fallback-hint'),
-      tips: q('.tips'),
+      vig: $('#h-vig'), sup: $('#h-sup'), flash: $('#h-flash'), scope: $('#h-scope'), scopeSvg: $('#h-scope-svg'), breath: $('#h-breath'), scopeTag: $('#h-scope-tag'),
+      lb1: $('#h-lb1'), lb2: $('#h-lb2'), loc: $('#h-loc'), markers: $('#h-markers'), cross: $('#h-cross'), hit: $('#h-hit'), hurt: $('#h-hurt'),
+      compass: $('#h-compass'), mode: $('#h-mode'), timer: $('#h-timer'), boss: $('#h-boss'), bossName: $('#h-boss-name'), bossFill: $('#h-boss-fill'),
+      obj: $('#h-obj'), objText: $('#h-obj-text'), objSub: $('#h-obj-sub'), feed: $('#h-feed'), big: $('#h-big'), toasts: $('#h-toasts'),
+      prompt: $('#h-prompt'), subs: $('#h-subs'), callouts: $('#h-callouts'), hint: $('#h-hint'), gren: $('#h-gren'), cook: $('#h-cook'),
+      map: $('#h-map'), stance: $('#h-stance'), hpFill: $('#h-hp-fill'), hpNum: $('#h-hp-num'), wname: $('#h-wname'), mag: $('#h-mag'), res: $('#h-res'),
+      fire: $('#h-mode-fire'), lethal: $('#h-lethal'), tactical: $('#h-tactical'), reload: $('#h-reload'), death: $('#h-death'), score: $('#h-score'), fps: $('#h-fps'),
     };
-    this.vitals = {};
-    for (const v of ['health', 'calories', 'hydration']) {
-      this.vitals[v] = { fill: q(`.vital-${v} i`), value: q(`.vital-${v} .vital-value`), row: q(`.vital-${v}`) };
-    }
-    this.buildCompass();
-    this.hintTimer = 0;
-    this.hitTimer = 0;
-    this.damageLevel = 0;
-    this.pickupRows = new Map();
-    this.tipIndex = 0;
-    this.tipTimer = 0;
-    this.tipsActive = false;
-    this.cache = {};
-    game.events.on('itemGained', ({ id, qty }) => this.pickup(id, qty));
-    game.events.on('craftQueueChanged', () => this.renderQueue());
+    this.mapCtx = this.el.map.getContext('2d');
+    this._buildCompass();
+    this.markerEls = [];
+    this.tagEls = [];
+    this.subQueue = [];
+    this.subT = 0;
+    this.hitT = 0;
+    this.frame = 0;
+    this.fpsAcc = 0;
+    this.fpsN = 0;
+    this.reset();
   }
 
-  buildCompass() {
-    let html = '';
+  reset() {
+    this.subQueue = [];
+    this.el.subs.innerHTML = '';
+    this.el.feed.innerHTML = '';
+    this.el.toasts.innerHTML = '';
+    this.el.obj.hidden = true;
+    this.el.timer.hidden = true;
+    this.el.boss.hidden = true;
+    this.el.death.hidden = true;
+    this.el.prompt.hidden = true;
+    this.el.score.hidden = true;
+    this.el.mode.innerHTML = '';
+    this.el.hint.textContent = '';
+    this.el.loc.innerHTML = '';
+    this.el.big.classList.remove('show');
+    this.letterbox(false);
+    this.mapImage = null;
+    this.reticleKind = null;
+  }
+
+  _buildCompass() {
+    const marks = [];
+    const labels = { 0: 'N', 45: 'NE', 90: 'E', 135: 'SE', 180: 'S', 225: 'SW', 270: 'W', 315: 'NW' };
     for (let rep = -1; rep <= 1; rep++) {
-      for (let deg = 0; deg < 360; deg += 15) {
-        const x = (deg + rep * 360) * PX_PER_DEG;
-        const major = deg % 45 === 0;
-        html += `<span class="tick${major ? ' major' : ''}" style="left:${x}px">${major ? COMPASS[deg / 45] : ''}</span>`;
+      for (let d = 0; d < 360; d += 15) {
+        const deg = d + rep * 360;
+        const lab = labels[d];
+        marks.push(`<span class="cm ${lab ? 'major' : ''}" style="left:${deg * 4}px">${lab ?? (d % 45 === 0 ? '' : d)}</span>`);
       }
     }
-    this.el.compassTrack.innerHTML = html;
+    this.el.compass.innerHTML = marks.join('') + '<div class="cm-obj" id="h-cobj"></div>';
+    this.compassObj = this.el.compass.querySelector('#h-cobj');
   }
 
-  show() {
-    this.root.hidden = false;
-    this.renderQueue();
+  // ---------- event API ----------
+  toast(text, kind = '') {
+    const t = document.createElement('div');
+    t.className = `toast ${kind}`;
+    t.textContent = text;
+    this.el.toasts.appendChild(t);
+    while (this.el.toasts.children.length > 4) this.el.toasts.firstChild.remove();
+    setTimeout(() => t.remove(), 1800);
   }
 
-  hide() {
-    this.root.hidden = true;
-  }
-
-  startTips() {
-    this.tipsActive = true;
-    this.tipIndex = 0;
-    this.tipTimer = 0;
-  }
-
-  toggleTips() {
-    this.tipsActive = !this.tipsActive;
-    this.tipTimer = 0;
-    if (!this.tipsActive) this.el.tips.hidden = true;
-  }
-
-  flashHint(text, seconds = 2.5) {
+  hint(text, seconds = 5) {
     this.el.hint.textContent = text;
-    this.el.hint.hidden = false;
-    this.hintTimer = seconds;
+    this.el.hint.classList.add('show');
+    clearTimeout(this._hintT);
+    this._hintT = setTimeout(() => this.el.hint.classList.remove('show'), seconds * 1000);
   }
 
-  hitmarker(killed = false, headshot = false) {
-    const h = this.el.hitmarker;
+  hitmarker(kill, head) {
+    const h = this.el.hit;
     h.classList.remove('show', 'kill', 'head');
     void h.offsetWidth;
     h.classList.add('show');
-    if (killed) h.classList.add('kill');
-    if (headshot) h.classList.add('head');
-    this.game.audio.play('hitmarker');
+    if (kill) h.classList.add('kill');
+    if (head) h.classList.add('head');
   }
 
-  damage(amount) {
-    this.damageLevel = Math.min(1, this.damageLevel + amount / 30 + 0.15);
+  killfeed(killer, victim, weapon, head, killerIsPlayer, victimIsPlayer, killerFriendly) {
+    const row = document.createElement('div');
+    row.className = 'kf' + (killerIsPlayer ? ' mine' : '') + (victimIsPlayer ? ' me-died' : '');
+    row.innerHTML = `<span class="${killerFriendly ? 'fr' : 'en'}">${escapeHtml(killer)}</span> <em>[${escapeHtml(weapon)}${head ? ' ⌖' : ''}]</em> <span class="${killerFriendly ? 'en' : 'fr'}">${escapeHtml(victim)}</span>`;
+    this.el.feed.prepend(row);
+    while (this.el.feed.children.length > 5) this.el.feed.lastChild.remove();
+    setTimeout(() => row.classList.add('fade'), 5000);
+    setTimeout(() => row.remove(), 6000);
   }
 
-  pickup(id, qty) {
-    const now = performance.now();
-    let row = this.pickupRows.get(id);
-    if (row && now - row.time < 2500) {
-      row.qty += qty;
-    } else {
-      if (row) row.el.remove();
-      const el = document.createElement('div');
-      el.className = 'pickup';
-      el.innerHTML = `<img src="${getIcon(id)}" alt=""><span class="pickup-qty"></span><span class="pickup-name">${itemName(id)}</span>`;
-      this.el.pickups.prepend(el);
-      row = { el, qty, time: now };
-      this.pickupRows.set(id, row);
-      while (this.el.pickups.children.length > 6) this.el.pickups.lastElementChild.remove();
+  prompt(html, progress = 0) {
+    const p = this.el.prompt;
+    if (!html) { p.hidden = true; return; }
+    p.hidden = false;
+    if (p._html !== html) { p.querySelector('.prompt-text').innerHTML = html; p._html = html; }
+    p.querySelector('.prompt-bar').style.visibility = progress > 0 ? 'visible' : 'hidden';
+    p.querySelector('.prompt-bar div').style.width = `${clamp(progress, 0, 1) * 100}%`;
+  }
+
+  grenadeWarning(g) {
+    this.grenade = g;
+  }
+
+  callout(name, text, friendly) {
+    const c = document.createElement('div');
+    c.className = `callout ${friendly ? 'fr' : 'en'}`;
+    c.innerHTML = `<b>${escapeHtml(name)}:</b> ${escapeHtml(text)}`;
+    this.el.callouts.appendChild(c);
+    setTimeout(() => c.remove(), 2200);
+  }
+
+  letterbox(on) {
+    this.el.lb1.classList.toggle('on', on);
+    this.el.lb2.classList.toggle('on', on);
+    this.root.classList.toggle('cinematic', on);
+  }
+
+  locationCard(lines) {
+    const el = this.el.loc;
+    el.innerHTML = lines.map((l, i) => `<div class="loc-line l${i}"></div>`).join('');
+    const divs = [...el.children];
+    let li = 0, ci = 0;
+    clearInterval(this._locT);
+    this._locT = setInterval(() => {
+      if (li >= lines.length) {
+        clearInterval(this._locT);
+        setTimeout(() => el.classList.add('fade'), 3500);
+        return;
+      }
+      ci++;
+      divs[li].textContent = lines[li].slice(0, ci);
+      if (ci % 2 === 0) Audio.ui('type');
+      if (ci >= lines[li].length) { li++; ci = 0; }
+    }, 38);
+    el.classList.remove('fade');
+  }
+
+  say(lines) {
+    if (!Store.settings.subtitles && !lines.length) return;
+    for (const l of lines) this.subQueue.push(l);
+  }
+
+  objective(text) {
+    this.el.obj.hidden = false;
+    this.el.objText.textContent = text;
+    this.el.obj.classList.remove('done');
+    this.el.obj.classList.remove('flash');
+    void this.el.obj.offsetWidth;
+    this.el.obj.classList.add('flash');
+    this.toast('NEW OBJECTIVE', 'obj');
+  }
+
+  objectiveDone(text) {
+    this.toast(`✔ ${text.toUpperCase()}`, 'obj');
+  }
+
+  objectiveSub(sub) {
+    if (this.el.objSub._v !== sub) { this.el.objSub.textContent = sub; this.el.objSub._v = sub; }
+  }
+
+  timer(text, urgent) {
+    this.el.timer.hidden = false;
+    this.el.timer.textContent = text;
+    this.el.timer.classList.toggle('urgent', !!urgent);
+  }
+
+  bossBar(name, frac = 1) {
+    if (!name) { this.el.boss.hidden = true; return; }
+    this.el.boss.hidden = false;
+    this.el.bossName.textContent = name;
+    this.el.bossFill.style.width = `${clamp(frac, 0, 1) * 100}%`;
+  }
+
+  bigMessage(title, sub = '') {
+    const b = this.el.big;
+    b.querySelector('.big-title').textContent = title;
+    b.querySelector('.big-sub').textContent = sub;
+    b.classList.remove('show');
+    void b.offsetWidth;
+    b.classList.add('show');
+  }
+
+  deathCard(title, sub = '') {
+    const d = this.el.death;
+    if (!title) { d.hidden = true; return; }
+    d.hidden = false;
+    d.querySelector('.dc-title').textContent = title;
+    d.querySelector('.dc-sub').textContent = sub ?? '';
+    d.querySelector('.dc-timer').textContent = '';
+  }
+
+  deathTimer(n) {
+    this.el.death.querySelector('.dc-timer').textContent = n > 0 ? `Respawning in ${n}` : '';
+  }
+
+  // ---------- per-frame ----------
+  update(game, dt) {
+    this.frame++;
+    const p = game.player;
+    const w = game.weapons;
+    const s = w.stats;
+    const cam = game.camera;
+    const W = window.innerWidth, H = window.innerHeight;
+
+    // FPS.
+    if (Store.settings.showFps) {
+      this.fpsAcc += dt; this.fpsN++;
+      if (this.fpsAcc > 0.5) { this.el.fps.hidden = false; this.el.fps.textContent = `${Math.round(this.fpsN / this.fpsAcc)} FPS`; this.fpsAcc = 0; this.fpsN = 0; }
+    } else this.el.fps.hidden = true;
+
+    // Weapon panel.
+    const wi = w.weapon;
+    if (this.el.wname._v !== wi.stats.name) { this.el.wname.textContent = wi.stats.name.toUpperCase(); this.el.wname._v = wi.stats.name; }
+    this.el.mag.textContent = wi.ammo;
+    this.el.mag.classList.toggle('low', wi.ammo <= Math.ceil(s.mag * 0.25));
+    this.el.res.textContent = `/ ${wi.reserve}`;
+    this.el.fire.textContent = wi.mode.toUpperCase();
+    const L = w.lethal, T = w.tactical;
+    this.el.lethal.textContent = `G ${EQUIPMENT[L.id].name.split(' ').pop()} ×${L.count}`;
+    this.el.tactical.textContent = `Q ${EQUIPMENT[T.id].name.split(' ').pop()} ×${T.count}`;
+    let rl = '';
+    if (w.isReloading()) rl = 'RELOADING';
+    else if (wi.ammo === 0 && wi.reserve === 0) rl = 'NO AMMO';
+    else if (wi.ammo <= Math.ceil(s.mag * 0.25)) rl = '[R] RELOAD';
+    this.el.reload.textContent = rl;
+
+    // Vitals.
+    const hp = p.health / p.maxHealth;
+    this.el.hpFill.style.width = `${hp * 100}%`;
+    this.el.hpFill.className = hp < 0.3 ? 'crit' : hp < 0.6 ? 'warn' : '';
+    this.el.hpNum.textContent = Math.ceil(p.health);
+    this.el.stance.className = `stance s-${p.stance}${p.sprinting ? ' sprint' : ''}`;
+    this.el.stance.textContent = p.stance === 'stand' ? (p.sprinting ? 'SPRINT' : 'STAND') : p.stance.toUpperCase();
+    // Damage vignette + heartbeat.
+    const dmg = clamp(1 - hp, 0, 1);
+    this.el.vig.style.opacity = p.alive ? Math.pow(dmg, 1.3) * 1.1 : 0.9;
+    if (hp < 0.35 && p.alive) {
+      this.beat = (this.beat ?? 0) - dt;
+      if (this.beat <= 0) { this.beat = 0.9; Audio.heartbeat(); }
     }
-    row.time = now;
-    row.el.querySelector('.pickup-qty').textContent = `+${row.qty}`;
-    row.el.classList.remove('fade');
-  }
+    this.el.sup.style.opacity = clamp(p.suppressed ?? 0, 0, 1) * 0.6;
+    const fl = p.flashed > 0 ? clamp(p.flashed / 1.5, 0, 1) : 0;
+    this.el.flash.style.opacity = fl;
 
-  renderQueue() {
-    const crafting = this.game.crafting;
-    if (!crafting) return;
-    const q = crafting.queue;
-    if (!q.length) {
-      this.el.queue.innerHTML = '';
-      return;
+    // Hurt direction arcs.
+    if (this.frame % 2 === 0) {
+      const html = p.hurtDirs.map((d) => {
+        const rel = d.ang - (Math.atan2(-Math.sin(p.yaw), -Math.cos(p.yaw)));
+        return `<div class="hd" style="transform:rotate(${-rel}rad);opacity:${clamp(d.t, 0, 1)}"></div>`;
+      }).join('');
+      this.el.hurt.innerHTML = html;
     }
-    this.el.queue.innerHTML = q.map((job, i) => `
-      <div class="queue-item${i === 0 ? ' active' : ''}">
-        <img src="${getIcon(job.recipe.out)}" alt="">
-        <span class="queue-count">${job.remaining * job.recipe.amount}</span>
-        ${i === 0 ? '<span class="queue-time"></span>' : ''}
-      </div>`).join('');
-    this.queueTime = this.el.queue.querySelector('.queue-time');
+
+    // Crosshair.
+    const scope = w.scopeInfo();
+    const showCross = Store.settings.crosshair && p.alive && !game.cinematic && !p.sprinting && w.ads < 0.5 && w.state !== 'reload';
+    this.el.cross.style.opacity = showCross ? 1 - w.ads * 2 : 0;
+    if (showCross) {
+      const spreadPx = Math.tan((w.spreadDeg() * Math.PI) / 360) / Math.tan((cam.fov * Math.PI) / 360) * (H / 2);
+      const g = Math.max(4, spreadPx);
+      this.el.cross.style.setProperty('--gap', `${g}px`);
+    }
+    // Scope overlay.
+    this.el.scope.hidden = !scope.active;
+    if (scope.active) {
+      if (this.reticleKind !== scope.kind) {
+        this.reticleKind = scope.kind;
+        this.el.scope.className = `scope k-${scope.kind}`;
+        this.el.scopeSvg.innerHTML = RETICLES[scope.kind];
+        this.el.scopeTag.textContent = scope.kind === 'thermal' ? 'THERMAL  ·  WHT-HOT' : scope.kind === 'sniper' ? '8×' : '';
+      }
+      this.el.breath.style.display = scope.kind === 'acog' ? 'none' : '';
+      this.el.breath.firstElementChild.style.width = `${p.breath * 100}%`;
+    }
+    game.app.setThermal(scope.active && scope.kind === 'thermal');
+
+    // Hitmarker decay handled by CSS.
+    // Grenade warning.
+    const gw = this.grenade;
+    if (gw && !gw.dead && p.pos.distanceTo(gw.pos) < gw.def.radius + 2) {
+      this.el.gren.hidden = false;
+      const v = gw.pos.clone().project(cam);
+      const behind = v.z > 1;
+      let x = (v.x * 0.5 + 0.5) * W, y = (-v.y * 0.5 + 0.5) * H;
+      if (behind) { x = W - x; y = H * 0.8; }
+      this.el.gren.style.transform = `translate(${clamp(x, 40, W - 40)}px, ${clamp(y, 40, H - 40)}px)`;
+    } else { this.el.gren.hidden = true; this.grenade = null; }
+
+    // Cook timer.
+    if (w.cooking && EQUIPMENT[w.cooking.id].cook) {
+      this.el.cook.hidden = false;
+      this.el.cook.textContent = `COOKING  ${(EQUIPMENT[w.cooking.id].fuse - w.cooking.t).toFixed(1)}s`;
+    } else this.el.cook.hidden = true;
+
+    // Compass.
+    const heading = ((-p.yaw * 180) / Math.PI) % 360;
+    const hd = (heading + 360) % 360;
+    this.el.compass.style.transform = `translateX(${-hd * 4}px)`;
+
+    // Markers & nametags.
+    this._markers(game, cam, W, H, hd);
+    // Mode info.
+    if (this.frame % 6 === 0) this._modeInfo(game);
+    // Minimap.
+    if (this.frame % 2 === 0) this._minimap(game);
+    // Subtitles.
+    this._subtitles(dt);
+    // Scoreboard.
+    const tab = game.input.isDown('Tab') || (!p.alive && game.mode.records);
+    this.el.score.hidden = !tab || !game.mode.records;
+    if (!this.el.score.hidden && this.frame % 10 === 0) this._scoreboard(game);
   }
 
-  setClickToPlay(visible) {
-    this.el.clickToPlay.hidden = !visible;
-  }
-
-  setText(key, el, text) {
-    if (this.cache[key] === text) return;
-    this.cache[key] = text;
-    el.textContent = text;
-  }
-
-  update(dt) {
-    const game = this.game;
-    const player = game.player;
-    const v = player.vitals;
-    for (const key of ['health', 'calories', 'hydration']) {
-      const value = v[key];
-      const pct = (value / MAX_VITALS[key]) * 100;
-      const row = this.vitals[key];
-      const rounded = Math.ceil(value);
-      if (this.cache[key] !== rounded) {
-        this.cache[key] = rounded;
-        row.value.textContent = rounded;
-        row.fill.style.width = `${pct}%`;
-        row.row.classList.toggle('low', pct < 20);
+  _subtitles(dt) {
+    if (!this.curSub && this.subQueue.length) {
+      const l = this.subQueue.shift();
+      this.curSub = l;
+      this.subT = 1.6 + l.text.length * 0.055;
+      const who = SPEAKER[l.who] ?? l.who;
+      const fr = !['VASKO', 'KESSLER', 'HART'].includes(l.who);
+      this.el.subs.innerHTML = Store.settings.subtitles ? `<div class="sub"><b class="${fr ? 'fr' : 'en'}">${escapeHtml(who)}:</b> ${escapeHtml(l.text)}</div>` : '';
+      Audio.ui('radio');
+    }
+    if (this.curSub) {
+      this.subT -= dt;
+      if (this.subT <= 0) {
+        this.curSub = null;
+        this.el.subs.innerHTML = '';
       }
     }
+  }
 
-    const statuses = [];
-    if (v.bleeding > 0) statuses.push(['bleed', 'Bleeding']);
-    if (v.freezing) statuses.push(['cold', 'Freezing']);
-    else if (v.cold) statuses.push(['cold', 'Cold']);
-    if (v.comfort > 2) statuses.push(['warm', 'Warm']);
-    if (v.wet > 0) statuses.push(['wet', 'Wet']);
-    if (v.calories <= 0) statuses.push(['bleed', 'Starving']);
-    if (v.hydration <= 0) statuses.push(['bleed', 'Dehydrated']);
-    if (v.healPool > 0) statuses.push(['heal', 'Healing']);
-    const wb = game.deployables.workbenchLevelAt(player.position);
-    if (wb) statuses.push(['craft', `Workbench ${wb}`]);
-    const statusKey = statuses.map((s) => s[1]).join('|') + Math.round(v.temperature);
-    if (this.cache.status !== statusKey) {
-      this.cache.status = statusKey;
-      this.el.status.innerHTML = `<span class="chip chip-temp">${Math.round(v.temperature)}°C</span>` + statuses.map(([cls, text]) => `<span class="chip chip-${cls}">${text}</span>`).join('');
+  _markers(game, cam, W, H, heading) {
+    const list = [...(game.mode.markers ?? [])];
+    // Friendly name tags.
+    const tags = [];
+    for (const a of game.actors) {
+      if (!a.alive || a.team !== game.player.team) continue;
+      const d = a.pos.distanceTo(game.player.pos);
+      if (d > 40) continue;
+      tags.push({ pos: a.pos.clone().setY(a.pos.y + 2.05), label: a.name, kind: 'tag', d });
     }
-
-    const belt = player.inventory.belt;
-    this.el.belt.forEach((el, i) => {
-      renderSlot(el, belt.get(i));
-      el.classList.toggle('active', i === player.activeSlot);
-    });
-
-    const item = player.activeItem;
-    const def = item ? ITEMS[item.id] : null;
-    let ammoText = '';
-    if (def?.type === 'gun') ammoText = game.itemActions.reloading > 0 ? 'Reloading…' : `${item.ammo} / ${player.inventory.count(def.gun.ammo)}`;
-    else if (def?.type === 'bow') ammoText = `${player.inventory.count(def.bow.ammo)} arrows`;
-    this.setText('ammo', this.el.ammo, ammoText);
-    this.el.ammo.hidden = !ammoText;
-
-    const sky = game.sky;
-    this.setText('time', this.el.time, formatClock(sky.time));
-    this.setText('day', this.el.day, `Day ${sky.day}`);
-    this.el.sun.classList.toggle('night', sky.isNight());
-
-    const heading = ((-player.yaw * 180) / Math.PI % 360 + 360) % 360;
-    this.el.compassTrack.style.transform = `translateX(${-heading * PX_PER_DEG}px)`;
-
-    const inter = game.interaction.current;
-    if (inter && !player.dead) {
-      this.el.interact.hidden = false;
-      this.el.interactKey.hidden = !inter.action;
-      this.setText('inter', this.el.interactLabel, inter.sub ? `${inter.label} · ${inter.sub}` : inter.label);
-    } else {
-      this.el.interact.hidden = true;
+    const all = list.concat(tags);
+    while (this.markerEls.length < all.length) {
+      const e = document.createElement('div');
+      e.className = 'mk';
+      this.el.markers.appendChild(e);
+      this.markerEls.push(e);
     }
-    const look = !inter ? game.interaction.describe : '';
-    this.el.look.hidden = !look;
-    if (look) this.setText('look', this.el.look, look);
-
-    const placement = game.building.placement ?? game.deployables.placement;
-    const controls = game.itemActions.controlsHint();
-    const placeError = placement?.error && (game.building.ghost.visible || game.deployables.activeGhost?.visible) ? placement.error : '';
-    const controlsText = [placeError, controls].filter(Boolean).join(' · ');
-    this.el.controls.hidden = !controlsText;
-    this.el.controls.classList.toggle('error', Boolean(placeError));
-    this.setText('controls', this.el.controls, controlsText);
-
-    if (this.hintTimer > 0) {
-      this.hintTimer -= dt;
-      if (this.hintTimer <= 0) this.el.hint.hidden = true;
-    }
-
-    this.el.crosshair.classList.toggle('hidden', game.itemActions.aiming && def?.type === 'gun');
-    this.damageLevel = Math.max(0, this.damageLevel - dt * 0.9);
-    const lowHealth = v.health < 25 ? 0.25 + Math.sin(performance.now() * 0.006) * 0.1 : 0;
-    this.el.vignette.style.opacity = Math.max(this.damageLevel, lowHealth).toFixed(3);
-    this.el.underwater.style.opacity = player.underwater ? '1' : '0';
-
-    if (this.queueTime && game.crafting.queue[0]) {
-      this.setText('qt', this.queueTime, `${Math.ceil(game.crafting.queue[0].timeLeft)}s`);
-    }
-
-    const now = performance.now();
-    for (const [id, row] of this.pickupRows) {
-      const age = now - row.time;
-      if (age > 3000 && !row.el.classList.contains('fade')) row.el.classList.add('fade');
-      if (age > 3600) {
-        row.el.remove();
-        this.pickupRows.delete(id);
+    const v = new THREE.Vector3();
+    const camPos = cam.getWorldPosition(new THREE.Vector3());
+    let compassSet = false;
+    for (let i = 0; i < this.markerEls.length; i++) {
+      const e = this.markerEls[i];
+      const m = all[i];
+      if (!m || game.cinematic) { e.style.display = 'none'; continue; }
+      v.copy(m.pos).project(cam);
+      const behind = v.z > 1;
+      const dist = Math.round(camPos.distanceTo(m.pos));
+      let x = (v.x * 0.5 + 0.5) * W, y = (-v.y * 0.5 + 0.5) * H;
+      if (m.kind === 'tag') {
+        if (behind || x < 0 || x > W || y < 0 || y > H) { e.style.display = 'none'; continue; }
+        e.style.display = '';
+        e.className = 'mk tag';
+        const html = escapeHtml(m.label);
+        if (e._h !== html) { e.innerHTML = html; e._h = html; }
+        e.style.transform = `translate(${x}px, ${y}px)`;
+        e.style.opacity = clamp(1 - m.d / 40, 0.3, 1);
+        continue;
+      }
+      if (behind) { x = W - x; y = H - 60; }
+      const edge = x < 30 || x > W - 30 || y < 60 || y > H - 60 || behind;
+      x = clamp(x, 30, W - 30); y = clamp(y, 70, H - 70);
+      e.style.display = '';
+      let cls = `mk m-${m.kind}`;
+      if (m.kind === 'flag') cls += m.contested ? ' contested' : m.owner === 'a' ? ' own' : m.owner === 'b' ? ' foe' : ' neutral';
+      if (edge) cls += ' edge';
+      e.className = cls;
+      const label = m.kind === 'flag' ? m.label : m.label;
+      const html = `<div class="mk-icon">${m.kind === 'flag' ? escapeHtml(m.label) : m.kind === 'enemy' ? '▼' : '◆'}</div>${label && m.kind !== 'flag' ? `<div class="mk-label">${escapeHtml(label)}</div>` : ''}<div class="mk-dist">${dist}m</div>`;
+      if (e._h !== html) { e.innerHTML = html; e._h = html; }
+      e.style.transform = `translate(${x}px, ${y}px)`;
+      e.style.opacity = '';
+      // First objective marker on the compass.
+      if (!compassSet && m.kind !== 'enemy') {
+        compassSet = true;
+        const ang = Math.atan2(m.pos.x - game.player.pos.x, -(m.pos.z - game.player.pos.z)) * 180 / Math.PI;
+        const a = (ang + 360) % 360;
+        let rel = a - heading;
+        if (rel > 180) rel -= 360;
+        if (rel < -180) rel += 360;
+        this.compassObj.style.display = '';
+        this.compassObj.style.left = `${(heading + rel) * 4}px`;
       }
     }
+    if (!compassSet) this.compassObj.style.display = 'none';
+  }
 
-    if (this.tipsActive) {
-      this.tipTimer -= dt;
-      if (this.tipTimer <= 0) {
-        if (this.tipIndex >= TIPS.length) {
-          this.tipsActive = false;
-          this.el.tips.hidden = true;
-        } else {
-          this.el.tips.innerHTML = `<span class="tips-label">Survival tip ${this.tipIndex + 1}/${TIPS.length}</span>${TIPS[this.tipIndex]}<span class="tips-key">H hides tips</span>`;
-          this.el.tips.hidden = false;
-          this.tipIndex++;
-          this.tipTimer = 14;
-        }
+  _modeInfo(game) {
+    const info = game.mode.hudInfo?.();
+    if (!info) { this.el.mode.innerHTML = ''; return; }
+    let html = '';
+    if (info.kind === 'teams' || info.kind === 'dom') {
+      html = `<div class="score-row"><span class="team fr">${info.names.a}</span><b class="fr">${info.a}</b><span class="tm">${info.time}</span><b class="en">${info.b}</b><span class="team en">${info.names.b}</span></div>`;
+      if (info.kind === 'dom') {
+        html += `<div class="flags">${info.flags.map((f) => `<span class="flag ${f.contested ? 'contested' : f.owner === 'a' ? 'own' : f.owner === 'b' ? 'foe' : 'neutral'}">${f.label}<i style="width:${Math.abs(f.progress) * 100}%" class="${f.progress >= 0 ? 'pa' : 'pb'}"></i></span>`).join('')}</div>`;
+      } else html += `<div class="limit">FIRST TO ${info.limit}</div>`;
+    } else if (info.kind === 'ffa') {
+      html = `<div class="score-row"><span class="team fr">YOU</span><b class="fr">${info.you}</b><span class="tm">${info.time}</span><b class="en">${info.leader}</b><span class="team en">${escapeHtml(info.leaderName)}</span></div><div class="limit">PLACE #${info.place}  ·  FIRST TO ${info.limit}</div>`;
+    } else if (info.kind === 'survival') {
+      html = `<div class="score-row"><span class="team fr">WAVE</span><b class="fr">${info.wave}</b><span class="tm">${info.score}</span><b class="en">${info.left}</b><span class="team en">HOSTILES</span></div>${info.intermission ? `<div class="limit">NEXT WAVE IN ${info.intermission}</div>` : ''}`;
+    }
+    if (this.el.mode._h !== html) { this.el.mode.innerHTML = html; this.el.mode._h = html; }
+  }
+
+  _minimap(game) {
+    const ctx = this.mapCtx;
+    const S = 200, scale = 2.2; // px per metre
+    const p = game.player;
+    const w = game.world;
+    if (!this.mapImage) {
+      // Pre-render the nav grid as a top-down map.
+      const n = w.nav;
+      const c = document.createElement('canvas');
+      c.width = n.w; c.height = n.h;
+      const g = c.getContext('2d');
+      const img = g.createImageData(n.w, n.h);
+      for (let i = 0; i < n.w * n.h; i++) {
+        const b = n.blocked[i];
+        const v = b ? 150 : 40;
+        img.data[i * 4] = v * 0.85; img.data[i * 4 + 1] = v; img.data[i * 4 + 2] = v * 0.85; img.data[i * 4 + 3] = b ? 230 : 140;
+      }
+      g.putImageData(img, 0, 0);
+      this.mapImage = c;
+    }
+    ctx.clearRect(0, 0, S, S);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(8,14,10,0.75)';
+    ctx.fillRect(0, 0, S, S);
+    ctx.translate(S / 2, S / 2);
+    ctx.rotate(p.yaw);
+    ctx.scale(scale, scale);
+    ctx.translate(-p.pos.x, -p.pos.z);
+    const n = w.nav;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(this.mapImage, n.minX, n.minZ, n.w * n.size, n.h * n.size);
+    const now = game.time;
+    const dot = (x, z, col, r = 2.2) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, z, r / scale * 1.4, 0, Math.PI * 2); ctx.fill(); };
+    for (const a of game.actors) {
+      if (!a.alive) continue;
+      if (a.team === p.team) dot(a.pos.x, a.pos.z, '#4ec0ff');
+      else if (now - a.lastShotTime < 1.6 || (a.targetVisible && a.target === p && now - a.lastShotTime < 4)) dot(a.pos.x, a.pos.z, '#ff4a3a');
+    }
+    for (const m of game.mode.markers ?? []) {
+      if (m.kind === 'flag') {
+        ctx.fillStyle = m.contested ? '#ffd040' : m.owner === 'a' ? '#4ec0ff' : m.owner === 'b' ? '#ff4a3a' : '#dddddd';
+        ctx.save();
+        ctx.translate(m.pos.x, m.pos.z);
+        ctx.rotate(-p.yaw);
+        ctx.font = `bold ${10 / scale}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(m.label, 0, 0);
+        ctx.restore();
+      } else if (m.kind !== 'tag') {
+        ctx.fillStyle = m.kind === 'enemy' ? '#ff4a3a' : '#ffd040';
+        ctx.save();
+        ctx.translate(m.pos.x, m.pos.z);
+        ctx.rotate(Math.PI / 4);
+        const r = 4 / scale;
+        ctx.fillRect(-r, -r, r * 2, r * 2);
+        ctx.restore();
       }
     }
-    this.el.fallback.hidden = !game.input.lockUnavailable;
+    ctx.restore();
+    // Player arrow (always up).
+    ctx.fillStyle = '#c8ff8a';
+    ctx.beginPath();
+    ctx.moveTo(S / 2, S / 2 - 7);
+    ctx.lineTo(S / 2 - 5, S / 2 + 5);
+    ctx.lineTo(S / 2, S / 2 + 2);
+    ctx.lineTo(S / 2 + 5, S / 2 + 5);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(160,220,140,0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  _scoreboard(game) {
+    const rows = game.mode.scoreboard();
+    const teams = game.mode.type === 'ffa' ? [null] : ['a', 'b'];
+    let html = `<div class="sb-title">${game.mode.type === 'survival' ? 'SURVIVAL' : game.mapInfo.name.toUpperCase()}</div>`;
+    for (const t of teams) {
+      const list = t ? rows.filter((r) => r.team === t) : rows;
+      if (t) html += `<div class="sb-team ${t === 'a' ? 'fr' : 'en'}">${t === 'a' ? 'TASK FORCE ORION' : 'MERIDIAN'}</div>`;
+      html += '<table><tr><th>#</th><th>OPERATOR</th><th>SCORE</th><th>K</th><th>D</th><th>K/D</th></tr>';
+      list.forEach((r, i) => {
+        html += `<tr class="${r.isPlayer ? 'me' : ''}"><td>${i + 1}</td><td>${escapeHtml(r.name)}${r.weapon ? ` <small>${escapeHtml(WEAPONS[r.weapon]?.name ?? '')}</small>` : ''}</td><td>${r.score}</td><td>${r.kills}</td><td>${r.deaths}</td><td>${(r.kills / Math.max(1, r.deaths)).toFixed(2)}</td></tr>`;
+      });
+      html += '</table>';
+    }
+    this.el.score.innerHTML = html;
   }
 }
+
+const RETICLES = {
+  sniper: `
+    <line x1="-100" y1="0" x2="-6" y2="0" stroke="#000" stroke-width="0.7"/><line x1="6" y1="0" x2="100" y2="0" stroke="#000" stroke-width="0.7"/>
+    <line x1="0" y1="-100" x2="0" y2="-6" stroke="#000" stroke-width="0.7"/><line x1="0" y1="6" x2="0" y2="100" stroke="#000" stroke-width="0.7"/>
+    <line x1="-100" y1="0" x2="-45" y2="0" stroke="#000" stroke-width="2.4"/><line x1="45" y1="0" x2="100" y2="0" stroke="#000" stroke-width="2.4"/>
+    <line x1="0" y1="45" x2="0" y2="100" stroke="#000" stroke-width="2.4"/>
+    ${[-36, -27, -18, -9, 9, 18, 27, 36].map((v) => `<circle cx="${v}" cy="0" r="0.9" fill="#000"/><circle cx="0" cy="${v}" r="0.9" fill="#000"/>`).join('')}
+    <circle cx="0" cy="0" r="0.7" fill="#d02020"/>`,
+  acog: `
+    <circle cx="0" cy="0" r="62" fill="none" stroke="rgba(0,0,0,0.6)" stroke-width="1"/>
+    <path d="M -6 6 L 0 -2 L 6 6" fill="none" stroke="#ff6a20" stroke-width="1.4"/>
+    <line x1="0" y1="8" x2="0" y2="40" stroke="#111" stroke-width="0.8"/>
+    ${[14, 22, 30].map((v) => `<line x1="-${v / 4}" y1="${v}" x2="${v / 4}" y2="${v}" stroke="#111" stroke-width="0.8"/>`).join('')}
+    <line x1="-60" y1="0" x2="-16" y2="0" stroke="#111" stroke-width="0.8"/><line x1="16" y1="0" x2="60" y2="0" stroke="#111" stroke-width="0.8"/>`,
+  thermal: `
+    <line x1="-100" y1="0" x2="-8" y2="0" stroke="#fff" stroke-width="0.6"/><line x1="8" y1="0" x2="100" y2="0" stroke="#fff" stroke-width="0.6"/>
+    <line x1="0" y1="-100" x2="0" y2="-8" stroke="#fff" stroke-width="0.6"/><line x1="0" y1="8" x2="0" y2="100" stroke="#fff" stroke-width="0.6"/>
+    <rect x="-3" y="-3" width="6" height="6" fill="none" stroke="#fff" stroke-width="0.6"/>`,
+};
+
+export { SPEAKER, CHARACTERS };

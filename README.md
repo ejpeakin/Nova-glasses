@@ -1,123 +1,135 @@
-# Rustbound
+# OPERATION: SHADOW STRIKE
 
-A single-player, Rust-style survival game that runs in the browser. You wash up on a
-procedurally generated island with a rock and a torch: gather wood and stone, craft
-tools, build a base before nightfall, hunt, smelt ore, and raid the monuments guarded
-by armed scientists.
+A modern military first-person shooter that runs in the browser. It is built with three.js and plain JavaScript, with no build step and no asset files. Every model, texture, sound and piece of music is generated in code.
 
-Built with plain JavaScript modules and [three.js](https://threejs.org) (r160, loaded
-from a CDN). No build step, no assets: every model, texture, icon and sound is
-generated in code.
+> Task Force ORION hunts MERIDIAN, a private army that has stolen **HALCYON**, the ground key to an orbital kinetic-strike constellation.
 
-## Running it
-
-ES modules must be served over HTTP, so opening `index.html` from disk will not work.
+## Play
 
 ```bash
-npm start            # zero-dependency static server on http://localhost:8080
-# or: PORT=3000 npm start
-# or any static server, e.g. python3 -m http.server 8080
+npm start
 ```
 
-An internet connection is needed for three.js (jsDelivr) and the Google Fonts. Use a
-desktop browser with a keyboard and mouse.
+Then open <http://localhost:8080>. You need Node 18 or newer. There are no dependencies to install, and three.js is vendored in `src/lib/`.
+
+The game has to be served over HTTP because ES modules don't load from `file://`. Any static server works, including GitHub Pages.
+
+Use a desktop browser (Chrome, Edge or Firefox) with a keyboard and mouse. Headphones help, because sound is positional.
 
 ## Controls
 
 | Key | Action |
 | --- | --- |
 | W A S D | Move |
-| Shift | Sprint |
-| Ctrl / C | Crouch (dive while swimming) |
-| Space | Jump (swim up) |
-| Mouse | Look |
-| 1–6 / wheel | Select belt slot |
-| E | Use, pick up, open, drink water |
-| Left mouse | Attack, gather, place, eat, fire |
-| Right mouse | Aim; hold with the building plan or hammer for the radial menu |
-| R | Reload, rotate placement |
-| Tab | Inventory |
-| Q | Crafting |
-| M | Map |
-| H | Survival tips |
-| Esc | Close panel or pause |
+| Mouse | Look / aim |
+| Left click | Fire |
+| Right click | Aim down sights |
+| R | Reload |
+| Shift | Sprint. While scoped with a sniper, hold breath |
+| Space | Jump, or stand up |
+| C | Crouch. While sprinting, slide |
+| Ctrl / Z | Prone |
+| E | Interact, pick up, swap weapon |
+| 1 / 2 / mouse wheel / X | Switch weapon |
+| G | Lethal equipment (hold to cook a frag; press again to detonate C4) |
+| Q | Tactical equipment |
+| V | Melee |
+| B | Toggle fire mode |
+| F | Flashlight |
+| N | Night vision |
+| Tab | Scoreboard |
+| Esc | Pause |
 
-Inventory: drag to move, Shift+drag to split a stack, right-click to quick-move, drag
-off the panels to drop on the ground.
+Browsers reserve Ctrl+W, so it can close the tab. The game goes fullscreen with keyboard lock when you deploy, which stops this in Chrome and Edge. You can turn this off in Settings. **Z** also works as a prone key.
 
-## What's in the game
+## What's in this version
 
-- **Island**: seeded heightmap (fractal and ridged simplex noise with a radial
-  falloff), beaches, forests, rocky hills, lakes, a day/night cycle with stars and a
-  moon, fog, water and swimming. The same seed always builds the same island.
-- **Gathering**: trees, stone, metal and sulfur nodes that shrink as you mine them and
-  respawn later; hemp, mushrooms, berry bushes and loose stone/wood/ore pickups.
-- **Survival**: health, calories, hydration, bleeding, healing over time, body
-  temperature (cold at night, warm by fires, clothing insulation), fall damage.
-- **Crafting**: 28 recipes with a timed queue and refunds on cancel; some need a
-  Workbench Level 1 nearby.
-- **Tools and combat**: rock, hatchets, pickaxes, spear, bone knife, hunting bow with
-  physical arrows, revolver and pipe shotgun with reloads, durability, armor.
-- **Building**: foundations, walls, doorways, windows, floors and stairs on a 3 m grid
-  with socket snapping, structural stability (unsupported pieces collapse), upgrades
-  twig → wood → stone → sheet metal, and wooden doors that wildlife and scientists
-  cannot open.
-- **Deployables**: campfire (cooking, warmth, charcoal), furnace (smelting; split ore
-  across slots to smelt faster), storage box, sleeping bag (respawn point), workbench.
-- **Wildlife**: deer flee, boars charge when you get close, wolves and bears hunt you
-  (more wolves at night). Harvest corpses for meat, leather, bone and fat.
-- **Monuments**: an abandoned outpost patrolled by scientists with rifles, roadside
-  ruins, loot crates, military crates, breakable barrels and recyclers.
-- **Death**: your items drop in a backpack marked on the map; respawn on a beach or
-  at a sleeping bag.
-- **Saving**: autosaves every minute and on demand to `localStorage`, storing only
-  what changed relative to the seed.
+**Core gameplay**
+- First-person movement: walk, sprint, slide, jump, crouch and prone. Stance changes check for headroom, you can climb stairs, and you can use multi-storey buildings with roof access.
+- Weapon handling: hip-fire spread and bloom, aim down sights with optic zoom, per-weapon recoil patterns with recovery, and camera kick.
+- Weapon animation: sway and bob, reloads where the magazine drops out and a new one goes in, empty reloads that pull the charging handle, per-shell shotgun reloads you can interrupt, bolt and pump cycling, a pistol slide that locks back, sprint pose, raise and lower on weapon switch, and a melee bash.
+- Health regenerates CoD-style. There are hit direction indicators, a low-health vignette and heartbeat, suppression when bullets whiz past, a flashbang blind effect and tinnitus.
+- Scopes: sniper (with a mil-dot reticle and hold breath), 3× ACOG and thermal (enemies glow white). Red dot and holographic sights are modelled on the gun.
+
+**Arsenal** (12 weapons, all fictional)
+- Assault rifles: VX-4 Talon, RK-74 Volkov
+- Marksman rifle: HX-30 Bastion
+- SMGs: MP-9 Wasp, K-45 Viper
+- Sniper rifles: LR-50 Longbow (bolt-action), SR-7 Specter
+- Shotguns: Breaker-12 (pump), AA-20 Havoc (auto)
+- LMG: M-260 Juggernaut
+- Pistols: P-11 Warden, .50 Raptor
+
+Every weapon has its own synthesized firing sound, damage and range falloff, fire rate, recoil pattern, fire modes and procedurally built model.
+
+The Gunsmith has six attachment slots: optic, muzzle, barrel, underbarrel, magazine and stock. There are 19 attachments, including a suppressor, compensator, extended and fast mags, grips, a laser, and reflex, holo, 3×, 8× and thermal optics. Each one changes stats and shows up on the model.
+
+Equipment: frag (cookable), sticky semtex, remote C4, flashbang, smoke (blocks AI line of sight) and a combat stim.
+
+**Enemy AI**
+- Enemies patrol routes and stand guard.
+- Detection builds up gradually. It depends on distance, your stance, your movement, darkness and your flashlight, so stealth is possible.
+- They hear unsuppressed gunfire and explosions, and investigate noises.
+- In a fight they take cover using auto-generated cover points and alternate between hiding and peeking. Behind tall cover they step out to shoot.
+- They reposition, flank, push your last known position and fire in bursts. Accuracy drops when they're moving, suppressed or have only just spotted you.
+- They throw grenades at you when you hide, and scatter from grenades thrown at them.
+- Squads share intel and limit how many members move at once.
+- Snipers and guards hold position in towers and on roofs. Bosses are heavily armoured and keep pushing forward.
+- There are four difficulty levels: Recruit, Regular, Hardened and Veteran.
+- In the campaign, friendly squadmates follow you in formation and fight alongside you.
+
+**Game modes**
+- **Campaign:** 8 missions with briefings, an intro cinematic for each mission, location and time cards, radio dialogue with subtitles, objective markers and a compass, checkpoints, stealth alarms, defend waves, boss fights and a final mission against a countdown.
+- **Team Deathmatch:** up to 16 players (you plus bots) in two teams.
+- **Free For All:** every player for themselves.
+- **Domination:** capture flags A, B and C. Capture progress can be contested, and points tick while you hold flags.
+- **Survival:** endless waves that escalate. Heavies arrive every 5th wave and a warlord boss every 10th.
+
+**Maps** (each has multiple routes, interiors, rooftops and cover lines)
+1. **Desert Outpost:** hesco compound, two-storey HQ, watchtowers and village ruins
+2. **Downtown:** gutted city blocks, a plaza, burnt-out vehicles and rooftop lanes
+3. **Snowfall:** mountain radar station, hangar, bunkers, fuel tanks and treelines
+4. **Blacksite:** underground facility with a server room, lab, armory, control room, cells and an atrium
+5. **Harbor:** container terminal, warehouses, gantry cranes and a moored cargo ship
+
+**Visuals**
+- Lighting presets for day, desert, dusk, dawn, overcast, night (moonlight and stars), snow and indoor.
+- Weather: rain with lightning, snow, dust and ash.
+- Fog, soft shadows, ACES tone mapping and a sky-based environment map.
+- Particle explosions, smoke columns, smoke grenades, muzzle flashes, tracers, sparks, impact dust, bullet-hole and scorch decals, and ejected brass.
+
+**Interface**
+- An animated main menu over a live 3D map.
+- Campaign select, mission briefing, multiplayer setup, the Armory (loadout) and the Gunsmith with a 3D weapon preview.
+- Settings for sensitivity, FOV, audio, graphics quality and render scale.
+- Statistics with a rank and XP system.
+- Pause menu, mission-failed screen with checkpoint retry, mission results and match scoreboards.
+- Progress, stats and loadouts are saved to `localStorage`.
 
 ## Project layout
 
 ```
-index.html                  Canvas, HUD mount points, menus and dialogs
-styles/main.css             All UI styling
-server.js                   Zero-dependency static dev server
-src/
-  main.js                   Entry point
-  Game.js                   Renderer, game loop, state machine, save/load orchestration
-  lib/three.js              Single pinned three.js import
-  core/                     Input, procedural audio, noise, math, settings, saves,
-                            geometry helpers, procedural canvas textures, event bus
-  world/
-    WorldGen.js             Seeded island, monument sites, resource and loot placement
-    Terrain.js              Heightmap, mesh, height/normal queries, terrain raycast
-    Physics.js              Spatial hash, box/cylinder/sphere/ramp colliders,
-                            capsule movement resolution, ground and ray queries
-    Sky.js, Water.js        Day/night lighting and the sea
-    ResourceManager.js      Instanced trees, ore nodes and pickups; gathering; respawns
-    Monuments.js            Outpost and ruins layouts
-    LootSpawner.js          Barrels and crates with respawn timers
-    Foliage.js              Decorative grass and shrubs
-  items/                    Item database, recipes, loot tables, icon painter, harvest math
-  inventory/                Item containers, player inventory, crafting queue
-  player/                   Player controller, vitals, first-person view model,
-                            held-item actions, interaction raycasts
-  entities/                 Creature base, animals, scientists, dropped items,
-                            lootable bags and crates, entity manager
-  building/BuildingSystem.js  Pieces, sockets, stability, upgrades, doors
-  deployables/              Campfire, furnace, box, bag, workbench, recycler
-  combat/                   Projectiles and particle/tracer/light effects
-  ui/                       HUD, inventory, crafting and container panels, radial menu,
-                            map, menus
+index.html, styles/main.css   UI shell and styling
+src/main.js                   entry point
+src/ui/App.js                 renderer, main loop, all menu screens and game flow
+src/ui/HUD.js                 in-game HUD (DOM overlay)
+src/ui/MenuScene.js           3D menu backdrop and weapon showcase
+src/Game.js                   a running match/mission: combat resolution, pickups, rendering
+src/player/Player.js          first-person controller
+src/weapons/                  weapon data, attachments, viewmodels, firing system, grenades
+src/ai/                       soldier AI and the animated humanoid model
+src/modes/                    campaign runner, TDM/FFA/Domination/Survival
+src/campaign/Story.js         the 8-mission script, characters and dialogue
+src/world/                    collision world + navigation/cover, map builder, maps, lighting/weather, effects, textures
+src/core/                     input, procedural audio engine, storage, utilities
 ```
 
-## Tuning
+## What a full engine (e.g. Unreal Engine 5) would add
 
-Balance lives in data tables:
+The browser version plays the whole loop described above. Some things are beyond a no-asset WebGL build:
 
-- `src/items/ItemDatabase.js`: damage, gather rates, durability, food values, armor
-- `src/items/Recipes.js`: crafting costs and times, recycling output
-- `src/items/LootTables.js`: barrel, crate and scientist loot
-- `src/entities/Animal.js` (`SPECIES`): health, speed, damage, detection ranges
-- `src/world/ResourceManager.js` (`NODE_TYPES`): yields and respawn times
-- `src/building/BuildingSystem.js` (`GRADES`, `PIECES`): building costs
-
-`window.game` is exposed in the browser console for debugging, e.g.
-`game.player.inventory.give('wood', 1000)` or `game.sky.time = 21`.
+- **Real online multiplayer.** Multiplayer modes here use AI bots locally. Online play needs dedicated servers, netcode, lag compensation and matchmaking.
+- **Photoreal assets.** Scanned environments, high-poly weapon models, motion-captured animation, ragdoll physics and recorded audio and voice acting. The models here are procedural primitives, and dialogue is subtitled radio text.
+- **Advanced rendering.** Global illumination (Lumen), virtualized geometry (Nanite), volumetric clouds and fog, screen-space reflections, and post-processing such as motion blur and depth of field.
+- **Destruction and full physics.** Breakable walls, vehicles you can drive, bullet penetration through materials.
+- **Pre-rendered cutscenes** with facial animation. The campaign uses in-engine camera fly-throughs instead.

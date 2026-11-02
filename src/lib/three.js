@@ -1,3 +1,3 @@
-// Single import point for three.js. Every module imports THREE from here so the
-// pinned CDN version lives in exactly one place.
-export * from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+// Single import point for three.js (vendored r160, MIT — see THREE_LICENSE).
+// Vendoring keeps the game playable offline and on any static host.
+export * from './three.module.min.js';
