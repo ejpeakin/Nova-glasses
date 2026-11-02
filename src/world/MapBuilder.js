@@ -50,8 +50,8 @@ const MATS = {
   lightPanel: { color: 0xffffff, emissive: 0xf4f8ff, emissiveIntensity: 2.2, rough: 0.4, sound: 'metal', noShadow: true },
   lightWarm: { color: 0xffe0b0, emissive: 0xffc080, emissiveIntensity: 2.5, rough: 0.4, sound: 'metal', noShadow: true },
   lightRed: { color: 0xff3030, emissive: 0xff2020, emissiveIntensity: 2.5, rough: 0.4, sound: 'metal', noShadow: true },
-  screen: { color: 0x113322, emissive: 0x22ff88, emissiveIntensity: 0.8, rough: 0.3, sound: 'metal' },
-  screenBlue: { color: 0x112233, emissive: 0x3399ff, emissiveIntensity: 0.9, rough: 0.3, sound: 'metal' },
+  screen: { color: 0x0a2016, emissive: 0x22cc70, emissiveIntensity: 0.5, rough: 0.3, sound: 'metal' },
+  screenBlue: { color: 0x0a1420, emissive: 0x2a70c0, emissiveIntensity: 0.45, rough: 0.3, sound: 'metal' },
 };
 
 export function materialSound(name) {

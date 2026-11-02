@@ -343,7 +343,7 @@ export class Domination extends TeamDeathmatch {
   botGoal(bot) {
     const mine = bot.team;
     const targets = this.flags.filter((f) => f.owner !== mine);
-    const list = targets.length && Math.random() < 0.8 ? targets : this.flags;
+    const list = [...(targets.length && Math.random() < 0.8 ? targets : this.flags)];
     list.sort((a, b) => a.pos.distanceTo(bot.pos) - b.pos.distanceTo(bot.pos));
     const f = Math.random() < 0.7 ? list[0] : pick(list);
     return f.pos.clone().add(new THREE.Vector3(rand(-3, 3), 0, rand(-3, 3)));

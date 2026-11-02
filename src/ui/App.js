@@ -475,6 +475,7 @@ export class App {
             <div class="lbl">TACTICAL</div>
             <div class="wgrid eq">${TACTICALS.map((id) => `<div class="card equip ${id === lo.tactical ? 'equipped sel' : ''}" data-t="${id}" title="${EQUIPMENT[id].desc}"><b>${EQUIPMENT[id].name}</b><small>${EQUIPMENT[id].desc}</small></div>`).join('')}</div>
           </div>
+          <div class="arm-right"><div class="preview-space"></div>
           <div class="arm-detail panel">
             <div class="md-tag">${CLASSES[fw.class].toUpperCase()} · ${fw.mag} RDS · ${fw.rpm} RPM · ${fw.modes.join(' / ').toUpperCase()}</div>
             <h3 class="md-title">${fw.name.toUpperCase()}</h3>
@@ -485,10 +486,10 @@ export class App {
               <button class="btn ${focus === lo.primary || focus === lo.secondary ? 'disabled' : 'primary'}" id="btn-equip" ${focus === lo.primary || focus === lo.secondary ? 'disabled' : ''}>${focus === lo.primary || focus === lo.secondary ? 'EQUIPPED' : 'EQUIP'}</button>
               <button class="btn primary" id="btn-smith">GUNSMITH ▸</button>
             </div>
-          </div>
+          </div></div>
         </div>`;
       this._bindBack();
-      this.menu?.showWeapon(focus, att);
+      this.menu?.showWeapon(focus, att, this.ui.querySelector('.preview-space'));
       for (const c of this.ui.querySelectorAll('[data-w]')) c.addEventListener('click', () => { focus = c.dataset.w; render(); });
       for (const c of this.ui.querySelectorAll('[data-l]')) c.addEventListener('click', () => { lo.lethal = c.dataset.l; Store.save(); render(); });
       for (const c of this.ui.querySelectorAll('[data-t]')) c.addEventListener('click', () => { lo.tactical = c.dataset.t; Store.save(); render(); });
@@ -520,6 +521,7 @@ export class App {
               <div class="chip-desc">${escapeHtml(ATTACHMENTS[slot][res[slot]].desc || '—')}</div></div>`;
             }).join('')}
           </div>
+          <div class="arm-right"><div class="preview-space"></div>
           <div class="panel smith-stats">
             <h3 class="md-title">${w.name.toUpperCase()}</h3>
             <div class="stats">${this._statBars(id, att)}</div>
@@ -533,11 +535,11 @@ export class App {
               <span>Suppressed <b>${st.suppressed ? 'YES' : 'NO'}</b></span>
             </div>
             <button class="btn" id="btn-reset">RESET TO DEFAULT</button>
-          </div>
+          </div></div>
         </div>`;
       this._bindBack();
       this.ui.querySelector('[data-back]').addEventListener('click', () => this.show('armory', { focus: id, back: arg.back }), { once: true });
-      this.menu?.showWeapon(id, att);
+      this.menu?.showWeapon(id, att, this.ui.querySelector('.preview-space'));
       for (const c of this.ui.querySelectorAll('.chip')) c.addEventListener('click', () => {
         att[c.dataset.slot] = c.dataset.a;
         Store.save();

@@ -43,11 +43,11 @@ export class MenuScene {
     this.showScene = new THREE.Scene();
     this.showCam = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.01, 20);
     this.showCam.position.set(0, 0, 2.2);
-    const key = new THREE.DirectionalLight(0xffffff, 3);
+    const key = new THREE.DirectionalLight(0xffffff, 4.5);
     key.position.set(2, 3, 2);
     const rim = new THREE.DirectionalLight(0x9fd07a, 2.5);
     rim.position.set(-3, 1, -2);
-    this.showScene.add(new THREE.HemisphereLight(0xddeeff, 0x202018, 1.2), key, rim);
+    this.showScene.add(new THREE.HemisphereLight(0xddeeff, 0x302a20, 2.0), key, rim);
     this.showPivot = new THREE.Group();
     this.showScene.add(this.showPivot);
     this.showcase = null;
@@ -55,20 +55,37 @@ export class MenuScene {
     this.resize();
   }
 
-  showWeapon(id, att) {
+  /** Show a rotating weapon model fitted into the on-screen rect of anchorEl. */
+  showWeapon(id, att, anchorEl = null) {
     this.showPivot.clear();
+    this.anchorEl = anchorEl;
     if (!id) { this.showcase = null; return; }
     const info = buildWeaponModel(WEAPONS[id], resolveAttachments(id, att));
     const g = info.group;
-    const len = WEAPONS[id].model.len;
-    const s = 1.1 / Math.max(0.35, len);
-    g.scale.setScalar(s);
-    g.position.z = (len / 2) * s * 0.6;
+    // Centre the model on its bounding box, barrel pointing right.
+    const box = new THREE.Box3().setFromObject(g);
+    const center = box.getCenter(new THREE.Vector3());
+    g.position.sub(center);
     const holder = new THREE.Group();
     holder.add(g);
-    holder.rotation.y = Math.PI / 2;
+    holder.rotation.y = -Math.PI / 2;
+    this.modelLen = Math.max(0.2, box.max.z - box.min.z);
     this.showPivot.add(holder);
     this.showcase = id;
+    this._placeShowcase();
+  }
+
+  _placeShowcase() {
+    if (!this.showcase) return;
+    const W = window.innerWidth, H = window.innerHeight;
+    const r = this.anchorEl?.getBoundingClientRect() ?? { left: W * 0.55, top: H * 0.15, width: W * 0.4, height: H * 0.35 };
+    const visH = 2 * Math.tan((this.showCam.fov * Math.PI) / 360) * this.showCam.position.z;
+    const visW = visH * this.showCam.aspect;
+    const nx = ((r.left + r.width / 2) / W) * 2 - 1;
+    const ny = -(((r.top + r.height / 2) / H) * 2 - 1);
+    this.showPivot.position.set(nx * visW / 2, ny * visH / 2, 0);
+    const want = Math.min((r.width / W) * visW * 0.85, (r.height / H) * visH * 2.2);
+    this.showPivot.scale.setScalar(want / this.modelLen);
   }
 
   resize() {
@@ -78,9 +95,6 @@ export class MenuScene {
     this.showCam.aspect = w / h;
     this.showCam.updateProjectionMatrix();
     this.effects.resize(h * this.renderer.getPixelRatio(), 50);
-    // Weapon sits in the right half of the screen.
-    const vis = 2 * Math.tan((this.showCam.fov * Math.PI) / 360) * 2.2;
-    this.showPivot.position.set(vis * this.showCam.aspect * 0.18, -0.05, 0);
   }
 
   update(dt) {
@@ -94,19 +108,23 @@ export class MenuScene {
     for (const p of this.smoke) this.effects.smokeColumn(p, dt);
     this.effects.update(dt, this.world);
     for (const h of this.troops) h.update(dt, 0, 0, Math.sin(this.t * 0.5 + h.phase) * 0.1, false);
-    this.showPivot.rotation.y = Math.sin(this.t * 0.4) * 0.5;
-    this.showPivot.rotation.x = Math.sin(this.t * 0.3) * 0.05;
+    this._placeShowcase();
+    this.showPivot.rotation.y = Math.sin(this.t * 0.4) * 0.45;
+    this.showPivot.rotation.x = 0.12 + Math.sin(this.t * 0.3) * 0.05;
   }
 
   render() {
     const r = this.renderer;
     r.autoClear = false;
+    if (this.showcase) {
+      // Gunsmith "studio": dark backdrop so the weapon reads clearly.
+      r.setClearColor(0x0b110d, 1);
+      r.clear();
+      r.render(this.showScene, this.showCam);
+      return;
+    }
     r.clear();
     r.render(this.scene, this.camera);
-    if (this.showcase) {
-      r.clearDepth();
-      r.render(this.showScene, this.showCam);
-    }
   }
 
   dispose() {

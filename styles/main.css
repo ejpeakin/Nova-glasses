@@ -48,7 +48,7 @@ button { font-family: inherit; }
 .ui::before { content: ''; position: fixed; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 3px); }
 .ui.s-pause, .ui.s-death, .ui.s-results, .ui.s-loading { background: rgba(3, 5, 4, 0.86); backdrop-filter: blur(3px); }
 .ui.s-click { background: rgba(0,0,0,0.5); display: grid; place-items: center; }
-.ui.s-armory, .ui.s-gunsmith { background: linear-gradient(90deg, rgba(4,7,5,0.95) 0%, rgba(4,7,5,0.85) 50%, rgba(4,7,5,0.2) 100%); }
+.ui.s-armory, .ui.s-gunsmith { background: radial-gradient(ellipse at 72% 28%, rgba(143,209,106,0.10) 0%, transparent 45%), linear-gradient(90deg, rgba(4,7,5,0.7) 0%, rgba(4,7,5,0.35) 45%, transparent 60%); }
 
 .scr-head { display: flex; align-items: center; gap: 24px; margin-bottom: 26px; }
 .scr-sub { font-family: var(--mono); color: var(--accent); letter-spacing: 0.22em; font-size: 13px; text-transform: uppercase; }
@@ -174,7 +174,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .lo-summary { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
 
 /* armory */
-.armory { display: grid; grid-template-columns: minmax(0, 560px) minmax(280px, 420px); gap: 22px; align-items: start; }
+.armory { display: grid; grid-template-columns: minmax(0, 560px) minmax(300px, 1fr); gap: 28px; align-items: start; }
+.arm-right { display: flex; flex-direction: column; max-width: 640px; }
+.preview-space { height: 34vh; min-height: 200px; }
+.arm-right .panel { background: rgba(10, 16, 12, 0.78); }
 .wgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
 .wgrid.eq { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
 .weapon, .equip { padding: 10px 12px; position: relative; }
@@ -191,7 +194,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .sbar i.down { background: var(--danger); }
 .att-list { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
 .att-list b { color: #cfd8c4; }
-.smith { display: grid; grid-template-columns: minmax(0, 560px) minmax(260px, 360px); gap: 22px; align-items: start; }
+.smith { display: grid; grid-template-columns: minmax(0, 560px) minmax(300px, 1fr); gap: 28px; align-items: start; }
+.smith-stats .stats, .smith-stats .spec { max-width: 520px; }
 .slot { margin-bottom: 8px; }
 .chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .chip { background: rgba(20,28,22,0.9); border: 1px solid var(--line); color: #cfd8c4; padding: 7px 11px; font-weight: 600; font-size: 14px; cursor: pointer; }
