@@ -539,7 +539,7 @@ export class App {
               <span>Magazine <b>${st.mag}</b></span>
               <span>Reload <b>${st.reload.toFixed(2)} s</b></span>
               <span>ADS <b>${Math.round(st.ads * 1000)} ms</b></span>
-              <span>Zoom <b>${st.zoom.toFixed(1)}×</b></span>
+              <span>Zoom <b>${st.zoomSteps ? `${st.zoomSteps[0]}-${st.zoomSteps[st.zoomSteps.length - 1]}` : st.zoom.toFixed(1)}×</b></span>
               <span>Suppressed <b>${st.suppressed ? 'YES' : 'NO'}</b></span>
             </div>
             <button class="btn" id="btn-reset">RESET TO DEFAULT</button>

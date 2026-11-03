@@ -659,7 +659,7 @@ export class Game {
     const controllable = !this.cinematic && p.alive && !this.mode.frozen && !this.over;
     if (controllable) {
       const s = Store.settings;
-      const sens = s.sensitivity * lerp(1, s.adsSensitivity / this.weapons.stats.zoom * 1.2, this.weapons.ads);
+      const sens = s.sensitivity * lerp(1, s.adsSensitivity / this.weapons.zoom * 1.2, this.weapons.ads);
       p.look(md.x, md.y, sens);
     }
     if (controllable) {

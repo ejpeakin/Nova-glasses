@@ -22,10 +22,11 @@ export class HUD {
       <canvas class="hud-after" id="h-after" width="480" height="270"></canvas>
       <div class="hud-flash" id="h-flash"></div>
       <div class="scope" id="h-scope" hidden>
-        <div class="scope-mask"></div>
+        <div class="scope-lens"></div>
         <svg class="scope-reticle" viewBox="-100 -100 200 200" id="h-scope-svg"></svg>
+        <div class="scope-ring" id="h-scope-ring"></div>
+        <div class="scope-read"><div class="sr-tag" id="h-scope-tag"></div><div class="sr-zoom" id="h-scope-zoom"></div><div class="sr-rng" id="h-scope-rng"></div></div>
         <div class="scope-breath" id="h-breath"><span></span></div>
-        <div class="scope-tag" id="h-scope-tag"></div>
       </div>
       <div class="letterbox top" id="h-lb1"></div><div class="letterbox bottom" id="h-lb2"></div>
       <div class="location-card" id="h-loc"></div>
@@ -69,7 +70,7 @@ export class HUD {
     `;
     const $ = (id) => root.querySelector(id);
     this.el = {
-      vig: $('#h-vig'), sup: $('#h-sup'), flash: $('#h-flash'), scope: $('#h-scope'), scopeSvg: $('#h-scope-svg'), breath: $('#h-breath'), scopeTag: $('#h-scope-tag'),
+      vig: $('#h-vig'), sup: $('#h-sup'), flash: $('#h-flash'), scope: $('#h-scope'), scopeSvg: $('#h-scope-svg'), breath: $('#h-breath'), scopeTag: $('#h-scope-tag'), scopeRing: $('#h-scope-ring'), scopeZoom: $('#h-scope-zoom'), scopeRng: $('#h-scope-rng'),
       lb1: $('#h-lb1'), lb2: $('#h-lb2'), loc: $('#h-loc'), markers: $('#h-markers'), cross: $('#h-cross'), hit: $('#h-hit'), hurt: $('#h-hurt'),
       compass: $('#h-compass'), mode: $('#h-mode'), timer: $('#h-timer'), boss: $('#h-boss'), bossName: $('#h-boss-name'), bossFill: $('#h-boss-fill'),
       obj: $('#h-obj'), objText: $('#h-obj-text'), objSub: $('#h-obj-sub'), feed: $('#h-feed'), big: $('#h-big'), toasts: $('#h-toasts'),
@@ -171,6 +172,46 @@ export class HUD {
 
   grenadeWarning(g) {
     this.grenade = g;
+  }
+
+  /**
+   * Eyepiece motion: the scope shadow lags mouse movement and bobs with footsteps,
+   * kicks on recoil, and opens up as the eye settles behind the glass. The reticle
+   * itself stays centred on the point of aim.
+   */
+  _scopeView(game, w, p, scope, dt) {
+    const md = game.lastMouse ?? { x: 0, y: 0 };
+    const sp = Math.min(6, p.speed ?? 0);
+    const t = game.time;
+    const kick = clamp(1 - (t - (w.lastFire ?? -9)) / 0.16, 0, 1);
+    const D = Math.min(innerWidth, innerHeight);
+    const lim = D * 0.06;
+    const tx = clamp(-md.x * 1.1, -lim, lim) + Math.sin(t * 6.5) * sp * D * 0.004;
+    const ty = clamp(-md.y * 1.1, -lim, lim) + Math.abs(Math.cos(t * 6.5)) * sp * D * 0.004 + kick * D * 0.035;
+    const k = 1 - Math.exp(-dt * 12);
+    this._sx = (this._sx ?? 0) + (tx - (this._sx ?? 0)) * k;
+    this._sy = (this._sy ?? 0) + (ty - (this._sy ?? 0)) * k;
+    this._scopeIn = Math.min(1, (this._scopeIn ?? 0) + dt / 0.16);
+    this._scopedT = (this._scopedT ?? 0) + dt;
+    const e = this._scopeIn, ease = 1 - (1 - e) * (1 - e);
+    const st = this.el.scope.style;
+    st.setProperty('--sx', `${this._sx.toFixed(1)}px`);
+    st.setProperty('--sy', `${this._sy.toFixed(1)}px`);
+    st.setProperty('--ss', (0.8 + 0.2 * ease).toFixed(3));
+    // Magnification and laser rangefinder readouts.
+    const z = w.zoom;
+    // Variable optics remind you the wheel zooms for the first moments of each look.
+    const zt = scope.kind === 'acog' ? '4×' : `${z.toFixed(1)}×${w.stats.zoomSteps && this._scopedT < 3 ? '  · WHEEL: ZOOM' : ''}`;
+    if (this._zt !== zt) { this._zt = zt; this.el.scopeZoom.textContent = zt; }
+    if (scope.kind !== 'acog' && this.frame % 4 === 0) {
+      const cam = game.camera, o = cam.position;
+      const f = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+      const hit = game.world.raycast(o.x, o.y, o.z, f.x, f.y, f.z, 999);
+      let d = hit ? hit.t : Infinity;
+      for (const a of game.actors) { if (a.alive && a !== p) { const h = a.rayHit(o, f, Math.min(d, 999)); if (h) d = h.t; } }
+      const txt = Number.isFinite(d) ? `RNG ${Math.round(d)} m` : 'RNG ---';
+      if (this._rng !== txt) { this._rng = txt; this.el.scopeRng.textContent = txt; }
+    } else if (scope.kind === 'acog' && this._rng) { this._rng = ''; this.el.scopeRng.textContent = ''; }
   }
 
   /** Radio menu (Y): numbered squad orders. */
@@ -440,11 +481,12 @@ export class HUD {
         this.reticleKind = scope.kind;
         this.el.scope.className = `scope k-${scope.kind}`;
         this.el.scopeSvg.innerHTML = RETICLES[scope.kind];
-        this.el.scopeTag.textContent = scope.kind === 'thermal' ? 'THERMAL  ·  WHT-HOT' : scope.kind === 'sniper' ? '8×' : '';
+        this.el.scopeTag.textContent = scope.kind === 'thermal' ? 'WHT-HOT' : '';
       }
+      this._scopeView(game, w, p, scope, dt);
       this.el.breath.style.display = scope.kind === 'acog' ? 'none' : '';
       this.el.breath.firstElementChild.style.width = `${p.breath * 100}%`;
-    }
+    } else { this._scopeIn = 0; this._scopedT = 0; }
     game.app.setThermal(scope.active && scope.kind === 'thermal');
 
     // Hitmarker decay handled by CSS.
@@ -686,24 +728,53 @@ export class HUD {
   }
 }
 
+// Scope reticles, drawn in a -100..100 box that spans the eyepiece.
 const RETICLES = {
-  sniper: `
-    <line x1="-100" y1="0" x2="-6" y2="0" stroke="#000" stroke-width="0.7"/><line x1="6" y1="0" x2="100" y2="0" stroke="#000" stroke-width="0.7"/>
-    <line x1="0" y1="-100" x2="0" y2="-6" stroke="#000" stroke-width="0.7"/><line x1="0" y1="6" x2="0" y2="100" stroke="#000" stroke-width="0.7"/>
-    <line x1="-100" y1="0" x2="-45" y2="0" stroke="#000" stroke-width="2.4"/><line x1="45" y1="0" x2="100" y2="0" stroke="#000" stroke-width="2.4"/>
-    <line x1="0" y1="45" x2="0" y2="100" stroke="#000" stroke-width="2.4"/>
-    ${[-36, -27, -18, -9, 9, 18, 27, 36].map((v) => `<circle cx="${v}" cy="0" r="0.9" fill="#000"/><circle cx="0" cy="${v}" r="0.9" fill="#000"/>`).join('')}
-    <circle cx="0" cy="0" r="0.7" fill="#d02020"/>`,
-  acog: `
-    <circle cx="0" cy="0" r="62" fill="none" stroke="rgba(0,0,0,0.6)" stroke-width="1"/>
-    <path d="M -6 6 L 0 -2 L 6 6" fill="none" stroke="#ff6a20" stroke-width="1.4"/>
-    <line x1="0" y1="8" x2="0" y2="40" stroke="#111" stroke-width="0.8"/>
-    ${[14, 22, 30].map((v) => `<line x1="-${v / 4}" y1="${v}" x2="${v / 4}" y2="${v}" stroke="#111" stroke-width="0.8"/>`).join('')}
-    <line x1="-60" y1="0" x2="-16" y2="0" stroke="#111" stroke-width="0.8"/><line x1="16" y1="0" x2="60" y2="0" stroke="#111" stroke-width="0.8"/>`,
-  thermal: `
-    <line x1="-100" y1="0" x2="-8" y2="0" stroke="#fff" stroke-width="0.6"/><line x1="8" y1="0" x2="100" y2="0" stroke="#fff" stroke-width="0.6"/>
-    <line x1="0" y1="-100" x2="0" y2="-8" stroke="#fff" stroke-width="0.6"/><line x1="0" y1="8" x2="0" y2="100" stroke="#fff" stroke-width="0.6"/>
-    <rect x="-3" y="-3" width="6" height="6" fill="none" stroke="#fff" stroke-width="0.6"/>`,
+  // Long-range mil-hash reticle: heavy outer posts, fine centre cross, numbered
+  // hashes, a holdover tree for drop and wind, and an illuminated centre dot.
+  sniper: (() => {
+    let s = '<defs><filter id="rg" x="-4" y="-4" width="8" height="8"><feGaussianBlur stdDeviation="0.45"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+    s += '<g fill="#070707"><rect x="-100" y="-1.15" width="60" height="2.3"/><rect x="40" y="-1.15" width="60" height="2.3"/><rect x="-1.15" y="40" width="2.3" height="60"/><rect x="-0.7" y="-100" width="1.4" height="60"/></g>';
+    s += '<g stroke="#070707" stroke-width="0.28" stroke-linecap="square">';
+    s += '<line x1="-40" y1="0" x2="-0.9" y2="0"/><line x1="0.9" y1="0" x2="40" y2="0"/><line x1="0" y1="-40" x2="0" y2="-0.9"/><line x1="0" y1="0.9" x2="0" y2="40"/>';
+    for (let v = 2.5; v < 40; v += 2.5) {
+      const L = v % 10 === 0 ? 3 : v % 5 === 0 ? 1.9 : 1;
+      for (const sg of [-1, 1]) {
+        s += `<line x1="${sg * v}" y1="${-L / 2}" x2="${sg * v}" y2="${L / 2}"/>`;
+        if (sg < 0) s += `<line x1="${-L / 2}" y1="${-v}" x2="${L / 2}" y2="${-v}"/>`;
+      }
+    }
+    s += '</g><g fill="#070707">';
+    // Holdover tree below the centre: one row per mil, wind dots every half mil.
+    for (let r = 2; r <= 6; r += 2) {
+      const y = r * 5;
+      for (let k = 1; k <= r / 2 + 1; k++) for (const sg of [-1, 1]) s += `<circle cx="${sg * k * 3}" cy="${y}" r="0.32"/>`;
+    }
+    s += '</g><g fill="#070707" font-family="monospace" font-size="2.6" text-anchor="middle">';
+    for (const v of [10, 20, 30]) s += `<text x="${v}" y="-2.6">${v / 5}</text><text x="${-v}" y="-2.6">${v / 5}</text><text x="-3" y="${v + 0.9}" text-anchor="end">${v / 5}</text>`;
+    s += '</g><circle r="0.5" fill="#ff3a22" filter="url(#rg)"/>';
+    return s;
+  })(),
+  // Prism combat optic: lit chevron on a bullet-drop ladder, with mil stadia.
+  acog: (() => {
+    let s = '<defs><filter id="ag" x="-2" y="-2" width="4" height="4"><feGaussianBlur stdDeviation="0.8"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+    s += '<g stroke="#0c0c0c" stroke-width="0.55" fill="none"><line x1="-100" y1="0" x2="-16" y2="0"/><line x1="16" y1="0" x2="100" y2="0"/>';
+    for (const x of [16, 28, 40, 52]) for (const sg of [-1, 1]) s += `<line x1="${sg * x}" y1="-1.6" x2="${sg * x}" y2="1.6"/>`;
+    s += '<line x1="0" y1="8" x2="0" y2="56"/>';
+    const bars = [[14, 6.5, 4], [21, 5.2, 5], [29, 4.1, 6], [38, 3.2, 7], [48, 2.5, 8]];
+    for (const [y, w] of bars) s += `<line x1="${-w}" y1="${y}" x2="${w}" y2="${y}" stroke-width="0.75"/>`;
+    s += '</g><g fill="#0c0c0c" font-family="monospace" font-size="3" text-anchor="end">';
+    for (const [y, w, n] of bars) s += `<text x="${-w - 1.8}" y="${y + 1}">${n}</text>`;
+    s += '</g><path d="M -6 7 L 0 0 L 6 7 L 4.2 7 L 0 2.2 L -4.2 7 Z" fill="#ff4626" filter="url(#ag)"/>';
+    return s;
+  })(),
+  // Digital thermal: thin white cross with corner brackets.
+  thermal: (() => {
+    let s = '<g stroke="#f2f2f2" stroke-width="0.42" fill="none"><line x1="-70" y1="0" x2="-5" y2="0"/><line x1="5" y1="0" x2="70" y2="0"/><line x1="0" y1="-70" x2="0" y2="-5"/><line x1="0" y1="5" x2="0" y2="70"/>';
+    for (let v = 10; v <= 60; v += 10) for (const sg of [-1, 1]) s += `<line x1="${sg * v}" y1="-1.2" x2="${sg * v}" y2="1.2"/><line x1="-1.2" y1="${sg * v}" x2="1.2" y2="${sg * v}"/>`;
+    s += '<path d="M -14 -9 V -14 H -9 M 9 -14 H 14 V -9 M 14 9 V 14 H 9 M -9 14 H -14 V 9"/></g><circle r="0.8" fill="#f2f2f2"/>';
+    return s;
+  })(),
 };
 
 export { SPEAKER, CHARACTERS };

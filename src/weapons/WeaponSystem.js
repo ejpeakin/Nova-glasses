@@ -180,8 +180,18 @@ export class WeaponSystem {
     return { active: overlay && this.ads > 0.86, kind: s.thermal ? 'thermal' : s.sight === 'acog' ? 'acog' : 'sniper' };
   }
 
+  /** Magnification the current optic is set to (variable scopes step through zoomSteps). */
+  get zoomTarget() {
+    const s = this.stats, w = this.weapon;
+    if (!s.zoomSteps) return s.zoom;
+    if (w.zoomIdx == null || w.zoomIdx >= s.zoomSteps.length) w.zoomIdx = Math.max(0, s.zoomSteps.indexOf(s.zoom));
+    return s.zoomSteps[w.zoomIdx];
+  }
+
+  get zoom() { return this.zoomNow ?? this.zoomTarget; }
+
   currentFov(base) {
-    const z = lerp(1, this.stats.zoom, smoothstep(this.ads));
+    const z = lerp(1, this.zoom, smoothstep(this.ads));
     return base / z;
   }
 
@@ -221,6 +231,15 @@ export class WeaponSystem {
     this.bloom = Math.max(0, this.bloom - dt * 6);
 
     const canAct = player.alive && !this.game.paused;
+    // Variable-power optics: the mouse wheel zooms while scoped (instead of switching weapons).
+    if (s.zoomSteps && this.ads > 0.6 && input.wheel !== 0) {
+      const n = s.zoomSteps.length;
+      const i = clamp((w.zoomIdx ?? s.zoomSteps.indexOf(s.zoom)) + (input.wheel < 0 ? 1 : -1), 0, n - 1);
+      if (i !== w.zoomIdx) { w.zoomIdx = i; Audio.ui('click'); }
+      input.wheel = 0;
+    }
+    this.zoomNow = damp(this.zoomNow ?? this.zoomTarget, this.zoomTarget, 16, dt);
+
     // Weapon switching.
     if (canAct && this.state !== 'switchOut' && this.state !== 'throw' && this.cooking === null && this.slots.length > 1) {
       let target = -1;
@@ -784,7 +803,8 @@ export class WeaponSystem {
     const holding = input.anyDown('ShiftLeft', 'ShiftRight') && player.breath > 0;
     if (holding) player.breath = Math.max(0, player.breath - dt / 4);
     else player.breath = Math.min(1, player.breath + dt * 0.25);
-    const amp = holding ? 0.0004 : player.breath <= 0 ? 0.012 : 0.006;
+    // Sway is angular, so high magnification shows more of it; ease it a little.
+    const amp = (holding ? 0.0004 : player.breath <= 0 ? 0.012 : 0.0055) * clamp(9 / this.zoom, 0.6, 1);
     const st = player.stance === 'prone' ? 0.35 : player.stance === 'crouch' ? 0.7 : 1;
     const t = this.time;
     this.scopeSway.x = damp(this.scopeSway.x, Math.sin(t * 0.9) * amp * st + Math.sin(t * 2.3) * amp * 0.3 * st, 6, dt);

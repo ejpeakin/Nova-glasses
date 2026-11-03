@@ -39,6 +39,10 @@ Use a desktop browser (Chrome, Edge or Firefox) with a keyboard and mouse. Headp
 | V | Melee. From behind, or on an unaware enemy, a silent takedown |
 | B | Toggle fire mode |
 | L | Weapon laser on SMGs and rifles: a beam from the muzzle and a dot where your shots land. Hip fire is much tighter while it's on. The weapon panel shows [L] LASER ON/OFF, and the Gunsmith's Laser module row sets whether it starts on |
+| Y, then 1-6 | Squad radio. 1 On me, 2 Hold position, 3 Move up (to where you aim), 4 Cover me (suppressing fire where you aim), 5 Enemy spotted (marks the target and the squad engages it), 6 Hold fire / Weapons free. Squadmates answer over the radio (spoken replies can be turned off in Settings) |
+| H | Squad: "On me!" |
+| K (hold) | Talk to your squad on the microphone: say "on me", "hold position", "move up", "cover me", "contact", "hold fire" or "weapons free". Uses the browser's speech recognition (Chrome and Edge; they send the audio to their speech service) |
+| Mouse wheel (scoped) | Zoom variable scopes: sniper 6×, 10× or 14×; thermal 3×, 5× or 8× |
 | F | Flashlight. With night vision down it becomes an IR illuminator that enemies can't see |
 | N | Night vision goggles (flip down / up) |
 | Tab | Scoreboard |
@@ -66,7 +70,7 @@ Browsers reserve Ctrl+W, so it can close the tab. The game goes fullscreen with 
 
 Every weapon has its own synthesized firing sound, damage and range falloff, fire rate, recoil pattern, fire modes and procedurally built model.
 
-The Gunsmith has six attachment slots: optic, muzzle, barrel, underbarrel, magazine and stock. There are 19 attachments, including a suppressor, compensator, extended and fast mags, grips, a laser, and reflex, holo, 3×, 8× and thermal optics. Each one changes stats and shows up on the model.
+The Gunsmith has six attachment slots: optic, muzzle, barrel, underbarrel, magazine and stock. There are 19 attachments, including a suppressor, compensator, extended and fast mags, grips, a laser, and reflex, holo, 4× prism, 6-14× variable sniper and 3-8× thermal optics. Each one changes stats and shows up on the model.
 
 Equipment: frag (cookable), sticky semtex, remote C4, flashbang, smoke (blocks AI line of sight) and a combat stim. Explosions are big: a blinding fireball, a shockwave ring and a dust wave racing along the ground, dirt and fragments thrown high, and a smoke column that keeps pouring. There's heavy camera shake and muffled hearing up close. Flashbangs white you out, then leave a burned-in afterimage of what you were looking at, with ringing ears. They're worse through night vision.
 

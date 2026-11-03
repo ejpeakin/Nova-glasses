@@ -148,12 +148,12 @@ export const SECONDARIES = Object.keys(WEAPONS).filter((k) => WEAPONS[k].slot ==
  */
 export const ATTACHMENTS = {
   optic: {
-    iron: { name: 'Iron Sights', desc: 'Factory sights.', zoom: 1.15, sight: 'iron' },
-    reflex: { name: 'Pinpoint Reflex', desc: 'Clean red dot, minimal obstruction.', zoom: 1.25, sight: 'reflex', adsTime: 1.02 },
-    holo: { name: 'HV-2 Holographic', desc: 'Ring-and-dot holo. Fast target acquisition.', zoom: 1.3, sight: 'holo', adsTime: 1.04 },
-    acog: { name: 'Tac-3x Combat Scope', desc: '3× magnified prism optic.', zoom: 2.4, sight: 'acog', adsTime: 1.12, classes: ['ar', 'marksman', 'lmg', 'sniper'] },
-    sniper8: { name: 'Vantage 8× Scope', desc: 'Variable sniper optic with mil-dot reticle.', zoom: 6.5, sight: 'scope', adsTime: 1.2, scope: true, classes: ['sniper', 'marksman'] },
-    thermal: { name: 'Night-Eye Thermal', desc: '4× thermal: hostiles glow through smoke and darkness.', zoom: 3.2, sight: 'scope', adsTime: 1.25, scope: true, thermal: true, classes: ['ar', 'marksman', 'sniper', 'lmg'] },
+    iron: { name: 'Iron Sights', desc: 'Factory sights.', zoom: 1.2, sight: 'iron' },
+    reflex: { name: 'Pinpoint Reflex', desc: 'Clean red dot, minimal obstruction.', zoom: 1.35, sight: 'reflex', adsTime: 1.02 },
+    holo: { name: 'HV-2 Holographic', desc: 'Ring-and-dot holo. Fast target acquisition.', zoom: 1.45, sight: 'holo', adsTime: 1.04 },
+    acog: { name: 'Tac-4x Combat Scope', desc: '4× prism optic with a lit chevron and bullet-drop ladder.', zoom: 4, sight: 'acog', adsTime: 1.12, classes: ['ar', 'marksman', 'lmg', 'sniper'] },
+    sniper8: { name: 'Vantage 6-14× Scope', desc: 'Variable sniper optic (mouse wheel zooms 6×, 10×, 14×) with a mil-hash reticle and rangefinder.', zoom: 10, zoomSteps: [6, 10, 14], sight: 'scope', adsTime: 1.2, scope: true, classes: ['sniper', 'marksman'] },
+    thermal: { name: 'Night-Eye Thermal', desc: '3-8× thermal (mouse wheel zooms): hostiles glow through smoke and darkness.', zoom: 5, zoomSteps: [3, 5, 8], sight: 'scope', adsTime: 1.25, scope: true, thermal: true, classes: ['ar', 'marksman', 'sniper', 'lmg'] },
   },
   muzzle: {
     none: { name: 'None', desc: '' },
@@ -242,6 +242,7 @@ export function computeStats(weaponId, att) {
     if (a.suppressed) s.suppressed = true;
     if (a.noFlash) s.noFlash = true;
     if (a.zoom) s.zoom = a.zoom;
+    if (a.zoomSteps) s.zoomSteps = a.zoomSteps;
     if (a.sight) s.sight = a.sight;
     if (a.scope) s.scope = true;
     if (a.thermal) s.thermal = true;
