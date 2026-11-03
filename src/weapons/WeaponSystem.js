@@ -707,7 +707,7 @@ export class WeaponSystem {
 
     // Scope hides the model.
     const scope = this.scopeInfo();
-    this.rig.visible = !scope.active;
+    this.rig.visible = !scope.active && !player.rappel;
     this.arms.left.visible = this.arms.right.visible = !scope.active;
 
     // Arms: elbows fixed below-outside the view, hands on grip / foregrip.
@@ -723,7 +723,25 @@ export class WeaponSystem {
       lh.lerp(pump, sb);
     }
     const elbowR = new THREE.Vector3(0.28, -0.42, 0.05), elbowL = new THREE.Vector3(-0.22, -0.45, -0.05);
-    if (this.arms.real) {
+    if (this.arms.real && player.rappel) {
+      // On the rappel rope: guide hand up the line in front of the chest, brake hand low by the hip.
+      const cam = this.game.camera, plan = player.rappel.plan;
+      const tw = plan.toWall;
+      const at = new THREE.Vector3(player.pos.x + tw.x * 0.22, player.pos.y + 1.05, player.pos.z + tw.z * 0.22);
+      const up = plan.anchor.clone().sub(at).normalize();
+      const guide = at.clone().addScaledVector(up, 0.42);
+      const right = new THREE.Vector3(-tw.z, 0, tw.x);
+      const brake = new THREE.Vector3(at.x + right.x * 0.16 - tw.x * 0.05, player.pos.y + 0.72, at.z + right.z * 0.16 - tw.z * 0.05);
+      const k = Math.tan((cam.fov * Math.PI) / 360) / Math.tan((this.viewCam.fov * Math.PI) / 360);
+      const toView = (v) => { const o = v.clone().applyMatrix4(cam.matrixWorldInverse); o.x /= k; o.y /= k; return o; };
+      // Fists closed round the line: knuckles stacked down it, fingers wrapped toward the wall.
+      const Z = up.clone().negate(), Y = tw.clone().negate(), X = new THREE.Vector3().crossVectors(Y, Z).normalize();
+      Y.crossVectors(Z, X).normalize();
+      const qWorld = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z));
+      const qView = cam.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(qWorld);
+      this.arms.attach('left', null, toView(guide), new THREE.Vector3(-0.3, -0.55, 0.1), 'fist', qView);
+      this.arms.attach('right', null, toView(brake), new THREE.Vector3(0.34, -0.62, 0.1), 'fist', qView);
+    } else if (this.arms.real) {
       // Gloved hands wrap the weapon: trigger hand on the grip, support hand on the
       // handguard; a free hand (sprinting, cooking, throwing) balls into a fist.
       const gq = this.rig.getWorldQuaternion(new THREE.Quaternion());

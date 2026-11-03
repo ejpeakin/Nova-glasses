@@ -349,13 +349,11 @@ export class HUD {
     const ao = p.flashed > 0 ? clamp(p.flashed / 3.2, 0, 1) * 0.9 : 0;
     if (ao !== this._ao) { after.style.opacity = ao; this._ao = ao; }
 
-    // Grapple launcher: shows when the crosshair is on something it can hook.
-    const gp = game.grapplePlan;
+    // Rappel rope: shows at a roof edge with a drop below.
+    const gp = game.rappelPlan;
     const gEl = (this._grapEl ??= this.root.querySelector('#h-grap'));
     if (gp && !game.cinematic && p.alive) {
-      const dist = Math.round(gp.landing.distanceTo(p.pos));
-      const dir = gp.ledge ? '▲ CLIMB' : gp.down ? '▼ RAPPEL' : '► ZIP';
-      const txt = `<b>T</b> ${dir} ${dist}m`;
+      const txt = `<b>T</b> ▼ RAPPEL DOWN ${Math.round(gp.height)}m`;
       if (gEl._t !== txt) { gEl.innerHTML = txt; gEl._t = txt; }
       gEl.hidden = false;
     } else gEl.hidden = true;

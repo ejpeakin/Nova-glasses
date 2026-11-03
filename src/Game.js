@@ -92,9 +92,12 @@ export class Game {
     this.rope = new THREE.Mesh(ropeGeo, new THREE.MeshStandardMaterial({ color: 0x2b2a26, roughness: 0.9 }));
     this.rope.visible = false;
     this.rope.frustumCulled = false;
-    this.hook = new THREE.Mesh(new THREE.OctahedronGeometry(0.07, 0), new THREE.MeshStandardMaterial({ color: 0x55585c, roughness: 0.4, metalness: 0.8 }));
+    this.hook = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.012, 6, 12), new THREE.MeshStandardMaterial({ color: 0x55585c, roughness: 0.4, metalness: 0.8 })); // anchor carabiner
     this.hook.visible = false;
-    this.scene.add(this.rope, this.hook);
+    this.ropeTail = new THREE.Mesh(ropeGeo, this.rope.material);
+    this.ropeTail.visible = false;
+    this.ropeTail.frustumCulled = false;
+    this.scene.add(this.rope, this.hook, this.ropeTail);
     // Visible weapon laser: a faint red beam from the muzzle and a bright dot on whatever it hits.
     {
       const g = new THREE.BufferGeometry();
@@ -123,32 +126,23 @@ export class Game {
     this.nvgFx.warm?.();
   }
 
-  // ---------- grapple launcher ----------
-  _grappleHand() {
-    return this.camera.position.clone().add(new THREE.Vector3(0.18, -0.2, -0.3).applyQuaternion(this.camera.quaternion));
-  }
-
-  _updateGrappleAim(input) {
+  // ---------- rappel rope (campaign) ----------
+  _updateRappelPrompt(input) {
     const p = this.player;
-    this._grapT = (this._grapT ?? 0) - this.dt;
-    if (p.climbing) { this.grapplePlan = null; return; }
-    if (this._grapT <= 0) {
-      this._grapT = 0.1;
-      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
-      this.grapplePlan = p.planGrapple(this.camera.position, fwd);
-    }
-    if (input.pressed('KeyT')) {
-      if (this.grapplePlan && (p.grappleCD ?? 0) <= 0) {
-        this.weapons.cancelAds?.();
-        p.startGrapple(this.grapplePlan, this._grappleHand());
-        this.grapplePlan = null;
-      } else Audio.ui('back');
+    this._rapT = (this._rapT ?? 0) - this.dt;
+    if (p.climbing) { this.rappelPlan = null; return; }
+    if (this._rapT <= 0) { this._rapT = 0.12; this.rappelPlan = p.planRappel(); }
+    if (input.pressed('KeyT') && this.rappelPlan) {
+      this.weapons.cancelAds?.();
+      p.startRappel(this.rappelPlan);
+      this.rappelPlan = null;
     }
   }
 
+  // ---------- weapon laser ----------
   _updateWeaponLaser() {
     const w = this.weapons, p = this.player;
-    const on = w.laserOn && p.alive && !this.cinematic && w.muzzleView;
+    const on = w.laserOn && p.alive && !this.cinematic && !p.climbing && w.muzzleView;
     this.laserBeam.visible = this.laserDot.visible = !!on;
     if (!on) return;
     const cam = this.camera;
@@ -169,19 +163,22 @@ export class Game {
     this.laserDot.scale.setScalar(0.035 + t * 0.0045);
   }
 
+  /** Rappel rope: anchored at the roof edge, running through your hands and on down to the ground. */
   _updateRope() {
-    const g = this.player.grapple;
-    const show = !!g && !this.cinematic;
-    this.rope.visible = this.hook.visible = show;
+    const r = this.player.rappel;
+    const show = !!r && !this.cinematic;
+    this.rope.visible = this.hook.visible = this.ropeTail.visible = show;
     if (!show) return;
-    const from = this._grappleHand();
-    const to = g.hook;
-    const len = from.distanceTo(to);
-    this.rope.position.copy(from);
-    this.rope.lookAt(to);
-    this.rope.scale.set(1, 1, Math.max(0.01, len));
-    this.hook.position.copy(to);
-    this.hook.rotation.y += 0.3;
+    const plan = r.plan, p = this.player;
+    const anchor = plan.anchor;
+    // The line passes in front of your chest, between you and the wall.
+    const at = new THREE.Vector3(p.pos.x + plan.toWall.x * 0.22, p.pos.y + 1.05, p.pos.z + plan.toWall.z * 0.22);
+    const seg = (m, a, b) => { m.position.copy(a); m.lookAt(b); m.scale.set(1, 1, Math.max(0.01, a.distanceTo(b))); };
+    seg(this.rope, anchor, at);
+    const ground = new THREE.Vector3(at.x + plan.toWall.x * 0.1, plan.groundY + 0.02, at.z + plan.toWall.z * 0.1);
+    seg(this.ropeTail, at, ground);
+    this.hook.position.copy(anchor);
+    this.ropeAt = at;
   }
 
   // ---------- target tagging (hold your sights on an enemy) ----------
@@ -663,7 +660,7 @@ export class Game {
       this.weapons.update(dt, input, p);
       if (input.pressed('KeyF')) { this.flashlightOn = !this.flashlightOn; Audio.ui('click'); }
       this._updateInteraction(dt);
-      if (this.mode.gadgets?.grapple) this._updateGrappleAim(input);
+      if (this.mode.gadgets?.rappel) this._updateRappelPrompt(input);
       if (this.mode.type === 'campaign') this._updateTagging(dt);
     } else {
       p.update(dt, { isDown: () => false, pressed: () => false, anyDown: () => false, anyPressed: () => false, mouseDown: [], mousePressed: [] }, this.weapons);

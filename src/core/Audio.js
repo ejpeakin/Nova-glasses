@@ -404,26 +404,6 @@ class AudioEngine {
     }
   }
 
-  /** Grapple launcher: 'fire' (pneumatic launch), 'hook' (claw bites the edge), 'reel' (winch). */
-  grapple(kind, pos = null) {
-    if (!this.ready) return;
-    const t = this.now;
-    if (kind === 'fire') {
-      const out = this._out(null, { gain: 0.8, verb: 0.2, ownVerb: 0.3 });
-      this._noise(out, t, 0.05, { type: 'bandpass', freq: 900, q: 0.8, gain: 1.4, attack: 0.0005, decay: 0.045 });
-      this._noise(out, t, 0.09, { type: 'lowpass', freq: 300, q: 0.5, gain: 1.2, decay: 0.08, brown: true });
-      this._noise(out, t + 0.01, 0.35, { type: 'bandpass', freq: 3500, freqEnd: 1200, q: 1.2, gain: 0.35, attack: 0.01 }); // line paying out
-    } else if (kind === 'hook') {
-      const out = this._out(pos, { gain: 0.9, ref: 3, rolloff: 1.2, maxDist: 60, verb: 0.3 });
-      if (!out) return;
-      this._noise(out, t, 0.03, { type: 'highpass', freq: 2200, q: 0.6, gain: 1.0, decay: 0.025 });
-      this._noise(out, t + 0.02, 0.08, { type: 'bandpass', freq: 1800, q: 1.6, gain: 0.5 });
-    } else if (kind === 'reel') {
-      const out = this._out(null, { gain: 0.45 });
-      this._noise(out, t, 0.7, { type: 'bandpass', freq: 1300, freqEnd: 2600, q: 1.5, gain: 0.5, attack: 0.05, decay: 0.65 });
-    }
-  }
-
   /** Ricochet whine off hard surfaces. */
   ricochet(pos) {
     if (!this.ready) return;

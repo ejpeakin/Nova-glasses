@@ -29,7 +29,7 @@ Use a desktop browser (Chrome, Edge or Firefox) with a keyboard and mouse. Headp
 | R | Reload |
 | Shift | Sprint. While scoped with a sniper, hold breath |
 | Space | Jump, vault, or climb ledges, walls, fences and containers up to 2.7 m. In mid-air, grab a ledge. Also stands you up |
-| T | Grapple launcher (campaign): aim at a ledge to be reeled up and over, at a far roof to zip across, or at the ground below to rappel down |
+| T | Rappel rope (campaign). At a roof or rock edge with a drop below, clip in and go over facing the wall, then bound down it. Hold Shift for bigger bounds |
 | C | Crouch. While sprinting, slide |
 | Ctrl / Z | Prone |
 | E | Interact, pick up, swap weapon |
@@ -87,7 +87,7 @@ Equipment: frag (cookable), sticky semtex, remote C4, flashbang, smoke (blocks A
 - In the campaign, friendly squadmates follow you in formation and fight alongside you.
 
 **Game modes**
-- **Campaign:** 8 missions in the style of a spy thriller. You're a covert operative: you scale buildings with the grapple launcher and by climbing, move across rooftops, take guards down silently, and tag targets by holding your sights on them. Guards who find a body raise the alarm unless you silence them. Every mission has cinematic cutscene clips between objectives. *Black Water* is a solo night infiltration of the harbor: climb the warehouses, snipe from the rooftops with a cached suppressed rifle, zip-line onto the office and steal the manifest. *White Silence* starts on a sniper perch above a radar station, then sends you down the line, through the wire and onto the roof. The other missions mix assaults, rescues and boss fights. All missions have briefings, helicopter fast-rope insertions (press E to rope down) or intro cinematics, location and time cards, radio dialogue with subtitles, objective markers and a compass, checkpoints, stealth alarms, defend waves, boss fights and a final mission against a countdown.
+- **Campaign:** 8 missions in the style of a spy thriller. You're a covert operative: you climb onto rooftops by stairs and ledges, rappel down walls on a rope, take guards down silently, and tag targets by holding your sights on them. Guards who find a body raise the alarm unless you silence them. Every mission has cinematic cutscene clips between objectives. *Black Water* is a solo night infiltration of the harbor: climb the fire stairs onto a warehouse, snipe from the roof with a cached suppressed rifle, rappel down the wall, take the office and steal the manifest. *White Silence* starts on a sniper perch on a rock outcrop: rappel down, slip through the wire and splice the uplink from the radar roof. The other missions mix assaults, rescues and boss fights. All missions have briefings, helicopter fast-rope insertions (press E to rope down) or intro cinematics, location and time cards, radio dialogue with subtitles, objective markers and a compass, checkpoints, stealth alarms, defend waves, boss fights and a final mission against a countdown.
 - **Team Deathmatch:** up to 16 players (you plus bots) in two teams.
 - **Free For All:** every player for themselves.
 - **Domination:** capture flags A, B and C. Capture progress can be contested, and points tick while you hold flags.

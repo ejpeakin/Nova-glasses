@@ -30,7 +30,7 @@ export class CampaignMode {
     this.drops = true;
     this.weaponDrops = true;
     this.type = 'campaign';
-    this.gadgets = { grapple: true }; // spy kit: grapple launcher
+    this.gadgets = { rappel: true }; // spy kit: rappel rope for going down off roofs
     this.markers = [];
     this.groups = {};
     this.objIndex = -1;
@@ -138,7 +138,7 @@ export class CampaignMode {
     g.stealthGrace = g.time + 6; // a moment to get your bearings before anyone can spot you
     this.frozen = false;
     Audio.playMusic('none');
-    g.hud.hint(this.mission.kitHint ?? 'T: grapple launcher  ·  SPACE at a ledge: climb  ·  V from behind: silent takedown  ·  aim at enemies to tag them', 8);
+    g.hud.hint(this.mission.kitHint ?? 'T at a roof edge: rappel down  ·  SPACE at a ledge: climb  ·  V from behind: silent takedown  ·  aim at enemies to tag them', 8);
     this._nextObjective();
   }
 
@@ -374,7 +374,7 @@ export class CampaignMode {
         for (const [hx, hz, hl] of o.hints ?? []) markers.push({ pos: new THREE.Vector3(hx, 1.2, hz), label: hl, kind: 'interact' });
         const d = Math.hypot(p.pos.x - tpos.x, p.pos.z - tpos.z);
         // Rooftop goals: you actually have to be up there.
-        if (o.minY !== undefined) sub = p.pos.y >= o.minY ? '' : (o.hintSub ?? 'Get up there: grapple [T] or climb [SPACE]');
+        if (o.minY !== undefined) sub = p.pos.y >= o.minY ? '' : (o.hintSub ?? 'Find a way up: stairs, or climb [SPACE] onto ledges');
         if (d < o.radius && p.alive && (o.minY === undefined || p.pos.y >= o.minY) && !p.climbing) this._complete();
         break;
       }

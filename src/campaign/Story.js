@@ -43,12 +43,22 @@ export const MISSIONS = [
     location: 'PORT KAVAL — BLACK SEA COAST', time: 'DAY 1 — 02:14 LOCAL',
     summary: 'Solo infiltration. Scale the warehouses, take the rooftops, steal the shipping manifest and tag the HALCYON container.',
     loadout: { primary: 'wasp', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { wasp: { muzzle: 'suppressor', optic: 'reflex' }, p11: { muzzle: 'suppressor' } } },
-    loadoutNote: 'Spy kit: grapple launcher [T]. A suppressed SR-7 is cached on the west warehouse roof.',
+    loadoutNote: 'Spy kit: rappel rope (T at a roof edge). A suppressed SR-7 is cached on the west warehouse roof.',
     start: { pos: [-64, 10], yaw: -0.6 },
     squad: [],
     stealth: true,
     alarmGroup: 'response',
     caches: [{ weapon: 'specter', pos: [-27, 7, -37], attachments: { muzzle: 'suppressor', optic: 'sniper8' } }],
+    // Exterior fire stairs up the west warehouse's west wall to its roof.
+    build(b) {
+      const n = 26, rise = 7.5 / n, run = 0.45;
+      for (let i = 0; i < n; i++) b.box(-42.95, 0, -33.2 - i * run, 1.3, (i + 1) * rise, run, 'metalDark');
+      b.box(-42.95, 0, -33.2 - n * run - 0.4, 1.3, 7.5, 1.2, 'metalDark'); // top landing, level with the parapet
+      for (let i = 0; i < n; i += 3) {
+        b.box(-43.62, (i + 1) * rise, -33.2 - i * run, 0.05, 1.0, 0.05, 'metal', false); // railing posts
+        b.box(-43.62, (i + 1) * rise + 0.95, -33.2 - (i + 1.5) * run, 0.05, 0.05, run * 3, 'metal', false); // rail
+      }
+    },
     briefing: [
       { who: 'WATCHTOWER', text: 'Wraith, Watchtower. MERIDIAN is moving something heavy through Port Kaval tonight. We need to know what, and where it goes.' },
       { who: 'WATCHTOWER', text: 'You go in alone. No squad, no air, no flag. If you are caught, ORION was never here.' },
@@ -64,8 +74,8 @@ export const MISSIONS = [
       response: { spawnOn: 'alarm', hunter: true, units: [{ pos: [60, -12], weapon: 'rk74' }, { pos: [62, -4] }, { pos: [60, 4], weapon: 'breaker' }, { pos: [58, 12] }, { pos: [56, -20], weapon: 'rk74' }] },
     },
     objectives: [
-      { type: 'goto', text: 'Get onto the west warehouse roof', target: [-30, 7, -40], radius: 11, minY: 6,
-        say: [{ who: 'REYES', text: 'Patrol on the south road. Stay in the shadows, then grapple up the warehouse wall. Press T on the ledge.' }] },
+      { type: 'goto', text: 'Climb the fire stairs onto the west warehouse roof', target: [-30, 7, -40], radius: 11, minY: 6, hints: [[-42.9, -34, 'STAIRS']],
+        say: [{ who: 'REYES', text: 'Patrol on the south road. Stay in the shadows. Fire stairs on the warehouse\'s west wall will get you up top.' }] },
       { type: 'cutscene', shots: [
         { orbit: [0, 3.5, -22], radius: 17, height: 7, a0: -0.7, a1: 0.35, dur: 4.5,
           say: [{ who: 'WATCHTOWER', text: 'Harbor master\'s office. The manifest is on the ground-floor terminal. Two guards inside.' }] },
@@ -74,10 +84,10 @@ export const MISSIONS = [
       ] },
       { type: 'eliminate', text: 'Take out the rooftop shooter from the warehouse', groups: ['officeRoof'],
         say: [{ who: 'REYES', text: 'Rifle\'s by the roof edge. Aim at him to tag him, then one quiet shot.' }] },
-      { type: 'goto', text: 'Zip-line across to the office roof', target: [-1, 6.6, -22], radius: 4.5, minY: 5.8, hintSub: 'Aim at the office roof and press T to zip across',
-        say: [{ who: 'REYES', text: 'Clear. Aim at the office roof and fire the line. You\'ll ride it across.' }] },
+      { type: 'goto', text: 'Rappel down the east wall and get to the office', target: [-8.5, -20], radius: 3.5,
+        say: [{ who: 'REYES', text: 'Clear. Rope\'s on your rig. Walk to the east edge of the roof, press T and go down the wall.' }] },
       { type: 'interact', text: 'Get inside and download the shipping manifest', target: [-3, 0, -20], label: 'download the shipping manifest', duration: 4,
-        say: [{ who: 'REYES', text: 'Roof hatch, then the stairs. Two inside. Take them from behind with V. No noise.' }],
+        say: [{ who: 'REYES', text: 'West door. Two inside. Take them from behind with V. No noise.' }],
         doneSay: [{ who: 'WATCHTOWER', text: 'Manifest received. Container K-77, berth two... Wraith, you tripped a silent alarm.' }],
         onComplete: ['alarm'] },
       { type: 'cutscene', shots: [
@@ -87,7 +97,7 @@ export const MISSIONS = [
           say: [{ who: 'REYES', text: 'They\'re coming to you. Get high, pick your shots, and keep moving.' }] },
       ] },
       { type: 'eliminate', text: 'Survive the response team', groups: ['response', 'office'],
-        say: [{ who: 'REYES', text: 'Use the roofs. Grapple between them and they\'ll never pin you down.' }] },
+        say: [{ who: 'REYES', text: 'Hold the office. They have to cross open ground to reach you. Make them pay for it.' }] },
       { type: 'interact', text: 'Plant the tracker on container K-77', target: [24, 0, 34], label: 'plant the tracker', duration: 3,
         say: [{ who: 'REYES', text: 'K-77 is under the east crane. Tag it and we are gone.' }] },
       { type: 'cutscene', shots: [
@@ -186,7 +196,7 @@ export const MISSIONS = [
         { orbit: [-26, 2, -28], radius: 15, height: 8, a0: 0.5, a1: 1.3, dur: 4,
           say: [{ who: 'TEX', text: 'South-west battery. Crew of three, and they\'ve got a spotter up high.' }] },
         { from: [-24, 3, -10], to: [-23, 3.4, -12], look: [-16, 10.6, -19], dur: 3,
-          say: [{ who: 'TEX', text: 'Sniper on that roof. Grapple up the next building over and take him at his own game.' }] },
+          say: [{ who: 'TEX', text: 'Sniper on that roof. Stay out of his line of sight until you\'re close.' }] },
       ] },
       { type: 'interact', text: 'Destroy the south-west AA battery', target: [-26, 0, -28], label: 'plant C4 on the AA battery', duration: 3, aa: true,
         say: [{ who: 'TEX', text: 'Sniper on the tower roof, south-west. Watch the high windows.' }],
@@ -207,7 +217,7 @@ export const MISSIONS = [
     location: 'KORVASK MOUNTAINS — RADAR STATION 9', time: 'DAY 6 — 05:50 LOCAL',
     summary: 'Overwatch from the ridge, slip into a mountain radar station, splice its uplink from the rooftop and take down the enforcer "Rook".',
     loadout: { primary: 'longbow', secondary: 'wasp', lethal: 'c4', tactical: 'smoke', attachments: { longbow: { muzzle: 'suppressor' }, wasp: { muzzle: 'suppressor' } } },
-    loadoutNote: 'Secondary: MP-9 Wasp (suppressed). Spy kit: grapple launcher [T].',
+    loadoutNote: 'Secondary: MP-9 Wasp (suppressed). Spy kit: rappel rope (T at a roof edge).',
     start: { pos: [-45, 6.7, -61.5], yaw: -0.95 },
     squad: [],
     stealth: true,
@@ -243,13 +253,13 @@ export const MISSIONS = [
         { orbit: [22, 5, 20], radius: 20, height: 9, a0: -0.4, a1: 0.5, dur: 4.5,
           say: [{ who: 'WATCHTOWER', text: 'The uplink antenna is on the radar building roof. Splice it from up there.' }] },
         { from: [-6, 3.5, -6], to: [-10, 3.2, -4], look: [-22, 2, 9], dur: 3.5,
-          say: [{ who: 'TEX', text: 'Hangar\'s full of Rook\'s people. Stay off the ground. Climb, don\'t walk.' }] },
+          say: [{ who: 'TEX', text: 'Hangar\'s full of Rook\'s people. Stay out of the open. Use the buildings.' }] },
       ] },
       { type: 'goto', text: 'Get down off the ridge and through the wire', target: [0, -42], radius: 8,
         hints: [[-25.5, -50, 'GAP'], [25.5, -50, 'GAP']],
-        say: [{ who: 'TEX', text: 'Rappel down: aim at the snow and press T. Then the gate, a gap in the wire, or just climb the fence.' }] },
+        say: [{ who: 'TEX', text: 'Walk to the south edge of the rock and press T to rappel down. Then the gate, a gap in the wire, or just climb the fence.' }] },
       { type: 'goto', text: 'Get onto the radar building roof', target: [20, 6.6, 21], radius: 5, minY: 5.8,
-        say: [{ who: 'TEX', text: 'Grapple onto the roof or climb the stairs. Two inside. Take them quietly if you go in.' }] },
+        say: [{ who: 'TEX', text: 'Stairs inside go up to the roof. Two inside. Take them quietly.' }] },
       { type: 'interact', text: 'Splice into the uplink antenna', target: [19.3, 6.6, 22.1], label: 'splice the uplink antenna', duration: 5,
         doneSay: [{ who: 'WATCHTOWER', text: 'Uplink is ours. Wait — heavy signature leaving the hangar. That\'s Rook.' }],
         onComplete: ['alarm'] },
