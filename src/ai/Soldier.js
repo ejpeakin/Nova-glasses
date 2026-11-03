@@ -306,6 +306,29 @@ export class Soldier {
       const loud = g.time - (g.player.lastShotTime ?? -99) < 10 || g.mode?.alarmed;
       if (!loud) candidates = candidates.filter((e) => e.state === 'combat' || e.state === 'hunt' || e.state === 'flee' || (e.awareness ?? 0) > 0.95);
     }
+    // Unaware guards who come across a fallen comrade go to investigate and raise the alarm.
+    if (!this.mpBot && !this.friendly && (this.state === 'idle' || this.state === 'patrol' || this.state === 'alert')) {
+      const g = this.game;
+      for (const b of g.bodies) {
+        if (b.team !== this.team || b.seenBy?.has(this) || b.actor === this) continue;
+        const d = Math.hypot(b.pos.x - this.pos.x, b.pos.z - this.pos.z);
+        if (d > 20) continue;
+        const eye = this.eyePos;
+        const to = new THREE.Vector3(b.pos.x - eye.x, 0, b.pos.z - eye.z).normalize();
+        const fwd = new THREE.Vector3(-Math.sin(this.lookYaw), 0, -Math.cos(this.lookYaw));
+        if (d > 4 && fwd.dot(to) < 0.2) continue; // not looking that way
+        if (!g.world.los(eye, b.pos.clone().setY(b.pos.y + 0.3))) continue;
+        (b.seenBy ??= new Set()).add(this);
+        this.state = 'alert';
+        this.alertT = 0;
+        this.awareness = Math.max(this.awareness, 0.6);
+        this.lastKnown = b.pos.clone();
+        this._pathTo(b.pos, true);
+        g.callout(this, pick(['Man down!', 'Body here!', 'We have a man down!']));
+        g.mode?.onBodyFound?.(this, b);
+        break;
+      }
+    }
     let best = null, bestScore = -Infinity, bestVis = 0;
     for (const e of candidates) {
       const vis = this._canSee(e, now);

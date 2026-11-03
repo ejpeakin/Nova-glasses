@@ -56,8 +56,9 @@ export class Player {
     this.holdBreath = 0;
     this.breath = 1;
     this.deathRoll = 0;
-    this.mantle = null; // active vault/mantle move
+    this.mantle = null; // active vault/mantle/climb move
     this.vaultPlan = null; // what Space would climb right now
+    this.grapple = null; // active grapple-launcher traverse
     this.vaultCheckT = 0;
   }
 
@@ -77,6 +78,8 @@ export class Player {
     this.deathRoll = 0;
     this.mantle = null;
     this.vaultPlan = null;
+    this.grapple = null;
+    this.grappleCD = 0;
     this.hurtDirs.length = 0;
   }
 
@@ -87,46 +90,57 @@ export class Player {
     return new THREE.Vector3(-Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch));
   }
 
+  /** Mid-climb, mid-vault or on a grapple line (weapon lowered, no firing). */
+  get climbing() { return !!this.mantle || !!this.grapple; }
+
   /**
-   * Can we vault over / mantle onto what is directly ahead? Low cover (sandbags,
-   * barriers, crates, sills) up to 1.65 m. Returns { to, over, crouch, vault } or null.
+   * Can we vault over, mantle onto or climb what is directly ahead? Low cover
+   * (sandbags, barriers, crates, sills) up to 1.65 m is a vault or mantle; ledges,
+   * container sides, walls and fences up to 2.7 m are a climb (hands on the edge,
+   * pull up). In the air (after a jump) the reach is measured from where we are.
+   * Returns { to, over, crouch, vault, climb } or null.
    */
-  _planVault() {
-    if (!this.onGround || this.stance === 'prone' || this.sliding > 0) return null;
+  _planVault(air = false) {
+    if ((!air && !this.onGround) || this.stance === 'prone' || this.sliding > 0) return null;
     const w = this.world, y = this.pos.y;
     const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
+    const maxRise = air ? 2.1 : 2.7;
     // Probe a few distances ahead for the nearest face we could climb.
     let px = 0, pz = 0, top = 0, rise = 0, found = false;
     for (const reach of [R + 0.12, R + 0.28, R + 0.45]) {
       px = this.pos.x + fx * reach; pz = this.pos.z + fz * reach;
-      top = w.groundHeight(px, pz, y + 1.65, 0, 0.1);
+      top = w.groundHeight(px, pz, y + maxRise, 0, 0.1);
       rise = top - y;
       // There must be an actual face in front of us (not just stairs or a slope).
-      if (rise >= 0.45 && rise <= 1.65 && w.overlaps(px - 0.08, y + 0.25, pz - 0.08, px + 0.08, top - 0.05, pz + 0.08)) { found = true; break; }
-      if (w.overlaps(px - 0.08, y + 1.66, pz - 0.08, px + 0.08, y + 1.75, pz + 0.08)) return null; // a wall too tall to climb is in the way
+      if (rise >= (air ? 0.3 : 0.45) && rise <= maxRise && w.overlaps(px - 0.08, y + 0.25, pz - 0.08, px + 0.08, top - 0.05, pz + 0.08)
+        && !w.overlaps(px - 0.08, top + 0.05, pz - 0.08, px + 0.08, top + 0.9, pz + 0.08)) { found = true; break; }
+      if (w.overlaps(px - 0.08, y + maxRise + 0.02, pz - 0.08, px + 0.08, y + maxRise + 0.1, pz + 0.08)) return null; // a wall too tall to climb is in the way
     }
     if (!found) return null;
+    const climb = rise > 1.65;
     // Room to pass over the top (diving through a window counts).
     if (this._blocked(px, top, pz, 1.05)) return null;
-    // Thin obstacle: vault over and land on the far side.
-    if (rise <= 1.3) {
+    // Thin obstacle (barrier, wall, fence): go over and land on the far side.
+    if (rise <= (climb ? maxRise : 1.3)) {
       for (const d of [0.75, 1.1, 1.5]) {
         const qx = px + fx * d, qz = pz + fz * d;
         const g = w.groundHeight(qx, qz, top + 0.05, 0, R - 0.02);
         if (g >= top - 0.05) break; // obstacle keeps going: mantle onto it instead
         if (g < top - 0.3 && !this._blocked(qx, g, qz, STANCE.stand.h) && !this._blocked((px + qx) / 2, top, (pz + qz) / 2, 1.05)) {
-          return { to: new THREE.Vector3(qx, g, qz), over: top, crouch: false, vault: true };
+          return { to: new THREE.Vector3(qx, g, qz), over: top, crouch: false, vault: true, climb };
         }
       }
     }
     // Deep obstacle: climb up and stand (or crouch) on top.
     const mx = this.pos.x + fx * (R + 0.55), mz = this.pos.z + fz * (R + 0.55);
+    if (Math.abs(w.groundHeight(mx, mz, top + 0.05, 0, 0.1) - top) > 0.2) return null; // nothing to stand on up there
     if (this._blocked(mx, top, mz, STANCE.crouch.h)) return null;
-    return { to: new THREE.Vector3(mx, top, mz), over: top, crouch: this._blocked(mx, top, mz, STANCE.stand.h), vault: false };
+    return { to: new THREE.Vector3(mx, top, mz), over: top, crouch: this._blocked(mx, top, mz, STANCE.stand.h), vault: false, climb };
   }
 
   _startMantle(plan) {
-    const dur = plan.vault ? 0.55 : 0.5 + (plan.over - this.pos.y) * 0.15;
+    const rise = plan.over - this.pos.y;
+    const dur = plan.climb ? 0.75 + rise * 0.22 : plan.vault ? 0.55 : 0.5 + rise * 0.15;
     this.mantle = { t: 0, dur, from: this.pos.clone(), plan, fx: -Math.sin(this.yaw), fz: -Math.cos(this.yaw) };
     this.vel.set(0, 0, 0);
     this.vaultPlan = null;
@@ -139,24 +153,171 @@ export class Player {
     m.t += dt;
     const k = Math.min(1, m.t / m.dur);
     const { from, plan } = m;
-    // Up first, then over (quadratic arc through a point just above the top edge).
-    const apex = new THREE.Vector3(from.x + (plan.to.x - from.x) * (plan.vault ? 0.5 : 0.35), plan.over + (plan.vault ? 0.35 : 0.08), from.z + (plan.to.z - from.z) * (plan.vault ? 0.5 : 0.35));
-    const a = 1 - k;
-    this.pos.set(
-      a * a * from.x + 2 * a * k * apex.x + k * k * plan.to.x,
-      a * a * from.y + 2 * a * k * apex.y + k * k * plan.to.y,
-      a * a * from.z + 2 * a * k * apex.z + k * k * plan.to.z,
-    );
-    this.mantleRoll = Math.sin(k * Math.PI) * (plan.vault ? 0.09 : 0.04);
+    if (plan.climb) {
+      // Hand over hand: haul straight up the face, then roll over the edge.
+      const up = Math.min(1, k / 0.62), over = Math.max(0, (k - 0.62) / 0.38);
+      const hy = from.y + (plan.over + 0.12 - from.y) * (1 - Math.pow(1 - up, 2));
+      const edge = new THREE.Vector3(from.x + (plan.to.x - from.x) * 0.12, 0, from.z + (plan.to.z - from.z) * 0.12);
+      if (over <= 0) this.pos.set(edge.x * up + from.x * (1 - up), hy, edge.z * up + from.z * (1 - up));
+      else {
+        const e = over * over * (3 - 2 * over);
+        this.pos.set(edge.x + (plan.to.x - edge.x) * e, plan.over + 0.12 + (plan.to.y - plan.over - 0.12) * e + Math.sin(e * Math.PI) * (plan.vault ? 0.25 : 0.06), edge.z + (plan.to.z - edge.z) * e);
+      }
+      // Each heave of the arms nods the view.
+      this.mantleRoll = Math.sin(k * Math.PI * 3) * 0.035 * (1 - over);
+      this.climbPitch = -Math.abs(Math.sin(k * Math.PI * 3)) * 0.05 * (1 - over);
+      if (Math.floor(k * 3) !== m.heave) { m.heave = Math.floor(k * 3); if (m.heave < 3) Audio.mech('raise'); }
+    } else {
+      // Up first, then over (quadratic arc through a point just above the top edge).
+      const apex = new THREE.Vector3(from.x + (plan.to.x - from.x) * (plan.vault ? 0.5 : 0.35), plan.over + (plan.vault ? 0.35 : 0.08), from.z + (plan.to.z - from.z) * (plan.vault ? 0.5 : 0.35));
+      const a = 1 - k;
+      this.pos.set(
+        a * a * from.x + 2 * a * k * apex.x + k * k * plan.to.x,
+        a * a * from.y + 2 * a * k * apex.y + k * k * plan.to.y,
+        a * a * from.z + 2 * a * k * apex.z + k * k * plan.to.z,
+      );
+      this.mantleRoll = Math.sin(k * Math.PI) * (plan.vault ? 0.09 : 0.04);
+    }
     if (k >= 1) {
       this.mantle = null;
       this.mantleRoll = 0;
+      this.climbPitch = 0;
       this.onGround = true;
       this.vel.set(m.fx * (plan.vault ? 3 : 0.5), 0, m.fz * (plan.vault ? 3 : 0.5));
       if (plan.crouch) this.stance = 'crouch';
       this.landDip = plan.vault ? 0.08 : 0.04;
       Audio.footstep(this.world.groundMat, null, 1.6);
     }
+  }
+
+  /**
+   * Where would the grapple launcher take us if fired along `dir` from the eye?
+   * A wall face: hook the ledge above it, be reeled up and haul over onto the top.
+   * A flat surface (roof, ground, container top): zip or rappel straight to it.
+   */
+  planGrapple(origin, dir, maxDist = 48) {
+    const w = this.world;
+    const hit = w.raycast(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, maxDist);
+    if (!hit) return null;
+    // Top of a face we hit (a roof edge, parapet or container lip).
+    const faceTop = (pt, n, reach) => Math.max(
+      w.groundHeight(pt.x - n.x * 0.12, pt.z - n.z * 0.12, pt.y + reach, 0, 0.08),
+      w.groundHeight(pt.x - n.x * 0.35, pt.z - n.z * 0.35, pt.y + reach, 0, 0.05),
+    );
+    if (hit.t < 2.5) {
+      // Looking down over a parapet / edge right in front of us: hop over it and rappel.
+      const n = hit.normal, pt = hit.point;
+      if (Math.abs(n.y) > 0.5 || dir.y > -0.15) return null;
+      const top = faceTop(pt, n, 2);
+      if (top > origin.y - 0.25 || top < this.pos.y + 0.2) return null;
+      const via = new THREE.Vector3(pt.x - n.x * 0.65, top + 0.4, pt.z - n.z * 0.65);
+      if (w.overlaps(via.x - 0.2, via.y, via.z - 0.2, via.x + 0.2, via.y + 1.2, via.z + 0.2)) return null;
+      const hit2 = w.raycast(via.x, via.y, via.z, dir.x, Math.min(dir.y, -0.5), dir.z, maxDist);
+      if (!hit2 || hit2.normal.y < 0.7) return null;
+      const L = hit2.point;
+      const ly = w.groundHeight(L.x, L.z, L.y + 0.2, 0, 0.1);
+      if (this._blocked(L.x, ly, L.z, STANCE.crouch.h)) return null;
+      const landing = new THREE.Vector3(L.x, ly, L.z);
+      return { anchor: new THREE.Vector3(pt.x, top, pt.z), via, hang: landing, landing, ledge: false, down: true, crouch: this._blocked(L.x, ly, L.z, STANCE.stand.h) };
+    }
+    const n = hit.normal, pt = hit.point;
+    if (Math.abs(n.y) < 0.5) {
+      // Find the top of this face: the highest surface just inside the wall, above the hit.
+      const ix = pt.x - n.x * 0.3, iz = pt.z - n.z * 0.3;
+      const top = faceTop(pt, n, 24);
+      if (top < pt.y - 0.2 || top - pt.y > 22 || top < 1.2) return null;
+      // Nothing solid directly above the lip (it must be an edge, not the middle of a tall wall).
+      if (w.overlaps(ix - 0.05, top + 0.05, iz - 0.05, ix + 0.05, top + 1.2, iz + 0.05)) return null;
+      // Land just inside the edge; behind a parapet the roof can sit lower than the lip.
+      let landing = null;
+      for (const d of [0.75, 1.1, 1.5, 2.0]) {
+        const lx = pt.x - n.x * d, lz = pt.z - n.z * d;
+        const ly = w.groundHeight(lx, lz, top + 0.2, 0, 0.1);
+        if (ly < top - 1.3 || ly > top + 0.25 || this._blocked(lx, ly, lz, STANCE.crouch.h)) continue;
+        landing = new THREE.Vector3(lx, ly, lz);
+        break;
+      }
+      if (!landing) return null;
+      return {
+        anchor: new THREE.Vector3(pt.x - n.x * 0.05, top, pt.z - n.z * 0.05),
+        hang: new THREE.Vector3(pt.x + n.x * (R + 0.15), top - 1.25, pt.z + n.z * (R + 0.15)),
+        landing, top, ledge: true, crouch: this._blocked(landing.x, landing.y, landing.z, STANCE.stand.h),
+      };
+    }
+    if (n.y > 0.7) {
+      const lx = pt.x, lz = pt.z;
+      const ly = w.groundHeight(lx, lz, pt.y + 0.2, 0, 0.1);
+      if (this._blocked(lx, ly, lz, STANCE.crouch.h)) return null;
+      return { anchor: pt.clone(), hang: new THREE.Vector3(lx, ly, lz), landing: new THREE.Vector3(lx, ly, lz), ledge: false, crouch: this._blocked(lx, ly, lz, STANCE.stand.h), down: ly < this.pos.y - 1.5 };
+    }
+    return null;
+  }
+
+  startGrapple(plan, hand) {
+    const fly = Math.max(0.12, hand.distanceTo(plan.anchor) / 110);
+    this.grapple = { plan, phase: 'shoot', t: 0, fly, hook: hand.clone(), from: hand.clone(), speed: 0 };
+    this.vel.set(0, 0, 0);
+    this.sliding = 0;
+    this.vaultPlan = null;
+    if (this.stance === 'prone') this.stance = 'crouch';
+    Audio.grapple?.('fire');
+  }
+
+  _updateGrapple(dt) {
+    const g = this.grapple, plan = g.plan;
+    g.t += dt;
+    if (g.phase === 'shoot') {
+      const k = Math.min(1, g.t / g.fly);
+      g.hook.lerpVectors(g.from, plan.anchor, k);
+      if (k >= 1) { g.phase = 'pull'; g.t = 0; Audio.grapple?.('hook', plan.anchor); Audio.grapple?.('reel'); }
+      return;
+    }
+    if (g.phase === 'pull') {
+      g.hook.copy(plan.anchor);
+      // Rappels first hop over the parapet, then drop down the line.
+      const goal = plan.via && !g.overEdge ? plan.via : plan.hang;
+      const to = goal.clone().sub(this.pos);
+      const d = to.length();
+      // Reel accelerates hard, then eases in to the wall / landing.
+      g.speed = Math.min(plan.down ? 11 : 17, g.speed + dt * 40);
+      const step = Math.min(d, g.speed * dt * Math.min(1, 0.35 + d / 3));
+      if (d > 1e-3) this.pos.addScaledVector(to.divideScalar(d), step);
+      this.mantleRoll = Math.sin(g.t * 7) * 0.015;
+      if (d - step < 0.06 && goal === plan.via) { g.overEdge = true; return; }
+      if (d - step < 0.06) {
+        if (plan.ledge) {
+          // Haul over the lip onto the roof.
+          g.phase = 'climb'; g.t = 0; g.climbFrom = this.pos.clone();
+          Audio.mech('raise');
+        } else {
+          this._endGrapple();
+        }
+      }
+      return;
+    }
+    // climb: haul up over the lip (clearing any parapet) and drop onto the roof.
+    const k = Math.min(1, g.t / 0.6);
+    const e = k * k * (3 - 2 * k);
+    const f = g.climbFrom, L = plan.landing, A = plan.anchor;
+    const cy = Math.max(plan.top ?? L.y, L.y) + 0.45;
+    const a = 1 - e;
+    this.pos.set(a * a * f.x + 2 * a * e * A.x + e * e * L.x, a * a * f.y + 2 * a * e * cy + e * e * L.y, a * a * f.z + 2 * a * e * A.z + e * e * L.z);
+    this.climbPitch = -Math.sin(e * Math.PI) * 0.12;
+    if (k >= 1) this._endGrapple();
+  }
+
+  _endGrapple() {
+    const plan = this.grapple.plan;
+    this.pos.copy(plan.landing);
+    this.grapple = null;
+    this.onGround = true;
+    this.vel.set(0, 0, 0);
+    this.mantleRoll = 0;
+    this.climbPitch = 0;
+    if (plan.crouch) this.stance = 'crouch';
+    this.landDip = 0.07;
+    this.grappleCD = 0.6;
+    Audio.footstep(this.world.groundMat, null, 1.6);
   }
 
   _blocked(x, y, z, h) {
@@ -245,6 +406,13 @@ export class Player {
       if (this.stance === 'prone') this.setStance('crouch');
       else if (this.onGround) this.setStance('prone');
     }
+    this.grappleCD = Math.max(0, (this.grappleCD ?? 0) - dt);
+    if (this.grapple) {
+      this._updateGrapple(dt);
+      this.speed = this.grapple?.phase === 'pull' ? 8 : 0;
+      this.eye = damp(this.eye, STANCE[this.stance].eye, 12, dt);
+      return;
+    }
     if (this.mantle) {
       this._updateMantle(dt);
       this.speed = 0;
@@ -256,6 +424,11 @@ export class Player {
     if (input.pressed('Space') && this.onGround && this.stance !== 'prone') {
       const plan = this._planVault();
       if (plan) { this._startMantle(plan); return; }
+    }
+    // Ledge grab: jump at a wall, press Space again to catch the edge and climb.
+    if (input.pressed('Space') && !this.onGround && this.vel.y < 3) {
+      const plan = this._planVault(true);
+      if (plan && plan.climb !== undefined) { this._startMantle({ ...plan, climb: true }); return; }
     }
     if (input.pressed('Space')) {
       if (this.stance !== 'stand') {
@@ -411,6 +584,7 @@ export class Player {
     cam.rotation.y = this.yaw + (Math.random() - 0.5) * sh * 0.04;
     cam.rotation.x = this.pitch + (Math.random() - 0.5) * sh * 0.04;
     cam.rotation.z = bobX * 0.3 + (this.sliding > 0 ? 0.06 : 0) + this.deathRoll + (this.mantleRoll ?? 0);
+    cam.rotation.x += this.climbPitch ?? 0;
     if (weaponOffset) { cam.rotation.x += weaponOffset.x; cam.rotation.y += weaponOffset.y; }
     if (cam.fov !== fov) { cam.fov = fov; cam.updateProjectionMatrix(); }
     cam.updateMatrixWorld();

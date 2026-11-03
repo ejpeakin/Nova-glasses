@@ -34,6 +34,7 @@ export class Game {
     this.interactables = [];
     this.flashlightOn = false;
     this.flashlightVisible = false; // white light enemies can see (the IR illuminator is invisible to them)
+    this.bodies = []; // fallen soldiers other guards can discover
     this.nvg = false;
     this.lastMouse = { x: 0, y: 0 };
     this.killfeed = [];
@@ -85,6 +86,15 @@ export class Game {
     this.flashlight.target.position.set(0, 0, -5);
     this.camera.add(this.flashlight, this.flashlight.target);
     this._initLasers();
+    const ropeGeo = new THREE.CylinderGeometry(0.011, 0.011, 1, 5);
+    ropeGeo.rotateX(Math.PI / 2);
+    ropeGeo.translate(0, 0, 0.5);
+    this.rope = new THREE.Mesh(ropeGeo, new THREE.MeshStandardMaterial({ color: 0x2b2a26, roughness: 0.9 }));
+    this.rope.visible = false;
+    this.rope.frustumCulled = false;
+    this.hook = new THREE.Mesh(new THREE.OctahedronGeometry(0.07, 0), new THREE.MeshStandardMaterial({ color: 0x55585c, roughness: 0.4, metalness: 0.8 }));
+    this.hook.visible = false;
+    this.scene.add(this.rope, this.hook);
     if (this.night || this.mapId === 'blacksite') this.hud?.hint('F: flashlight   N: night vision', 6);
     Audio.setAmbience(mode.ambience ?? this.mapInfo.ambience);
     Audio.setAcoustics(this.world.indoor ? 'indoor' : this.mapId);
@@ -99,6 +109,71 @@ export class Game {
     this.renderer.compile(this.weapons.viewScene, this.weapons.viewCam);
     this.renderer.setRenderTarget(null);
     this.nvgFx.warm?.();
+  }
+
+  // ---------- grapple launcher ----------
+  _grappleHand() {
+    return this.camera.position.clone().add(new THREE.Vector3(0.18, -0.2, -0.3).applyQuaternion(this.camera.quaternion));
+  }
+
+  _updateGrappleAim(input) {
+    const p = this.player;
+    this._grapT = (this._grapT ?? 0) - this.dt;
+    if (p.climbing) { this.grapplePlan = null; return; }
+    if (this._grapT <= 0) {
+      this._grapT = 0.1;
+      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+      this.grapplePlan = p.planGrapple(this.camera.position, fwd);
+    }
+    if (input.pressed('KeyT')) {
+      if (this.grapplePlan && (p.grappleCD ?? 0) <= 0) {
+        this.weapons.cancelAds?.();
+        p.startGrapple(this.grapplePlan, this._grappleHand());
+        this.grapplePlan = null;
+      } else Audio.ui('back');
+    }
+  }
+
+  _updateRope() {
+    const g = this.player.grapple;
+    const show = !!g && !this.cinematic;
+    this.rope.visible = this.hook.visible = show;
+    if (!show) return;
+    const from = this._grappleHand();
+    const to = g.hook;
+    const len = from.distanceTo(to);
+    this.rope.position.copy(from);
+    this.rope.lookAt(to);
+    this.rope.scale.set(1, 1, Math.max(0.01, len));
+    this.hook.position.copy(to);
+    this.hook.rotation.y += 0.3;
+  }
+
+  // ---------- target tagging (hold your sights on an enemy) ----------
+  _updateTagging(dt) {
+    const w = this.weapons;
+    if ((w.ads ?? 0) < 0.85) { this._tagT = 0; this._tagged = null; return; }
+    const cam = this.camera;
+    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+    let best = null, bestA = THREE.MathUtils.degToRad(2.2);
+    for (const a of this.actors) {
+      if (!a.alive || a.marked || !this.hostile(this.player, a)) continue;
+      const c = a.chest;
+      const to = c.clone().sub(cam.position);
+      const d = to.length();
+      if (d > 180) continue;
+      const ang = to.divideScalar(d).angleTo(fwd);
+      if (ang < bestA && this.world.los(cam.position, c)) { bestA = ang; best = a; }
+    }
+    if (best && best === this._tagged) {
+      this._tagT += dt;
+      if (this._tagT > 0.45) {
+        best.marked = true;
+        this._tagT = 0;
+        Audio.ui('click');
+        this.hud?.toast('TARGET TAGGED', 'xp');
+      }
+    } else { this._tagged = best; this._tagT = 0; }
   }
 
   // ---------- IR lasers (visible only through night vision) ----------
@@ -303,7 +378,7 @@ export class Game {
   melee(attacker) {
     const p = this.player;
     const fwd = p.forward.setY(0).normalize();
-    let best = null, bestD = 2.4;
+    let best = null, bestD = 2.6;
     for (const a of this.actors) {
       if (!a.alive || !this.hostile(p, a)) continue;
       const to = a.pos.clone().sub(p.pos).setY(0);
@@ -313,6 +388,21 @@ export class Game {
       best = a; bestD = d;
     }
     Audio.mech('raise');
+    // Silent takedown: an enemy who hasn't seen you (or has their back to you) drops without a sound.
+    if (best && best.role !== 'boss' && best.role !== 'heavy') {
+      const engaged = best.state === 'combat' && best.target === p && best.targetVisible;
+      const facing = new THREE.Vector3(-Math.sin(best.yaw), 0, -Math.cos(best.yaw));
+      const toP = p.pos.clone().sub(best.pos).setY(0).normalize();
+      const behind = facing.dot(toP) < 0.25;
+      if (!engaged && (behind || best.state === 'idle' || best.state === 'patrol' || best.state === 'alert')) {
+        best.takeDamage(99999, null, attacker, false, 'melee');
+        Audio.impact('flesh', best.chest);
+        this.hud?.toast('SILENT TAKEDOWN', 'xp');
+        this.hud?.hitmarker(true, false);
+        Store.stats.meleeKills++;
+        return;
+      }
+    }
     if (best) {
       best.takeDamage(best.role === 'boss' ? 120 : 250, p.pos, attacker, false, 'melee');
       Audio.impact('flesh', best.chest);
@@ -362,6 +452,10 @@ export class Game {
       Store.saveSoon();
     }
     this.mode.onKill?.(killer, victim, weaponId, head);
+    if (!victim.isPlayer) {
+      this.bodies.push({ pos: victim.pos.clone(), team: victim.team, t: this.time, actor: victim });
+      if (this.bodies.length > 40) this.bodies.shift();
+    }
     // Drops.
     if (!victim.isPlayer && victim.team !== this.player.team && this.mode.drops) this._drop(victim);
   }
@@ -383,7 +477,7 @@ export class Game {
     }
   }
 
-  addPickup(kind, pos, weaponId = null) {
+  addPickup(kind, pos, weaponId = null, attachments = null) {
     let mesh;
     if (kind === 'ammo') {
       mesh = new THREE.Group();
@@ -415,7 +509,7 @@ export class Game {
     mesh.position.y += this.world.groundHeight(pos.x, pos.z, pos.y + 0.3);
     mesh.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     this.scene.add(mesh);
-    const p = { kind, pos: mesh.position.clone(), mesh, weaponId, t: 0 };
+    const p = { kind, pos: mesh.position.clone(), mesh, weaponId, attachments, t: 0 };
     this.pickups.push(p);
     return p;
   }
@@ -472,7 +566,7 @@ export class Game {
           prompt = `Press <b>E</b> to swap for <b>${w.name}</b>`;
           if (this.input.pressed('KeyE')) {
             const old = this.weapons.weapon.id;
-            this.weapons.replaceCurrent(pk.weaponId);
+            this.weapons.replaceCurrent(pk.weaponId, pk.attachments ?? {});
             pk.dead = true;
             if (WEAPONS[old].class !== 'pistol') this.addPickup('weapon', p.pos.clone(), old);
           }
@@ -534,6 +628,8 @@ export class Game {
       this.weapons.update(dt, input, p);
       if (input.pressed('KeyF')) { this.flashlightOn = !this.flashlightOn; Audio.ui('click'); }
       this._updateInteraction(dt);
+      if (this.mode.gadgets?.grapple) this._updateGrappleAim(input);
+      if (this.mode.type === 'campaign') this._updateTagging(dt);
     } else {
       p.update(dt, { isDown: () => false, pressed: () => false, anyDown: () => false, anyPressed: () => false, mouseDown: [], mousePressed: [] }, this.weapons);
       this.hud?.prompt(null);
@@ -582,6 +678,7 @@ export class Game {
     this.weapons.updateLighting(this.env, this.camera);
     if (p.suppressed) p.suppressed = Math.max(0, p.suppressed - dt * 1.5);
     this._updateLasers();
+    this._updateRope();
     this.hud?.update(this, dt);
     this.render();
   }

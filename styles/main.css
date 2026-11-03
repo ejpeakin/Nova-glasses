@@ -405,6 +405,10 @@ blockquote cite { display: block; font-size: 15px; color: var(--muted); margin-t
 .mk-label { font-family: var(--mono); font-size: 11px; color: var(--warn); letter-spacing: 0.1em; }
 .mk-dist { font-family: var(--mono); font-size: 11px; color: #fff; }
 .mk.m-enemy .mk-icon { color: var(--danger); }
+.mk.m-mark .mk-icon { color: var(--danger); font-size: 13px; opacity: 0.85; }
+.mk.m-mark .mk-dist { font-size: 9px; opacity: 0.7; }
+.grap { position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; color: #cfe8d0; background: rgba(0,0,0,0.38); padding: 2px 8px; border: 1px solid rgba(160,220,160,0.35); white-space: nowrap; pointer-events: none; }
+.grap b { color: var(--accent, #8fd18a); }
 .mk.m-defend .mk-icon, .mk.m-defend .mk-label { color: var(--friendly); }
 .mk.m-flag .mk-icon { width: 26px; height: 26px; margin: 0 auto; display: grid; place-items: center; border: 2px solid #ddd; background: rgba(0,0,0,0.45); font-weight: 700; font-size: 15px; color: #ddd; }
 .mk.m-flag.own .mk-icon { border-color: var(--friendly); color: var(--friendly); }

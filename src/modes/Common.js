@@ -63,6 +63,55 @@ export class Cinematic {
   }
 }
 
+/**
+ * A cut-together sequence of camera shots (a mid-mission "clip"). Each shot is a
+ * Cinematic over its own keys; shot.onStart fires as it cuts in (dialogue, spawns).
+ */
+export class ShotSequence {
+  constructor(shots, onEnd) {
+    this.shots = shots;
+    this.i = -1;
+    this.onEnd = onEnd;
+    this.done = false;
+    this._next();
+  }
+
+  _next() {
+    if (this.done) return;
+    this.i++;
+    if (this.i >= this.shots.length) { this.finish(); return; }
+    const s = this.shots[this.i];
+    this.cur = new Cinematic(s.keys, s.dur, () => this._next());
+    s.onStart?.();
+  }
+
+  update(dt, camera) {
+    if (!this.done) this.cur?.update(dt, camera);
+  }
+
+  finish() {
+    if (this.done) return;
+    this.done = true;
+    this.onEnd?.();
+  }
+}
+
+/** Camera keys for a shot: { from, to, look, lookTo } or an orbit { orbit, radius, height, a0, a1 }. */
+export function shotKeys(s) {
+  const V = (a) => new THREE.Vector3(a[0], a[1], a[2]);
+  if (s.orbit) {
+    const c = V(s.orbit), r = s.radius ?? 14, h = s.height ?? 6, a0 = s.a0 ?? 0, a1 = s.a1 ?? 0.8;
+    const keys = [];
+    for (let i = 0; i <= 4; i++) {
+      const a = a0 + (a1 - a0) * (i / 4);
+      keys.push({ pos: new THREE.Vector3(c.x + Math.sin(a) * r, c.y + h - i * (s.drop ?? 0.4), c.z + Math.cos(a) * r), look: c.clone() });
+    }
+    return keys;
+  }
+  const look = V(s.look), lookTo = s.lookTo ? V(s.lookTo) : look.clone();
+  return [{ pos: V(s.from), look }, { pos: V(s.to ?? s.from), look: lookTo }];
+}
+
 /** Build a standard intro: wide establishing shot -> over the shoulder -> eyes. */
 export function introKeys(start, yaw, focus) {
   const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));

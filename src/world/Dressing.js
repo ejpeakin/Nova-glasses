@@ -16,7 +16,7 @@ function avoidList(b, mapId) {
   for (const p of Object.values(b.points)) add(p.x, p.z, 3);
   for (const m of MISSIONS) {
     if (m.map !== mapId) continue;
-    add(m.start.pos[0], m.start.pos[1], 4);
+    add(m.start.pos[0], m.start.pos[m.start.pos.length === 3 ? 2 : 1], 4);
     if (m.insertion) add(m.insertion.lz[0], m.insertion.lz[1], 7);
     for (const o of m.objectives) if (o.target) add(o.target[0], o.target.length === 3 ? o.target[2] : o.target[1], 3.5);
     for (const g of Object.values(m.groups)) for (const u of g.units) add(u.pos[0], u.pos.length === 3 ? u.pos[2] : u.pos[1], 1.6);

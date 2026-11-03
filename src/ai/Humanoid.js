@@ -689,6 +689,12 @@ export class Humanoid {
     }
     // Reload choreography for the support hand (and the magazine).
     if (this.rl) this._reloadHands(lh);
+    else if ((this.sprintBlend ?? 0) > 0.01) {
+      // Free arm pumps opposite the left leg.
+      const sw = Math.sin(this.phase);
+      tmpV2.set(-0.2, 0.24 + sw * 0.07, -0.16 - sw * 0.17);
+      lh.lerp(tmpV2, this.sprintBlend);
+    }
     this._solveArm(this.arms[0], rh);
     this._solveArm(this.arms[1], lh);
   }
@@ -866,6 +872,15 @@ export class Humanoid {
       mb.decompose(pb, qbt, tmpS1);
       gp.lerp(pb, ab);
       gq.slerp(qbt, ab);
+    }
+    // Pose S: tactical sprint — gun held one-handed by the right shoulder, muzzle up.
+    this.sprintBlend = damp(this.sprintBlend ?? 0, run > 0.55 && ab < 0.3 && !this.rl ? 1 : 0, 6, dt);
+    const sp = this.sprintBlend;
+    if (sp > 0.001) {
+      const ps = tmpV1.set(this.pistol ? 0.12 : 0.15, this.pistol ? 0.52 : 0.5, this.pistol ? -0.24 : -0.17);
+      const qs = tmpQ2.setFromEuler(tmpEu.set((this.pistol ? 1.0 : 1.15) - tr.x + Math.sin(this.phase) * 0.06, 0.12, -0.28));
+      gp.lerp(ps, sp);
+      gq.slerp(qs, sp);
     }
     // Pose C: reload — gun brought in, muzzle up and canted toward the support hand.
     if (rw > 0.001) {

@@ -36,6 +36,7 @@ export class HUD {
       <div class="compass"><div class="compass-strip" id="h-compass"></div><div class="compass-needle"></div></div>
       <div class="mode-info" id="h-mode"></div>
       <div class="timer" id="h-timer" hidden></div>
+      <div class="grap" id="h-grap" hidden></div>
       <div class="detect" id="h-detect" hidden><div class="det-label"></div><div class="det-bar"><div></div></div></div>
       <div class="boss" id="h-boss" hidden><div class="boss-name" id="h-boss-name"></div><div class="boss-bar"><div id="h-boss-fill"></div></div></div>
       <div class="objective" id="h-obj" hidden><div class="obj-label">OBJECTIVE</div><div class="obj-text" id="h-obj-text"></div><div class="obj-sub" id="h-obj-sub"></div></div>
@@ -230,6 +231,13 @@ export class HUD {
     this._locFade = setTimeout(() => this.el.loc.classList.add('fade'), delay * 1000);
   }
 
+  /** Drop queued and current subtitles (a clip cuts in with its own dialogue). */
+  clearSubs() {
+    this.subQueue.length = 0;
+    this.curSub = null;
+    this.el.subs.innerHTML = '';
+  }
+
   say(lines) {
     if (!Store.settings.subtitles && !lines.length) return;
     for (const l of lines) this.subQueue.push(l);
@@ -341,6 +349,17 @@ export class HUD {
     const ao = p.flashed > 0 ? clamp(p.flashed / 3.2, 0, 1) * 0.9 : 0;
     if (ao !== this._ao) { after.style.opacity = ao; this._ao = ao; }
 
+    // Grapple launcher: shows when the crosshair is on something it can hook.
+    const gp = game.grapplePlan;
+    const gEl = (this._grapEl ??= this.root.querySelector('#h-grap'));
+    if (gp && !game.cinematic && p.alive) {
+      const dist = Math.round(gp.landing.distanceTo(p.pos));
+      const dir = gp.ledge ? '▲ CLIMB' : gp.down ? '▼ RAPPEL' : '► ZIP';
+      const txt = `<b>T</b> ${dir} ${dist}m`;
+      if (gEl._t !== txt) { gEl.innerHTML = txt; gEl._t = txt; }
+      gEl.hidden = false;
+    } else gEl.hidden = true;
+
     // Stealth meter (campaign): fills as an unalerted enemy notices you.
     const det = game.mode.type === 'campaign' && p.alive && !game.cinematic ? (p.detection ?? 0) : 0;
     const dEl = (this._detEl ??= this.root.querySelector('#h-detect'));
@@ -443,6 +462,9 @@ export class HUD {
 
   _markers(game, cam, W, H, heading) {
     const list = [...(game.mode.markers ?? [])];
+    if (game.mode.type === 'campaign') {
+      for (const a of game.actors) if (a.alive && a.marked && !list.some((m) => m.actor === a)) list.push({ pos: a.pos.clone().setY(a.pos.y + 2.05), label: '', kind: 'mark', actor: a });
+    }
     // Friendly name tags.
     const tags = [];
     for (const a of game.actors) {
@@ -488,12 +510,12 @@ export class HUD {
       if (edge) cls += ' edge';
       e.className = cls;
       const label = m.kind === 'flag' ? m.label : m.label;
-      const html = `<div class="mk-icon">${m.kind === 'flag' ? escapeHtml(m.label) : m.kind === 'enemy' ? '▼' : '◆'}</div>${label && m.kind !== 'flag' ? `<div class="mk-label">${escapeHtml(label)}</div>` : ''}<div class="mk-dist">${dist}m</div>`;
+      const html = `<div class="mk-icon">${m.kind === 'flag' ? escapeHtml(m.label) : m.kind === 'enemy' || m.kind === 'mark' ? '▼' : '◆'}</div>${label && m.kind !== 'flag' ? `<div class="mk-label">${escapeHtml(label)}</div>` : ''}<div class="mk-dist">${dist}m</div>`;
       if (e._h !== html) { e.innerHTML = html; e._h = html; }
       e.style.transform = `translate(${x}px, ${y}px)`;
       e.style.opacity = '';
       // First objective marker on the compass.
-      if (!compassSet && m.kind !== 'enemy') {
+      if (!compassSet && m.kind !== 'enemy' && m.kind !== 'mark') {
         compassSet = true;
         const ang = Math.atan2(m.pos.x - game.player.pos.x, -(m.pos.z - game.player.pos.z)) * 180 / Math.PI;
         const a = (ang + 360) % 360;

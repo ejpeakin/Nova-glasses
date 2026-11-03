@@ -3,7 +3,7 @@
 import * as THREE from '../lib/three.js';
 import { Squad } from '../ai/Soldier.js';
 import { Humanoid } from '../ai/Humanoid.js';
-import { spawnSoldier, snapGround, Cinematic, introKeys } from './Common.js';
+import { spawnSoldier, snapGround, Cinematic, introKeys, ShotSequence, shotKeys } from './Common.js';
 import { MISSIONS } from '../campaign/Story.js';
 import { Insertion } from './Insertion.js';
 import { Audio } from '../core/Audio.js';
@@ -30,6 +30,7 @@ export class CampaignMode {
     this.drops = true;
     this.weaponDrops = true;
     this.type = 'campaign';
+    this.gadgets = { grapple: true }; // spy kit: grapple launcher
     this.markers = [];
     this.groups = {};
     this.objIndex = -1;
@@ -60,14 +61,17 @@ export class CampaignMode {
       b.sandbags(x - 6, z - 8, 4, 'x');
       b.sandbags(x + 6, z + 2, 4, 'z');
     }
+    // Mission-specific set pieces (sniper perches, rooftop access, outcrops).
+    m.build?.(b);
   }
 
   setup(game) {
     this.game = game;
     const m = this.mission;
     const p = game.player;
-    const sp = snapGround(game.world, m.start.pos[0], m.start.pos[1]);
-    p.spawn(sp.x, 0, sp.z, m.start.yaw);
+    // Raised starts ([x, y, z]) put you on a perch; otherwise snap to the nav grid.
+    const sp = m.start.pos.length === 3 ? new THREE.Vector3(m.start.pos[0], m.start.pos[1], m.start.pos[2]) : snapGround(game.world, m.start.pos[0], m.start.pos[1]);
+    p.spawn(sp.x, sp.y, sp.z, m.start.yaw);
     p.invulnerable = 0;
     this.checkpoint = { pos: sp.clone(), yaw: m.start.yaw };
     this.squad = [];
@@ -90,6 +94,8 @@ export class CampaignMode {
       }
     }
     if (m.timer) this.timeLeft = m.timer;
+    // Weapon caches (e.g. a suppressed rifle left on a rooftop by an asset).
+    for (const c of m.caches ?? []) game.addPickup('weapon', new THREE.Vector3(c.pos[0], c.pos[1], c.pos[2]), c.weapon, c.attachments ?? null);
     // Intro cinematic, then hand control to the player.
     const firstTarget = m.objectives[0].target;
     const focus = firstTarget ? new THREE.Vector3(firstTarget[0], 0, firstTarget.length === 3 ? firstTarget[2] : firstTarget[1]) : null;
@@ -132,7 +138,49 @@ export class CampaignMode {
     g.stealthGrace = g.time + 6; // a moment to get your bearings before anyone can spot you
     this.frozen = false;
     Audio.playMusic('none');
+    g.hud.hint(this.mission.kitHint ?? 'T: grapple launcher  ·  SPACE at a ledge: climb  ·  V from behind: silent takedown  ·  aim at enemies to tag them', 8);
     this._nextObjective();
+  }
+
+  // ---------- mid-mission clips ----------
+  _playCutscene(o) {
+    const g = this.game;
+    this.frozen = true;
+    this.inClip = true;
+    g.player.invulnerable = 999;
+    g.stealthGrace = g.time + 999;
+    g.weapons.cancelAds?.();
+    g.hud.clearSubs();
+    const shots = o.shots.map((sh) => ({
+      // Hold each shot at least as long as its lines take to read.
+      keys: shotKeys(sh), dur: Math.max(sh.dur ?? 4, (sh.say ?? []).reduce((t, l) => t + 1.6 + l.text.length * 0.055, 0) - 0.3),
+      onStart: () => {
+        if (sh.say) { g.hud.clearSubs(); g.hud.say(sh.say); }
+        for (const id of sh.spawn ?? []) this._spawnGroup(id);
+      },
+    }));
+    if (o.say) g.hud.say(o.say);
+    if (o.music) Audio.playMusic(o.music);
+    g.cinematic = new ShotSequence(shots, () => this._endCutscene(o));
+    g.hud.letterbox(true);
+  }
+
+  _endCutscene(o) {
+    const g = this.game;
+    g.cinematic = null;
+    g.hud.letterbox(false);
+    this.frozen = false;
+    this.inClip = false;
+    g.player.invulnerable = 1.5;
+    g.stealthGrace = g.time + 2.5;
+    this._complete();
+  }
+
+  /** A guard found a body. On a stealth op he raises the alarm unless he's silenced quickly. */
+  onBodyFound(finder) {
+    if (!this.mission.stealth || this.alarmed || this.inClip) return;
+    this.game.hud.toast('BODY DISCOVERED', 'warn');
+    this.timers.push({ t: 4.5, fn: () => { if (finder.alive && !this.alarmed) { this.game.hud.toast('ALARM RAISED', 'warn'); this.alarm(); } } });
   }
 
   _spawnFriend(s, i) {
@@ -182,8 +230,10 @@ export class CampaignMode {
     if (o.doneSay) this.game.hud.say(o.doneSay);
     for (const a of o.onComplete ?? []) this._action(a);
     if (o.interact) o.interact.active = false;
-    Audio.ui('objective');
-    this.game.hud.objectiveDone(o.text);
+    if (o.type !== 'cutscene') {
+      Audio.ui('objective');
+      this.game.hud.objectiveDone(o.text);
+    }
     // Checkpoint.
     this.checkpoint = { pos: this.game.player.pos.clone(), yaw: this.game.player.yaw };
     this._nextObjective();
@@ -224,7 +274,10 @@ export class CampaignMode {
       return;
     }
     const o = this.objective;
-    this._spawnTrigger(this.objIndex);
+    // Numbered spawn triggers count real objectives only (clips don't shift them).
+    if (o.type !== 'cutscene') { this.realIndex = (this.realIndex ?? -1) + 1; this._spawnTrigger(this.realIndex); }
+    if (o.id) this._spawnTrigger(o.id);
+    if (o.type === 'cutscene') { this._playCutscene(o); return; }
     if (o.say) this.game.hud.say(o.say);
     this.game.hud.objective(o.text);
     o.started = this.elapsed;
@@ -320,7 +373,9 @@ export class CampaignMode {
         markers.push({ pos: tpos, label: o.type === 'extract' ? 'EXFIL' : 'GO', kind: 'goto' });
         for (const [hx, hz, hl] of o.hints ?? []) markers.push({ pos: new THREE.Vector3(hx, 1.2, hz), label: hl, kind: 'interact' });
         const d = Math.hypot(p.pos.x - tpos.x, p.pos.z - tpos.z);
-        if (d < o.radius && p.alive) this._complete();
+        // Rooftop goals: you actually have to be up there.
+        if (o.minY !== undefined) sub = p.pos.y >= o.minY ? '' : (o.hintSub ?? 'Get up there: grapple [T] or climb [SPACE]');
+        if (d < o.radius && p.alive && (o.minY === undefined || p.pos.y >= o.minY) && !p.climbing) this._complete();
         break;
       }
       case 'interact': {

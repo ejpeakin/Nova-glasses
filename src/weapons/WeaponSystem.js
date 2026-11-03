@@ -143,8 +143,8 @@ export class WeaponSystem {
   }
 
   /** Swap the active slot's weapon (e.g. picking up an enemy gun). */
-  replaceCurrent(id) {
-    const inst = this._makeInstance(id, {});
+  replaceCurrent(id, attachments = {}) {
+    const inst = this._makeInstance(id, attachments);
     inst.reserve = Math.floor(inst.stats.reserve * 0.5);
     this.slots[this.current].model.group.removeFromParent();
     this.slots[this.current] = inst;
@@ -225,7 +225,7 @@ export class WeaponSystem {
     }
 
     // ADS.
-    const adsBlocked = player.sprinting || !!player.mantle || this.state === 'switchOut' || this.state === 'raise' || this.state === 'melee' || this.state === 'throw' || (this.state === 'reload' && !s.perShell);
+    const adsBlocked = player.sprinting || player.climbing || this.state === 'switchOut' || this.state === 'raise' || this.state === 'melee' || this.state === 'throw' || (this.state === 'reload' && !s.perShell);
     const wantAds = canAct && input.mouseDown[2] && !adsBlocked;
     const adsRate = 1 / Math.max(0.08, s.ads);
     this.ads = clamp(this.ads + (wantAds ? adsRate : -adsRate * 1.4) * dt, 0, 1);
@@ -256,7 +256,7 @@ export class WeaponSystem {
     const trigger = canAct && input.mouseDown[0];
     const triggerPressed = canAct && input.mousePressed[0];
     this.firing = false;
-    if (this.state === 'idle' && !player.sprinting && !player.mantle) {
+    if (this.state === 'idle' && !player.sprinting && !player.climbing) {
       const mode = w.mode;
       if (mode === 'auto') {
         if (trigger) this._tryFire(player);
@@ -539,11 +539,13 @@ export class WeaponSystem {
     pos.y += Math.abs(Math.sin(bp)) * 0.014 * bobA * (player.sprinting ? 2 : 1);
     // Idle breathing.
     pos.y += Math.sin(this.time * 1.6) * 0.0025 * (1 - a * 0.7);
-    // Sprint pose.
-    this.sprintBlend = damp(this.sprintBlend ?? 0, player.sprinting ? 1 : 0, 10, dt);
+    // Tactical sprint: the gun comes up one-handed beside the right shoulder, muzzle
+    // to the sky, while the free arm pumps in time with the stride.
+    this.sprintBlend = damp(this.sprintBlend ?? 0, player.sprinting && this.state !== 'reload' ? 1 : 0, 9, dt);
     const sb = this.sprintBlend;
-    pos.x += -0.05 * sb; pos.y += -0.06 * sb; pos.z += 0.04 * sb;
-    rot.x += -0.25 * sb; rot.y += 0.75 * sb; rot.z += 0.35 * sb;
+    const stride = Math.sin(bp);
+    pos.x += (isPistol ? -0.02 : 0.03) * sb; pos.y += (isPistol ? 0.02 : 0.045) * sb + Math.abs(stride) * 0.012 * sb; pos.z += (isPistol ? 0.06 : 0.11) * sb;
+    rot.x += (isPistol ? 0.95 : 1.05) * sb + stride * 0.05 * sb; rot.y += 0.22 * sb; rot.z += -0.38 * sb + stride * 0.04 * sb;
     // Stance tilt (prone/crouch cant).
     // Kick.
     pos.z += this.kickZ;
@@ -667,7 +669,7 @@ export class WeaponSystem {
       pos.y -= 0.12; rot.x -= 0.3; pos.x += 0.05;
     }
     // Climbing: gun swings down and aside while the hands are busy.
-    this.mantleBlend = damp(this.mantleBlend ?? 0, player.mantle ? 1 : 0, 14, dt);
+    this.mantleBlend = damp(this.mantleBlend ?? 0, player.climbing ? 1 : 0, 14, dt);
     pos.y -= this.mantleBlend * 0.16; pos.x += this.mantleBlend * 0.04; rot.x -= this.mantleBlend * 0.5; rot.z -= this.mantleBlend * 0.4;
     if (!(this.state === 'cycle' && w.mode === 'bolt') && w.model.action && this.state !== 'reload') {
       w.model.action.position.copy(w.model.actionHome);
@@ -694,6 +696,12 @@ export class WeaponSystem {
     const leftLocal = leftOverride ?? w.model.leftHand;
     const lh = leftLocal.clone().applyMatrix4(this.rig.matrixWorld);
     if (this.cooking || this.state === 'throw') lh.set(-0.15, -0.25, -0.35);
+    else if (sb > 0.01 && !leftOverride) {
+      // Free arm pumping: forward and up on one stride, back and down on the next.
+      const swing = Math.sin(bp);
+      const pump = new THREE.Vector3(-0.2 + swing * 0.02, -0.33 + swing * 0.08, -0.36 - swing * 0.1);
+      lh.lerp(pump, sb);
+    }
     this.arms.place(this.arms.right, new THREE.Vector3(0.28, -0.42, 0.05), grip);
     this.arms.place(this.arms.left, new THREE.Vector3(-0.22, -0.45, -0.05), lh);
     if (this._shellHand && !scope.active) {
