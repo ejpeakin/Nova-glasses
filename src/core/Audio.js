@@ -72,8 +72,9 @@ class AudioEngine {
     this.muffle.type = 'lowpass';
     this.muffle.frequency.value = 20000;
     this.compressor = c.createDynamicsCompressor();
-    this.compressor.threshold.value = -14;
-    this.compressor.ratio.value = 6;
+    this.compressor.threshold.value = -11;
+    this.compressor.knee.value = 8;
+    this.compressor.ratio.value = 4;
     this.compressor.attack.value = 0.003;
     this.compressor.release.value = 0.25;
     this.sfx = c.createGain();
@@ -86,7 +87,7 @@ class AudioEngine {
     this.compressor.connect(this.master);
     // Final brickwall limiter so stacked gunfire and explosions never hard-clip.
     this.limiter = c.createDynamicsCompressor();
-    this.limiter.threshold.value = -3;
+    this.limiter.threshold.value = -1;
     this.limiter.knee.value = 0;
     this.limiter.ratio.value = 20;
     this.limiter.attack.value = 0.0005;
@@ -110,17 +111,20 @@ class AudioEngine {
     // real close-range recording, where the blast overdrives the mic.
     this.guns = c.createGain();
     this.gunShaper = c.createWaveShaper();
-    this.gunShaper.curve = this._satCurve(2.4);
+    this.gunShaper.curve = this._satCurve(3.2);
     this.gunShaper.oversample = '2x';
     this.gunComp = c.createDynamicsCompressor();
-    this.gunComp.threshold.value = -20;
+    this.gunComp.threshold.value = -22;
     this.gunComp.knee.value = 6;
-    this.gunComp.ratio.value = 5;
+    this.gunComp.ratio.value = 4;
     this.gunComp.attack.value = 0.0008;
     this.gunComp.release.value = 0.09;
+    this.gunMakeup = c.createGain();
+    this.gunMakeup.gain.value = 1.9; // gunfire sits well above everything else, like the real thing
     this.guns.connect(this.gunShaper);
     this.gunShaper.connect(this.gunComp);
-    this.gunComp.connect(this.sfx);
+    this.gunComp.connect(this.gunMakeup);
+    this.gunMakeup.connect(this.sfx);
 
     // Level acoustics (echo and reverb), generated per map.
     this.reverb = c.createConvolver();
@@ -350,7 +354,7 @@ class AudioEngine {
       return;
     }
     const out = this._out(pos, {
-      gain: (own ? 1.15 : 1.6) * (p.gain ?? 1), ref: 7, rolloff: 1.0, maxDist: 650,
+      gain: (own ? 1.3 : 1.8) * (p.gain ?? 1), ref: 7, rolloff: 1.0, maxDist: 650,
       verb: (p.tail ?? 0.6) * 1.2, ownVerb: 0.75, verbMax: 2.2, bus: this.guns,
     });
     if (!out) return;
@@ -363,13 +367,15 @@ class AudioEngine {
     // Everything below is filtered noise: a real gunshot is an explosion, not a note.
     // 1. CRACK: the instant blast front, only milliseconds long.
     if (d < 140) this._noise(out, t, 0.012, { type: 'highpass', freq: 1300 * pitch, q: 0.5, gain: (2.3 + crack) * (0.35 + 0.65 * near), attack: 0.0002, decay: 0.01 });
-    // 2. BANG: broadband blast whose brightness collapses within a tenth of a second.
-    this._noise(out, t, 0.12, { type: 'lowpass', freq: (p.body ?? 2200) * 2.6 * pitch * (0.45 + 0.55 * near), freqEnd: 450, q: 0.5, gain: 2.9, attack: 0.0004, decay: 0.1 });
-    // 3. THUMP: the low pressure hit (low-passed brown noise, no pitch).
-    this._noise(out, t, own ? 0.16 : 0.12, { type: 'lowpass', freq: (p.thump ?? 140) * 1.2, q: 0.5, gain: own ? 2.6 : 1.8, attack: 0.0008, decay: own ? 0.14 : 0.1, brown: true });
-    // 4. BOOM: the rumble that carries furthest.
-    this._noise(out, t + 0.004, own ? 0.32 : 0.3, { type: 'lowpass', freq: 420 * pitch, freqEnd: 140, q: 0.5, gain: own ? 1.1 : 0.95, attack: 0.004, decay: own ? 0.28 : 0.26, brown: true });
-    // 5. The action cycling, close to the gun.
+    // 2. BANG: broadband blast whose brightness collapses into a deep body.
+    this._noise(out, t, 0.18, { type: 'lowpass', freq: (p.body ?? 2200) * 2.2 * pitch * (0.45 + 0.55 * near), freqEnd: 220, q: 0.5, gain: 3.4, attack: 0.0004, decay: 0.15 });
+    // 3. BODY: the deep boom you hear on any speaker (80-260 Hz band of noise).
+    this._noise(out, t, own ? 0.22 : 0.19, { type: 'lowpass', freq: 260 * pitch, freqEnd: 120, q: 0.8, gain: own ? 3.0 : 2.3, attack: 0.0008, decay: own ? 0.19 : 0.16 });
+    // 4. THUMP: the low pressure hit in your chest (low-passed brown noise, no pitch).
+    this._noise(out, t, own ? 0.2 : 0.16, { type: 'lowpass', freq: (p.thump ?? 140) * 0.9, q: 0.5, gain: own ? 3.2 : 2.2, attack: 0.0008, decay: own ? 0.18 : 0.14, brown: true });
+    // 5. BOOM: the low rumble that rolls on and carries furthest.
+    this._noise(out, t + 0.004, own ? 0.6 : 0.5, { type: 'lowpass', freq: 300 * pitch, freqEnd: 70, q: 0.5, gain: own ? 1.6 : 1.3, attack: 0.004, decay: own ? 0.55 : 0.45, brown: true });
+    // 6. The action cycling, close to the gun.
     if (own || d < 12) this._action(out, t, own ? 0.3 : 0.14);
   }
 
