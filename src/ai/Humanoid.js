@@ -57,9 +57,26 @@ class Parts {
   }
 
   box(w, h, d, color, mat, p, r, s) { return this.add(new THREE.BoxGeometry(w, h, d), color, mat, p, r, s, Math.max(w, h, d) / 0.35); }
-  sphere(rad, color, mat, p, s, r, ws = 12, hs = 9) { return this.add(new THREE.SphereGeometry(rad, ws, hs), color, mat, p, r, s, rad / 0.15); }
+  sphere(rad, color, mat, p, s, r, ws, hs) {
+    ws ??= rad < 0.03 ? 8 : rad < 0.09 ? 10 : 12;
+    hs ??= Math.round(ws * 0.72);
+    return this.add(new THREE.SphereGeometry(rad, ws, hs), color, mat, p, r, s, rad / 0.15);
+  }
   cyl(r1, r2, h, color, mat, p, r, s, seg = 10) { return this.add(new THREE.CylinderGeometry(r1, r2, h, seg), color, mat, p, r, s, h / 0.35); }
-  capsule(rad, len, color, mat, p, r, s) { return this.add(new THREE.CapsuleGeometry(rad, len, 4, 10), color, mat, p, r, s, (len + rad * 2) / 0.35); }
+  capsule(rad, len, color, mat, p, r, s) { return this.add(new THREE.CapsuleGeometry(rad, len, 5, 12), color, mat, p, r, s, (len + rad * 2) / 0.35); }
+  /** Box with rounded edges and corners (radius rad). */
+  rbox(w, h, d, rad, color, mat, p, r, s) {
+    const m = Math.max(w, h, d);
+    // Two bend segments only on large, chunky pieces; thin straps and pouches get one.
+    const seg = m > 0.25 && Math.min(w, h, d) > 0.08 ? 2 : 1;
+    return this.add(roundedBoxGeo(w, h, d, rad, seg), color, mat, p, r, s, m / 0.35);
+  }
+  /** Surface of revolution around +Y from a [radius, y] profile (bottom to top, closed with radius 0 at both ends). */
+  lathe(profile, color, mat, p, r, s, seg = 14) {
+    const pts = profile.map(([rad, y]) => new THREE.Vector2(rad, y));
+    const h = profile[profile.length - 1][1] - profile[0][1];
+    return this.add(new THREE.LatheGeometry(pts, seg), color, mat, p, r, s, h / 0.35);
+  }
 
   build() {
     const pos = [], nrm = [], uv = [], col = [];
@@ -101,6 +118,33 @@ class Parts {
   }
 }
 
+/** Rounded box: a subdivided box whose edge bands are bent around radius `r`. */
+function roundedBoxGeo(w, h, d, r, seg = 2) {
+  const hx = w / 2, hy = h / 2, hz = d / 2;
+  r = Math.max(0.0005, Math.min(r, hx - 1e-4, hy - 1e-4, hz - 1e-4));
+  const n = seg * 2 + 1;
+  const g = new THREE.BoxGeometry(1, 1, 1, n, n, n);
+  const P = g.attributes.position, N = g.attributes.normal;
+  const map = (t, half) => {
+    const u = Math.round((t + 0.5) * n);
+    if (u <= seg) return -half + r * (u / seg);
+    if (u >= seg + 1) return half - r + r * ((u - seg - 1) / seg);
+    return 0;
+  };
+  const v = new THREE.Vector3(), inner = new THREE.Vector3(), off = new THREE.Vector3();
+  for (let i = 0; i < P.count; i++) {
+    v.set(map(P.getX(i), hx), map(P.getY(i), hy), map(P.getZ(i), hz));
+    inner.set(clamp(v.x, -hx + r, hx - r), clamp(v.y, -hy + r, hy - r), clamp(v.z, -hz + r, hz - r));
+    off.subVectors(v, inner);
+    if (off.lengthSq() < 1e-12) off.set(N.getX(i), N.getY(i), N.getZ(i));
+    off.normalize();
+    v.copy(inner).addScaledVector(off, r);
+    P.setXYZ(i, v.x, v.y, v.z);
+    N.setXYZ(i, off.x, off.y, off.z);
+  }
+  return g;
+}
+
 let MATS = null;
 function materials() {
   if (MATS) return MATS;
@@ -123,59 +167,61 @@ function cached(key, fn) {
 /** Pelvis: pivot at hip joint height. */
 function pelvisGeo(f) {
   const p = new Parts();
-  p.box(0.33, 0.2, 0.22, f.pants, FABRIC, [0, 0.03, 0]);
-  p.box(0.35, 0.055, 0.24, f.gear, PLAIN, [0, 0.13, 0]); // war belt
-  p.box(0.07, 0.09, 0.05, f.gear, PLAIN, [-0.13, 0.08, -0.12]); // belt pouches
-  p.box(0.07, 0.09, 0.05, f.gear, PLAIN, [0.13, 0.08, -0.12]);
-  p.box(0.09, 0.1, 0.05, f.gear, PLAIN, [0, 0.07, 0.13]); // dump pouch
+  p.sphere(0.16, f.pants, FABRIC, [0, 0.035, 0], [1.08, 0.74, 0.8], [0, 0, 0], 14, 10); // hips
+  p.sphere(0.085, f.pants, FABRIC, [-0.072, -0.005, 0.05], [1, 1, 0.9]); // seat
+  p.sphere(0.085, f.pants, FABRIC, [0.072, -0.005, 0.05], [1, 1, 0.9]);
+  p.add(new THREE.TorusGeometry(0.163, 0.026, 6, 20), f.gear, PLAIN, [0, 0.125, 0], [Math.PI / 2, 0, 0], [1.06, 0.82, 1.35], 2); // war belt
+  p.rbox(0.07, 0.09, 0.05, 0.016, f.gear, PLAIN, [-0.13, 0.085, -0.115]); // belt pouches
+  p.rbox(0.07, 0.09, 0.05, 0.016, f.gear, PLAIN, [0.13, 0.085, -0.115]);
+  p.rbox(0.1, 0.1, 0.055, 0.022, f.gear, PLAIN, [0, 0.07, 0.135]); // dump pouch
   return p.build();
 }
 
 /** Torso: pivot at the hips; shoulders at y≈0.5. */
 function torsoGeo(f, v) {
   const p = new Parts();
+  // Body: a tapered, elliptical surface of revolution (waist -> ribcage -> shoulders -> neck).
+  const bodyProfile = [[0, 0], [0.118, 0.012], [0.138, 0.06], [0.134, 0.15], [0.143, 0.25], [0.163, 0.35], [0.174, 0.43], [0.168, 0.49], [0.13, 0.545], [0.07, 0.585], [0, 0.6]];
   if (f.heavy) {
-    p.capsule(0.19, 0.2, f.fabric, FABRIC, [0, 0.3, 0], [0, 0, 0], [1.25, 1, 0.9]);
-    p.box(0.52, 0.5, 0.44, f.vest, PLAIN, [0, 0.33, 0]); // bomb-suit plates
-    p.box(0.46, 0.18, 0.4, f.gear, PLAIN, [0, 0.12, 0]);
-    p.box(0.3, 0.12, 0.08, f.gear, PLAIN, [0, 0.42, -0.24]);
-    p.cyl(0.17, 0.2, 0.12, f.vest, PLAIN, [0, 0.62, 0]); // armoured collar
-    p.sphere(0.12, f.vest, PLAIN, [-0.27, 0.52, 0], [1, 0.8, 1.1]); // pauldrons
-    p.sphere(0.12, f.vest, PLAIN, [0.27, 0.52, 0], [1, 0.8, 1.1]);
+    p.lathe(bodyProfile, f.fabric, FABRIC, [0, 0, 0], [0, 0, 0], [1.32, 1, 1]);
+    p.lathe([[0, 0.05], [0.2, 0.07], [0.215, 0.2], [0.225, 0.4], [0.215, 0.52], [0.15, 0.6], [0, 0.62]], f.vest, PLAIN, [0, 0, 0], [0, 0, 0], [1.25, 1, 1.05], 18); // bomb-suit
+    p.rbox(0.34, 0.3, 0.09, 0.04, f.gear, PLAIN, [0, 0.36, -0.22]); // chest plate
+    p.rbox(0.36, 0.16, 0.1, 0.045, f.gear, PLAIN, [0, 0.12, -0.2]);
+    p.lathe([[0, 0.56], [0.16, 0.57], [0.18, 0.62], [0.16, 0.68], [0, 0.69]], f.vest, PLAIN, [0, 0, 0], [0, 0, 0], [1, 1, 1], 16); // armoured collar
+    p.sphere(0.12, f.vest, PLAIN, [-0.27, 0.52, 0], [1, 0.8, 1.1], [0, 0, 0], 14, 10); // pauldrons
+    p.sphere(0.12, f.vest, PLAIN, [0.27, 0.52, 0], [1, 0.8, 1.1], [0, 0, 0], 14, 10);
     return p.build();
   }
-  // Body under the gear.
-  p.capsule(0.145, 0.1, f.fabric, FABRIC, [0, 0.17, 0], [0, 0, 0], [1.15, 1, 0.82]);
-  p.capsule(0.16, 0.16, f.fabric, FABRIC, [0, 0.38, 0], [0, 0, 0], [1.2, 1, 0.8]);
-  p.sphere(0.072, f.fabric, FABRIC, [-0.205, 0.5, 0], [1, 0.95, 1]); // deltoids
-  p.sphere(0.072, f.fabric, FABRIC, [0.205, 0.5, 0], [1, 0.95, 1]);
-  // Plate carrier.
-  p.box(0.33, 0.31, 0.065, f.vest, PLAIN, [0, 0.37, -0.15]);
-  p.box(0.33, 0.34, 0.06, f.vest, PLAIN, [0, 0.38, 0.14]);
-  p.box(0.38, 0.15, 0.29, f.vest, PLAIN, [0, 0.27, 0]); // cummerbund
-  p.box(0.065, 0.045, 0.3, f.vest, PLAIN, [-0.1, 0.535, 0]); // shoulder straps
-  p.box(0.065, 0.045, 0.3, f.vest, PLAIN, [0.1, 0.535, 0]);
+  p.lathe(bodyProfile, f.fabric, FABRIC, [0, 0, 0], [0, 0, 0], [1.22, 1, 0.8], 16);
+  p.sphere(0.074, f.fabric, FABRIC, [-0.2, 0.495, 0], [1, 0.95, 1.05], [0, 0, 0], 10, 8); // deltoids
+  p.sphere(0.074, f.fabric, FABRIC, [0.2, 0.495, 0], [1, 0.95, 1.05], [0, 0, 0], 10, 8);
+  // Plate carrier: a padded shell around the ribcage with soft-edged plates front and back.
+  p.lathe([[0, 0.19], [0.158, 0.2], [0.172, 0.24], [0.181, 0.34], [0.19, 0.43], [0.184, 0.495], [0.12, 0.528], [0, 0.534]], f.vest, PLAIN, [0, 0, 0], [0, 0, 0], [1.2, 1, 0.93], 16);
+  p.rbox(0.3, 0.29, 0.05, 0.022, f.vest, PLAIN, [0, 0.37, -0.15]);
+  p.rbox(0.3, 0.31, 0.05, 0.022, f.vest, PLAIN, [0, 0.38, 0.145]);
+  p.rbox(0.07, 0.04, 0.3, 0.018, f.vest, PLAIN, [-0.1, 0.528, 0]); // shoulder straps
+  p.rbox(0.07, 0.04, 0.3, 0.018, f.vest, PLAIN, [0.1, 0.528, 0]);
   // Triple mag pouch + admin pouch.
   for (const x of [-0.09, 0, 0.09]) {
-    p.box(0.08, 0.11, 0.055, f.gear, PLAIN, [x, 0.285, -0.205]);
-    p.box(0.028, 0.03, 0.05, 0x1d1e20, PLAIN, [x, 0.35, -0.205]); // magazine baseplate
+    p.rbox(0.08, 0.11, 0.055, 0.016, f.gear, PLAIN, [x, 0.285, -0.2]);
+    p.rbox(0.03, 0.03, 0.05, 0.009, 0x1d1e20, PLAIN, [x, 0.35, -0.2]); // magazine baseplate
   }
-  p.box(0.2, 0.08, 0.035, f.gear, PLAIN, [0, 0.43, -0.195]);
+  p.rbox(0.2, 0.08, 0.035, 0.013, f.gear, PLAIN, [0, 0.43, -0.19]);
   // Side pouches.
-  p.box(0.06, 0.12, 0.09, f.gear, PLAIN, [-0.21, 0.27, 0.02]);
-  p.box(0.06, 0.1, 0.08, f.gear, PLAIN, [0.21, 0.27, 0.04]);
+  p.rbox(0.06, 0.12, 0.09, 0.018, f.gear, PLAIN, [-0.215, 0.27, 0.02]);
+  p.rbox(0.06, 0.1, 0.08, 0.018, f.gear, PLAIN, [0.215, 0.27, 0.04]);
   if (v.radio) {
-    p.box(0.07, 0.15, 0.06, f.gear, PLAIN, [-0.12, 0.42, 0.19]);
+    p.rbox(0.07, 0.15, 0.06, 0.016, f.gear, PLAIN, [-0.12, 0.42, 0.19]);
     p.cyl(0.006, 0.004, 0.42, 0x111111, PLAIN, [-0.13, 0.68, 0.2], [0.15, 0, 0.1], [1, 1, 1], 5); // antenna
   }
   if (v.pack) {
-    p.box(0.3, 0.34, 0.15, f.gear, PLAIN, [0, 0.36, 0.245]);
-    p.box(0.28, 0.08, 0.16, f.vest, PLAIN, [0, 0.55, 0.245]);
+    p.rbox(0.3, 0.34, 0.15, 0.05, f.gear, PLAIN, [0, 0.36, 0.245]);
+    p.rbox(0.28, 0.09, 0.16, 0.04, f.vest, PLAIN, [0, 0.55, 0.245]);
   }
   // Neck.
   const neckCol = f.mask === 'balaclava' ? f.maskColor : f.mask === 'shemagh' ? f.scarf : v.skin;
-  p.cyl(0.052, 0.058, 0.11, neckCol, f.mask === 'none' ? PLAIN : FABRIC, [0, 0.6, 0.0]);
-  if (f.mask === 'shemagh') p.cyl(0.085, 0.09, 0.07, f.scarf, FABRIC, [0, 0.58, 0]);
+  p.lathe([[0, 0.55], [0.062, 0.56], [0.054, 0.6], [0.05, 0.65], [0, 0.66]], neckCol, f.mask === 'none' ? PLAIN : FABRIC, [0, 0, 0], [0, 0, 0], [1, 1, 1.05], 12);
+  if (f.mask === 'shemagh') p.add(new THREE.TorusGeometry(0.068, 0.03, 8, 16), f.scarf, FABRIC, [0, 0.585, 0], [Math.PI / 2, 0, 0], [1.05, 1, 1.1], 1);
   return p.build();
 }
 
@@ -186,53 +232,50 @@ function headGeo(f, v) {
   const headCol = masked ? f.maskColor : v.skin;
   const headMat = masked ? FABRIC : PLAIN;
   if (f.heavy || v.headgear === 'juggernaut') {
-    p.sphere(0.155, f.helmet, PLAIN, [0, 0.12, 0], [1, 1.08, 1.08], [0, 0, 0], 14, 10);
-    p.box(0.2, 0.09, 0.08, f.gear, PLAIN, [0, 0.07, -0.12]); // chin guard
+    p.sphere(0.155, f.helmet, PLAIN, [0, 0.12, 0], [1, 1.08, 1.08], [0, 0, 0], 18, 14);
+    p.rbox(0.2, 0.09, 0.08, 0.035, f.gear, PLAIN, [0, 0.07, -0.12]); // chin guard
     return p.build();
   }
-  // Skull + jaw + face.
-  p.sphere(0.102, headCol, headMat, [0, 0.11, 0.005], [0.94, 1.1, 1.04]);
-  p.box(0.13, 0.07, 0.12, headCol, headMat, [0, 0.03, -0.025]);
-  p.box(0.022, 0.035, 0.03, v.skin, PLAIN, [0, 0.085, -0.11]); // nose
-  p.box(0.025, 0.05, 0.03, v.skin, PLAIN, [-0.098, 0.1, 0]); // ears
-  p.box(0.025, 0.05, 0.03, v.skin, PLAIN, [0.098, 0.1, 0]);
-  if (masked) {
-    p.box(0.13, 0.042, 0.02, v.skin, PLAIN, [0, 0.118, -0.098]); // eye slot
-  }
+  // Skull, jaw and face.
+  p.sphere(0.102, headCol, headMat, [0, 0.11, 0.005], [0.94, 1.1, 1.04], [0, 0, 0], 14, 11);
+  p.sphere(0.07, headCol, headMat, [0, 0.045, -0.03], [0.95, 0.72, 1.0], [0, 0, 0], 12, 8); // jaw
+  p.sphere(0.016, v.skin, PLAIN, [0, 0.087, -0.104], [0.85, 1.5, 1.15]); // nose
+  p.sphere(0.022, v.skin, PLAIN, [-0.098, 0.1, 0], [0.5, 1.1, 0.8]); // ears
+  p.sphere(0.022, v.skin, PLAIN, [0.098, 0.1, 0], [0.5, 1.1, 0.8]);
+  if (masked) p.rbox(0.12, 0.04, 0.03, 0.013, v.skin, PLAIN, [0, 0.118, -0.093]); // eye opening
   if (f.mask === 'shemagh') {
-    p.box(0.16, 0.08, 0.15, f.scarf, FABRIC, [0, 0.035, -0.02]); // face wrap
+    p.sphere(0.085, f.scarf, FABRIC, [0, 0.04, -0.02], [1, 0.62, 1.02]); // face wrap
     p.sphere(0.11, f.scarf, FABRIC, [0, 0.14, 0.01], [1, 0.75, 1.05]);
   }
   // Eyes or ballistic glasses.
-  if (v.glasses) p.box(0.16, 0.034, 0.025, 0x0c0d0e, PLAIN, [0, 0.118, -0.105]);
+  if (v.glasses) p.rbox(0.16, 0.034, 0.025, 0.011, 0x0c0d0e, PLAIN, [0, 0.118, -0.103]);
   else {
-    p.box(0.022, 0.012, 0.01, 0x15130f, PLAIN, [-0.033, 0.12, -0.1]);
-    p.box(0.022, 0.012, 0.01, 0x15130f, PLAIN, [0.033, 0.12, -0.1]);
+    p.sphere(0.009, 0x15130f, PLAIN, [-0.033, 0.12, -0.096], [1.3, 0.8, 1], [0, 0, 0], 8, 6);
+    p.sphere(0.009, 0x15130f, PLAIN, [0.033, 0.12, -0.096], [1.3, 0.8, 1], [0, 0, 0], 8, 6);
   }
   // Headgear.
   switch (v.headgear) {
     case 'helmet':
-      p.sphere(0.128, f.helmet, PLAIN, [0, 0.14, 0.006], [1.06, 0.88, 1.13], [0, 0, 0], 14, 8);
-      p.add(new THREE.SphereGeometry(0.128, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2), f.helmet, PLAIN, [0, 0.135, 0.006], [0, 0, 0], [1.07, 0.92, 1.14]);
-      p.box(0.018, 0.028, 0.15, f.gear, PLAIN, [-0.132, 0.125, 0.01]); // ARC rails
-      p.box(0.018, 0.028, 0.15, f.gear, PLAIN, [0.132, 0.125, 0.01]);
-      p.box(0.055, 0.04, 0.035, 0x1a1a1a, PLAIN, [0, 0.205, -0.128]); // NVG shroud
-      p.cyl(0.045, 0.045, 0.03, f.gear, PLAIN, [-0.115, 0.085, 0], [0, 0, Math.PI / 2]); // headset cups
-      p.cyl(0.045, 0.045, 0.03, f.gear, PLAIN, [0.115, 0.085, 0], [0, 0, Math.PI / 2]);
-      p.box(0.07, 0.035, 0.04, f.gear, PLAIN, [0, 0.21, 0.12]); // counterweight pouch
+      p.sphere(0.128, f.helmet, PLAIN, [0, 0.14, 0.006], [1.06, 0.88, 1.13], [0, 0, 0], 16, 9);
+      p.add(new THREE.SphereGeometry(0.128, 16, 6, 0, Math.PI * 2, 0, Math.PI / 2), f.helmet, PLAIN, [0, 0.135, 0.006], [0, 0, 0], [1.07, 0.92, 1.14]);
+      p.rbox(0.018, 0.028, 0.15, 0.007, f.gear, PLAIN, [-0.132, 0.125, 0.01]); // ARC rails
+      p.rbox(0.018, 0.028, 0.15, 0.007, f.gear, PLAIN, [0.132, 0.125, 0.01]);
+      p.rbox(0.055, 0.04, 0.035, 0.012, 0x1a1a1a, PLAIN, [0, 0.205, -0.128]); // NVG shroud
+      p.cyl(0.045, 0.045, 0.03, f.gear, PLAIN, [-0.115, 0.085, 0], [0, 0, Math.PI / 2], [1, 1, 1], 14); // headset cups
+      p.cyl(0.045, 0.045, 0.03, f.gear, PLAIN, [0.115, 0.085, 0], [0, 0, Math.PI / 2], [1, 1, 1], 14);
+      p.rbox(0.07, 0.035, 0.04, 0.012, f.gear, PLAIN, [0, 0.21, 0.12]); // counterweight pouch
       break;
     case 'cap':
-      p.add(new THREE.SphereGeometry(0.11, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), f.fabric, FABRIC, [0, 0.135, 0.005], [0, 0, 0], [1, 0.8, 1.08]);
-      p.box(0.15, 0.012, 0.08, f.fabric, FABRIC, [0, 0.138, -0.125], [-0.15, 0, 0]);
-      p.cyl(0.045, 0.045, 0.03, f.gear, PLAIN, [-0.11, 0.09, 0], [0, 0, Math.PI / 2]);
-      p.cyl(0.045, 0.045, 0.03, f.gear, PLAIN, [0.11, 0.09, 0], [0, 0, Math.PI / 2]);
+      p.add(new THREE.SphereGeometry(0.11, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2), f.fabric, FABRIC, [0, 0.135, 0.005], [0, 0, 0], [1, 0.8, 1.08]);
+      p.rbox(0.15, 0.012, 0.08, 0.005, f.fabric, FABRIC, [0, 0.138, -0.125], [-0.15, 0, 0]);
+      p.cyl(0.045, 0.045, 0.03, f.gear, PLAIN, [-0.11, 0.09, 0], [0, 0, Math.PI / 2], [1, 1, 1], 14);
+      p.cyl(0.045, 0.045, 0.03, f.gear, PLAIN, [0.11, 0.09, 0], [0, 0, Math.PI / 2], [1, 1, 1], 14);
       break;
     case 'boonie':
-      p.cyl(0.18, 0.18, 0.012, f.fabric, FABRIC, [0, 0.16, 0], [0, 0, 0], [1, 1, 1], 14);
-      p.cyl(0.1, 0.112, 0.07, f.fabric, FABRIC, [0, 0.2, 0], [0, 0, 0], [1, 1, 1], 12);
+      p.lathe([[0, 0.152], [0.18, 0.15], [0.185, 0.158], [0.11, 0.17], [0.112, 0.235], [0, 0.24]], f.fabric, FABRIC, [0, 0, 0], [0, 0, 0], [1, 1, 1], 18);
       break;
     case 'beanie':
-      p.add(new THREE.SphereGeometry(0.113, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), f.gear, FABRIC, [0, 0.13, 0.005], [0, 0, 0], [1, 1, 1.06]);
+      p.add(new THREE.SphereGeometry(0.113, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2), f.gear, FABRIC, [0, 0.13, 0.005], [0, 0, 0], [1, 1, 1.06]);
       break;
     default:
       break;
@@ -243,44 +286,47 @@ function headGeo(f, v) {
 /** Upper arm: pivot at the shoulder, hangs along -Y (length 0.32). */
 function upperArmGeo(f) {
   const p = new Parts();
-  p.capsule(0.054, 0.21, f.fabric, FABRIC, [0, -0.16, 0]);
-  p.box(0.075, 0.07, 0.03, f.gear, PLAIN, [0.0, -0.1, -0.045]); // sleeve pocket
-  if (f.heavy) p.box(0.13, 0.2, 0.13, f.vest, PLAIN, [0, -0.12, 0]);
+  // Deltoid -> biceps -> elbow taper.
+  p.lathe([[0, -0.345], [0.04, -0.335], [0.046, -0.3], [0.05, -0.24], [0.056, -0.16], [0.058, -0.09], [0.061, -0.035], [0.05, 0.018], [0, 0.034]], f.fabric, FABRIC, [0, 0, 0], [0, 0, 0], [1, 1, 1.04], 12);
+  p.rbox(0.07, 0.07, 0.03, 0.013, f.gear, PLAIN, [0.0, -0.1, -0.048]); // sleeve pocket
+  if (f.heavy) p.sphere(0.08, f.vest, PLAIN, [0, -0.12, 0], [1, 1.5, 1]);
   return p.build();
 }
 
 /** Forearm + hand: pivot at the elbow; palm centred at -0.31. */
 function foreArmGeo(f, left) {
   const p = new Parts();
-  p.capsule(0.046, 0.18, f.fabric, FABRIC, [0, -0.13, 0]);
-  p.cyl(0.05, 0.048, 0.05, f.fabric, FABRIC, [0, -0.235, 0]); // cuff
-  p.box(0.07, 0.085, 0.04, f.gloves, PLAIN, [0, -0.3, 0]); // palm
-  p.box(0.064, 0.05, 0.032, f.gloves, PLAIN, [0, -0.355, -0.012], [0.5, 0, 0]); // curled fingers
-  p.box(0.022, 0.05, 0.022, f.gloves, PLAIN, [left ? 0.04 : -0.04, -0.29, -0.022], [0.3, 0, 0]); // thumb
-  if (f.heavy) p.box(0.11, 0.16, 0.11, f.vest, PLAIN, [0, -0.11, 0]);
+  p.lathe([[0, -0.255], [0.036, -0.245], [0.04, -0.215], [0.046, -0.14], [0.051, -0.075], [0.049, -0.015], [0.036, 0.022], [0, 0.03]], f.fabric, FABRIC, [0, 0, 0], [0, 0, 0], [1, 1, 0.9], 12);
+  p.lathe([[0, -0.255], [0.046, -0.252], [0.048, -0.225], [0, -0.215]], f.fabric, FABRIC, [0, 0, 0], [0, 0, 0], [1, 1, 0.92], 12); // cuff
+  p.rbox(0.068, 0.085, 0.04, 0.017, f.gloves, PLAIN, [0, -0.3, 0]); // palm
+  p.rbox(0.062, 0.05, 0.03, 0.013, f.gloves, PLAIN, [0, -0.354, -0.012], [0.5, 0, 0]); // curled fingers
+  p.add(new THREE.CapsuleGeometry(0.011, 0.03, 2, 6), f.gloves, PLAIN, [left ? 0.038 : -0.038, -0.29, -0.022], [0.3, 0, 0]); // thumb
+  if (f.heavy) p.sphere(0.065, f.vest, PLAIN, [0, -0.11, 0], [1, 1.6, 1]);
   return p.build();
 }
 
 /** Thigh: pivot at the hip joint (length 0.46). */
 function thighGeo(f, right, v) {
   const p = new Parts();
-  p.capsule(0.082, 0.3, f.pants, FABRIC, [0, -0.225, 0]);
-  if (right && v.holster) p.box(0.06, 0.18, 0.1, f.gear, PLAIN, [0.085, -0.17, 0]); // drop holster
-  if (!right && v.legPouch) p.box(0.05, 0.12, 0.09, f.gear, PLAIN, [-0.085, -0.2, 0.01]);
-  if (f.heavy) p.box(0.19, 0.3, 0.2, f.vest, PLAIN, [0, -0.2, -0.01]);
+  p.lathe([[0, -0.49], [0.054, -0.475], [0.064, -0.43], [0.072, -0.36], [0.083, -0.24], [0.09, -0.12], [0.092, -0.04], [0.08, 0.03], [0.05, 0.062], [0, 0.07]], f.pants, FABRIC, [0, 0, 0], [0, 0, 0], [1, 1, 1.06], 14);
+  p.rbox(0.03, 0.12, 0.1, 0.012, f.pants, FABRIC, [right ? 0.082 : -0.082, -0.22, 0]); // cargo pocket
+  if (right && v.holster) p.rbox(0.06, 0.18, 0.1, 0.02, f.gear, PLAIN, [0.1, -0.17, 0]); // drop holster
+  if (!right && v.legPouch) p.rbox(0.05, 0.12, 0.09, 0.018, f.gear, PLAIN, [-0.1, -0.2, 0.01]);
+  if (f.heavy) p.lathe([[0, -0.37], [0.105, -0.35], [0.11, -0.1], [0.1, 0.0], [0, 0.02]], f.vest, PLAIN, [0, 0, -0.01], [0, 0, 0], [1, 1, 1], 14);
   return p.build();
 }
 
 /** Shin + boot: pivot at the knee (length 0.46 to sole). */
 function shinGeo(f) {
   const p = new Parts();
-  p.sphere(0.07, f.pants, FABRIC, [0, 0.0, 0.005], [1, 1.1, 1]); // knee joint
-  p.capsule(0.064, 0.26, f.pants, FABRIC, [0, -0.18, 0]);
-  p.box(0.1, 0.11, 0.05, f.gear, PLAIN, [0, -0.03, -0.065]); // knee pad
-  p.box(0.112, 0.12, 0.17, f.boots, PLAIN, [0, -0.39, -0.015]); // boot upper
-  p.box(0.115, 0.06, 0.27, f.boots, PLAIN, [0, -0.43, -0.04]); // foot
-  p.box(0.12, 0.022, 0.28, 0x111111, PLAIN, [0, -0.462, -0.04]); // sole
-  if (f.heavy) p.box(0.15, 0.3, 0.15, f.vest, PLAIN, [0, -0.17, -0.01]);
+  p.sphere(0.068, f.pants, FABRIC, [0, 0.0, 0.004], [1, 1.1, 1]); // knee
+  // Calf bulge tapering into the ankle.
+  p.lathe([[0, -0.375], [0.048, -0.36], [0.05, -0.3], [0.058, -0.2], [0.066, -0.12], [0.066, -0.05], [0.062, 0.0], [0.04, 0.035], [0, 0.04]], f.pants, FABRIC, [0, 0, 0], [0, 0, 0], [1, 1, 1.08], 14);
+  p.sphere(0.06, f.gear, PLAIN, [0, -0.03, -0.055], [1, 1.25, 0.55]); // knee pad
+  p.rbox(0.112, 0.14, 0.165, 0.042, f.boots, PLAIN, [0, -0.385, -0.012]); // boot upper
+  p.rbox(0.112, 0.072, 0.27, 0.033, f.boots, PLAIN, [0, -0.424, -0.045]); // foot
+  p.rbox(0.118, 0.026, 0.282, 0.011, 0x111111, PLAIN, [0, -0.452, -0.045]); // sole
+  if (f.heavy) p.lathe([[0, -0.33], [0.085, -0.32], [0.09, -0.12], [0.08, 0.02], [0, 0.04]], f.vest, PLAIN, [0, 0, -0.01], [0, 0, 0], [1, 1, 1], 14);
   return p.build();
 }
 
@@ -405,7 +451,7 @@ export class Humanoid {
     this.torso.add(this.head);
     this.head.add(mk(cached(`${key}:head:${v.headgear}:${v.skin}:${v.glasses}`, () => headGeo(f, v))));
     if (f.heavy) {
-      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.035, 0.03), new THREE.MeshStandardMaterial({ color: 0x300000, emissive: 0xff1810, emissiveIntensity: 2.4 }));
+      const visor = new THREE.Mesh(roundedBoxGeo(0.17, 0.035, 0.03, 0.012), new THREE.MeshStandardMaterial({ color: 0x300000, emissive: 0xff1810, emissiveIntensity: 2.4 }));
       visor.position.set(0, 0.13, -0.16);
       this.head.add(visor);
     }
