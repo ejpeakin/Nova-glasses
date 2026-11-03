@@ -470,6 +470,7 @@ export const MISSIONS = [
       { name: 'Tex', weapon: 'viper', suppressed: true },
     ],
     stealth: true,
+    squadLeash: 7,
     alarmGroup: 'response',
     alarmTimer: 60,
     timerText: 'HOSTAGES',

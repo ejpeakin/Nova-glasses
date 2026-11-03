@@ -80,6 +80,7 @@ export class CampaignMode {
     this.checkpoint = { pos: sp.clone(), yaw: m.start.yaw };
     this.squad = [];
     this.props = [];
+    this.squadLeash = m.squadLeash; // close-quarters ops keep the squad tight
     m.squad.forEach((s, i) => this._spawnFriend(s, i));
     for (const [id, g] of Object.entries(m.groups)) {
       this.groups[id] = { def: g, spawned: false, units: [], squad: new Squad(id) };
@@ -325,6 +326,7 @@ export class CampaignMode {
       this.squad.forEach((s, i) => {
         const st = o.stack[i % o.stack.length];
         s.command('hold', new THREE.Vector3(st[0], 0, st[1]), o.stackYaw ?? 0);
+        if (s.order) s.order.exact = true;
       });
     }
     if (o.squadFollow) for (const s of this.squad) s.order = null;

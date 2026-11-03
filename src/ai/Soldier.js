@@ -222,6 +222,12 @@ export class Soldier {
       return;
     }
     if (this.state === 'flee') return;
+    // Squadmates keep their place (formation, stack, held position) and just turn to the noise.
+    if (this.friendly) {
+      this.watch(pos.clone());
+      if (source && this.pos.distanceTo(pos) < 12 && this.game.world.los(this.eyePos, source.eyePos ?? pos)) { this._acquire(source, false); this.state = 'combat'; }
+      return;
+    }
     this.lastKnown = pos.clone();
     this.awareness = Math.max(this.awareness, 0.5);
     if (source && this.pos.distanceTo(pos) < 12) {
@@ -778,7 +784,7 @@ export class Soldier {
             if (this.alertT > 3 && !this.path && this.lastKnown && this.pos.distanceTo(this.lastKnown) > 3) this._pathTo(this.lastKnown, false);
           }
           if (this.alertT > 14) {
-            this.state = this.patrol ? 'patrol' : this.hunter ? 'hunt' : 'idle';
+            this.state = this.friendly ? 'follow' : this.patrol ? 'patrol' : this.hunter ? 'hunt' : 'idle';
             this.path = null;
             this.awareness = 0;
           }
@@ -929,9 +935,9 @@ export class Soldier {
       this.followCrouch = p.stance !== 'stand' ? 1 : 0;
       return p.yaw;
     }
-    // In position: take a knee and watch the sector.
+    // In position: take a knee and watch the sector (or the door, on a stack).
     this.followCrouch = 1;
-    return o.yaw + (this.followIndex % 3 - 1) * 0.5;
+    return o.exact ? o.yaw : o.yaw + (this.followIndex % 3 - 1) * 0.5;
   }
 
   /** Where this soldier should stay close to in a fight, and how far it may stray. */
@@ -939,7 +945,7 @@ export class Soldier {
     const o = this.order;
     if (o && (o.kind === 'hold' || o.kind === 'move')) return { at: o.pos, r: 9 };
     if (o && o.kind === 'regroup') return { at: this.game.player.pos, r: 5 };
-    if (this.friendly) return { at: this.game.player.pos, r: 22 };
+    if (this.friendly) return { at: this.game.player.pos, r: this.game.mode?.squadLeash ?? 22 };
     return null;
   }
 

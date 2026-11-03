@@ -177,12 +177,36 @@ function hackProp(game, o, pos, n) {
 }
 
 function trackerProp(game, o, pos, n) {
-  // Find the container wall: look back from the operator's side.
+  // Find the container: the nearest wall around the target at chest height.
   const y = pos.y + 1.12;
-  const o2 = pos.clone().addScaledVector(n, 1.6);
-  const hit = game.world.raycast(o2.x, y, o2.z, -n.x, 0, -n.z, 3.2);
-  let S, N = n.clone();
-  if (hit && Math.abs(hit.normal.y) < 0.5) { S = hit.point.clone(); N = hit.normal.clone().setY(0).normalize(); } else S = V(pos.x, y, pos.z);
+  let S = null, N = n.clone(), best = 2.6;
+  for (let i = 0; i < 24; i++) {
+    const a = (i / 24) * Math.PI * 2, dx = Math.sin(a), dz = Math.cos(a);
+    const hit = game.world.raycast(pos.x, y, pos.z, dx, 0, dz, best);
+    if (hit && hit.t < best && Math.abs(hit.normal.y) < 0.5) { best = hit.t; S = hit.point.clone(); N = hit.normal.clone().setY(0).normalize(); }
+  }
+  let crate = null;
+  if (!S) {
+    // Nothing to stick it to here: the cargo itself, a stencilled crate on the quay.
+    crate = new THREE.Group();
+    crate.position.set(pos.x, pos.y, pos.z);
+    crate.rotation.y = Math.atan2(n.x, n.z);
+    box(1.4, 1.3, 1.1, mat(0x5a6a4a, 0.85, 0.1), 0, 0.65, -0.55, crate);
+    for (const x of [-0.6, 0, 0.6]) box(0.06, 1.32, 1.12, mat(0x45523a, 0.85, 0.1), x, 0.65, -0.55, crate);
+    const c = document.createElement('canvas');
+    c.width = 128; c.height = 64;
+    const cg = c.getContext('2d');
+    cg.fillStyle = '#e8e4d0'; cg.font = 'bold 40px monospace'; cg.fillText('K-77', 14, 46);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const label = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.3), new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.9 }));
+    label.position.set(-0.3, 0.95, 0.002);
+    crate.add(label);
+    game.scene.add(crate);
+    crate.updateMatrixWorld(true);
+    S = crate.localToWorld(V(0.25, 1.0, 0));
+    N = n.clone();
+  }
   const g = new THREE.Group();
   g.position.copy(S).addScaledVector(N, 0.012);
   g.quaternion.setFromUnitVectors(UP, N);
@@ -200,7 +224,7 @@ function trackerProp(game, o, pos, n) {
       if (placed) light.visible = armed ? Math.sin(t * 6) > 0.6 : Math.sin(t * 14) > 0;
     },
     complete() { placed = true; armed = true; g.visible = true; Audio.foley('beep', work); },
-    dispose() { g.removeFromParent(); },
+    dispose() { g.removeFromParent(); crate?.removeFromParent(); },
   };
 }
 
@@ -249,7 +273,13 @@ function c4Prop(game, o, pos, n) {
 function personProp(game, o, pos, n, kind) {
   const faction = o.detainee ?? (kind === 'cut' ? 'civilian' : kind === 'rescue' ? 'orion' : 'meridian');
   const model = o.model ?? new Humanoid(faction, kind === 'rescue' ? 'vx4' : 'p11', { seed: 77 });
-  model.root.position.set(pos.x, pos.y, pos.z);
+  // Never inside solid geometry (a man trapped "in" a wreck sits against its side).
+  const at = pos.clone();
+  for (let d = 0; d < 4; d += 0.1) {
+    const q = pos.clone().addScaledVector(n, d);
+    if (!game.world.overlaps(q.x - 0.32, q.y + 0.15, q.z - 0.32, q.x + 0.32, q.y + 1.1, q.z + 0.32)) { at.copy(q).addScaledVector(n, d > 0 ? 0.1 : 0); break; }
+  }
+  model.root.position.copy(at);
   // Hostage and prisoner kneel facing away (you work at their wrists); the wounded
   // man in the wreck sits facing you.
   model.root.rotation.y = kind === 'rescue' ? Math.atan2(-n.x, -n.z) : Math.atan2(n.x, n.z);
@@ -429,8 +459,8 @@ export function buildDoor(game, spec) {
     block(p) {
       if (door.open && Math.abs(door.angle) > 0.6) return;
       const lp = g.worldToLocal(p.pos.clone());
-      if (Math.abs(lp.x) > w / 2 + 0.1 || Math.abs(lp.z) > 0.45 || lp.y > h) return;
-      lp.z = lp.z < 0 ? -0.45 : 0.45;
+      if (Math.abs(lp.x) > w / 2 + 0.1 || Math.abs(lp.z) > 0.45 || lp.y > h) { if (Math.abs(lp.z) > 0.45) door.side = Math.sign(lp.z); return; }
+      lp.z = (door.side ?? Math.sign(lp.z || out)) < 0 ? -0.45 : 0.45; // back to the side you came from
       const wp = g.localToWorld(lp);
       p.pos.x = wp.x;
       p.pos.z = wp.z;
