@@ -197,6 +197,9 @@ export class Effects {
       this.casings.push({ mesh: m, vel: new THREE.Vector3(), life: 0 });
     }
     this.casingIndex = 0;
+    // Dropped magazines (pooled, created on demand).
+    this.props = [];
+    this.propIndex = 0;
   }
 
   resize(h, fov) {
@@ -285,6 +288,32 @@ export class Effects {
     c.mesh.visible = true;
   }
 
+  /** A dropped magazine (or similar): falls from its current world transform and comes to rest. */
+  dropProp(geo, mat, matrixWorld, vel) {
+    let p = this.props.find((x) => !x.mesh.visible);
+    if (!p) {
+      if (this.props.length < 16) {
+        p = { mesh: new THREE.Mesh(geo, mat), vel: new THREE.Vector3(), spin: new THREE.Vector3(), life: 0, rest: false, rq: new THREE.Quaternion() };
+        this.scene.add(p.mesh);
+        this.props.push(p);
+      } else {
+        p = this.props[this.propIndex];
+        this.propIndex = (this.propIndex + 1) % this.props.length;
+      }
+    }
+    const m = p.mesh;
+    m.geometry = geo;
+    m.material = mat;
+    matrixWorld.decompose(m.position, m.quaternion, m.scale);
+    p.vel.copy(vel ?? new THREE.Vector3()).add(new THREE.Vector3(rand(-0.4, 0.4), -0.5, rand(-0.4, 0.4)));
+    p.spin.set(rand(-6, 6), rand(-3, 3), rand(-6, 6));
+    p.life = 30;
+    p.rest = false;
+    // Comes to rest lying on its side at a random heading.
+    p.rq.setFromEuler(new THREE.Euler(0, rand(0, Math.PI * 2), Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1), 'YXZ'));
+    m.visible = true;
+  }
+
   explosion(pos, size = 1) {
     const q = this.quality === 'low' ? 0.5 : 1;
     for (let i = 0; i < 26 * q; i++) {
@@ -370,6 +399,25 @@ export class Effects {
         c.vel.x *= 0.5; c.vel.z *= 0.5;
       }
     }
+    for (const p of this.props) {
+      if (!p.mesh.visible) continue;
+      p.life -= dt;
+      if (p.life <= 0) { p.mesh.visible = false; continue; }
+      if (p.rest) continue;
+      const m = p.mesh;
+      p.vel.y -= 9.8 * dt;
+      m.position.addScaledVector(p.vel, dt);
+      m.rotation.x += p.spin.x * dt; m.rotation.y += p.spin.y * dt; m.rotation.z += p.spin.z * dt;
+      const gy = world ? world.groundHeight(m.position.x, m.position.z, m.position.y + 0.1, 0.05, 0.02) : 0;
+      if (m.position.y < gy + 0.03) {
+        m.position.y = gy + 0.03;
+        p.vel.multiplyScalar(0.3);
+        p.vel.y = Math.abs(p.vel.y) * 0.25;
+        p.spin.multiplyScalar(0.3);
+        m.quaternion.slerp(p.rq, 0.6);
+        if (p.vel.lengthSq() < 0.05) { p.rest = true; m.quaternion.copy(p.rq); }
+      }
+    }
   }
 
   dispose() {
@@ -378,5 +426,6 @@ export class Effects {
     for (const d of this.decals) this.scene.remove(d);
     for (const f of this.flashLights) this.scene.remove(f.light);
     for (const c of this.casings) this.scene.remove(c.mesh);
+    for (const p of this.props) this.scene.remove(p.mesh);
   }
 }

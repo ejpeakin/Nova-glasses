@@ -71,7 +71,11 @@ Equipment: frag (cookable), sticky semtex, remote C4, flashbang, smoke (blocks A
 - Detection builds up gradually. It depends on distance, your stance, your movement, fog, darkness and your flashlight, so stealth is possible. In the campaign a stealth meter under the compass shows when you're being noticed, and missions start in cover with a few seconds' grace.
 - They hear unsuppressed gunfire and explosions, and investigate noises.
 - In a fight they take cover using auto-generated cover points and alternate between hiding and peeking. Behind tall cover they step out to shoot.
-- They reposition, flank, push your last known position and fire in bursts. Accuracy drops when they're moving, suppressed or have only just spotted you.
+- They reposition, flank and push your last known position. They walk while firing and sprint between cover without shooting.
+- Realistic marksmanship. Their aim settles onto you over about a second, then they hit reliably. They aim centre mass, or at your head if that's all that shows above cover. Moving targets are much harder to hit, especially sprinting side to side. So are distance, darkness and fog. Being suppressed, hit or on the move throws off their aim.
+- Trigger discipline: long bursts up close, short bursts at mid range, aimed single shots far out. Muzzle climb pushes later rounds in a burst high. LMGs lay down long strings of fire. Snipers wait for a settled shot, and their scope glints when they're aiming at you.
+- Visible weapon handling. They shoulder the rifle with a bladed stance and cheek weld, and take a knee to shoot or reload. The gun kicks with recoil and ejects brass. Bolt-action and pump guns are cycled by hand. Reloads show the magazine coming out (empties fall to the ground), a fresh one drawn from the vest and the charging handle racked. They top up their magazines in cover and call out when reloading.
+- Hits make them flinch toward the side the shot came from. They die in one of three ways: crumpling on the spot from a headshot, toppling away from the shot, or twisting to the ground.
 - They throw grenades at you when you hide, and scatter from grenades thrown at them.
 - Squads share intel and limit how many members move at once.
 - Snipers and guards hold position in towers and on roofs. Bosses are heavily armoured and keep pushing forward.

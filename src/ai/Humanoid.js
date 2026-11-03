@@ -3,7 +3,7 @@
 // and plain gear/skin), so a detailed soldier costs about a dozen draw calls.
 // Arms use two-bone IK so both hands stay on the weapon; legs use a procedural gait.
 import * as THREE from '../lib/three.js';
-import { getTexture } from '../world/Textures.js';
+import { getTexture, getSpriteTexture } from '../world/Textures.js';
 import { WEAPONS, resolveAttachments } from '../weapons/WeaponData.js';
 import { buildWeaponModel } from '../weapons/WeaponModel.js';
 import { damp, clamp, makeRng } from '../core/Utils.js';
@@ -156,7 +156,10 @@ function torsoGeo(f, v) {
   p.box(0.065, 0.045, 0.3, f.vest, PLAIN, [-0.1, 0.535, 0]); // shoulder straps
   p.box(0.065, 0.045, 0.3, f.vest, PLAIN, [0.1, 0.535, 0]);
   // Triple mag pouch + admin pouch.
-  for (const x of [-0.09, 0, 0.09]) p.box(0.08, 0.11, 0.055, f.gear, PLAIN, [x, 0.285, -0.205]);
+  for (const x of [-0.09, 0, 0.09]) {
+    p.box(0.08, 0.11, 0.055, f.gear, PLAIN, [x, 0.285, -0.205]);
+    p.box(0.028, 0.03, 0.05, 0x1d1e20, PLAIN, [x, 0.35, -0.205]); // magazine baseplate
+  }
   p.box(0.2, 0.08, 0.035, f.gear, PLAIN, [0, 0.43, -0.195]);
   // Side pouches.
   p.box(0.06, 0.12, 0.09, f.gear, PLAIN, [-0.21, 0.27, 0.02]);
@@ -237,21 +240,23 @@ function headGeo(f, v) {
   return p.build();
 }
 
-/** Upper arm: pivot at the shoulder, hangs along -Y (length 0.29). */
+/** Upper arm: pivot at the shoulder, hangs along -Y (length 0.32). */
 function upperArmGeo(f) {
   const p = new Parts();
-  p.capsule(0.052, 0.19, f.fabric, FABRIC, [0, -0.145, 0]);
+  p.capsule(0.054, 0.21, f.fabric, FABRIC, [0, -0.16, 0]);
+  p.box(0.075, 0.07, 0.03, f.gear, PLAIN, [0.0, -0.1, -0.045]); // sleeve pocket
   if (f.heavy) p.box(0.13, 0.2, 0.13, f.vest, PLAIN, [0, -0.12, 0]);
   return p.build();
 }
 
-/** Forearm + hand: pivot at the elbow; glove centred at -0.29. */
+/** Forearm + hand: pivot at the elbow; palm centred at -0.31. */
 function foreArmGeo(f, left) {
   const p = new Parts();
-  p.capsule(0.045, 0.17, f.fabric, FABRIC, [0, -0.12, 0]);
-  p.cyl(0.05, 0.048, 0.05, f.fabric, FABRIC, [0, -0.215, 0]); // cuff
-  p.box(0.075, 0.1, 0.045, f.gloves, PLAIN, [0, -0.29, 0]);
-  p.box(0.025, 0.05, 0.025, f.gloves, PLAIN, [left ? 0.04 : -0.04, -0.27, -0.02]); // thumb
+  p.capsule(0.046, 0.18, f.fabric, FABRIC, [0, -0.13, 0]);
+  p.cyl(0.05, 0.048, 0.05, f.fabric, FABRIC, [0, -0.235, 0]); // cuff
+  p.box(0.07, 0.085, 0.04, f.gloves, PLAIN, [0, -0.3, 0]); // palm
+  p.box(0.064, 0.05, 0.032, f.gloves, PLAIN, [0, -0.355, -0.012], [0.5, 0, 0]); // curled fingers
+  p.box(0.022, 0.05, 0.022, f.gloves, PLAIN, [left ? 0.04 : -0.04, -0.29, -0.022], [0.3, 0, 0]); // thumb
   if (f.heavy) p.box(0.11, 0.16, 0.11, f.vest, PLAIN, [0, -0.11, 0]);
   return p.build();
 }
@@ -259,7 +264,7 @@ function foreArmGeo(f, left) {
 /** Thigh: pivot at the hip joint (length 0.46). */
 function thighGeo(f, right, v) {
   const p = new Parts();
-  p.capsule(0.082, 0.28, f.pants, FABRIC, [0, -0.22, 0]);
+  p.capsule(0.082, 0.3, f.pants, FABRIC, [0, -0.225, 0]);
   if (right && v.holster) p.box(0.06, 0.18, 0.1, f.gear, PLAIN, [0.085, -0.17, 0]); // drop holster
   if (!right && v.legPouch) p.box(0.05, 0.12, 0.09, f.gear, PLAIN, [-0.085, -0.2, 0.01]);
   if (f.heavy) p.box(0.19, 0.3, 0.2, f.vest, PLAIN, [0, -0.2, -0.01]);
@@ -269,7 +274,8 @@ function thighGeo(f, right, v) {
 /** Shin + boot: pivot at the knee (length 0.46 to sole). */
 function shinGeo(f) {
   const p = new Parts();
-  p.capsule(0.062, 0.26, f.pants, FABRIC, [0, -0.19, 0]);
+  p.sphere(0.07, f.pants, FABRIC, [0, 0.0, 0.005], [1, 1.1, 1]); // knee joint
+  p.capsule(0.064, 0.26, f.pants, FABRIC, [0, -0.18, 0]);
   p.box(0.1, 0.11, 0.05, f.gear, PLAIN, [0, -0.03, -0.065]); // knee pad
   p.box(0.112, 0.12, 0.17, f.boots, PLAIN, [0, -0.39, -0.015]); // boot upper
   p.box(0.115, 0.06, 0.27, f.boots, PLAIN, [0, -0.43, -0.04]); // foot
@@ -289,13 +295,25 @@ function bakedGun(weaponId) {
   const info = buildWeaponModel(def, resolveAttachments(weaponId, {}));
   info.group.updateMatrixWorld(true);
   const p = new Parts();
+  const pm = new Parts();
+  const inMag = (o) => { for (let q = o; q; q = q.parent) if (q === info.mag) return true; return false; };
+  const toMag = new THREE.Matrix4().makeTranslation(-info.magHome.x, -info.magHome.y, -info.magHome.z);
   info.group.traverse((o) => {
     if (!o.isMesh || o.material.transparent || o.material.isMeshBasicMaterial) return;
     const g = o.geometry.clone().applyMatrix4(o.matrixWorld);
-    p.add(g, o.material.color.getHex(), PLAIN);
+    if (inMag(o) && def.class !== 'shotgun') pm.add(g.applyMatrix4(toMag), o.material.color.getHex(), PLAIN);
+    else p.add(g, o.material.color.getHex(), PLAIN);
   });
+  const geo = p.build();
+  geo.computeBoundingBox();
   const entry = {
-    geo: p.build(),
+    geo,
+    magGeo: pm.list.length ? pm.build() : null,
+    magHome: info.magHome.clone(),
+    magGrip: info.magGrip.clone(),
+    sightY: info.sightY,
+    ejection: info.ejection.clone(),
+    stockZ: geo.boundingBox.max.z,
     muzzle: info.muzzle.position.clone(),
     left: info.leftHand.clone(),
     right: info.rightHand ? info.rightHand.clone() : new THREE.Vector3(0, -0.04, 0.03),
@@ -304,21 +322,40 @@ function bakedGun(weaponId) {
   return entry;
 }
 
-function gunMaterial() {
+export function gunMaterial() {
   if (!gunMat) gunMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.35 });
   return gunMat;
 }
 
 /** Detailed weapon mesh (third person, pickups). */
 export function buildLowGun(weaponId) {
-  const m = new THREE.Mesh(bakedGun(weaponId).geo, gunMaterial());
+  const b = bakedGun(weaponId);
+  const m = new THREE.Mesh(b.geo, gunMaterial());
   m.castShadow = true;
+  if (b.magGeo) {
+    const mag = new THREE.Mesh(b.magGeo, gunMaterial());
+    mag.position.copy(b.magHome);
+    m.add(mag);
+  }
   return m;
 }
 
 // ---------------------------------------------------------------------------
 
 const DOWN = new THREE.Vector3(0, -1, 0);
+const ARM_A = 0.32, ARM_B = 0.31; // shoulder->elbow, elbow->palm
+const smooth = (t) => t * t * (3 - 2 * t);
+const lerp = (a, b, t) => a + (b - a) * t;
+const tmpM2 = new THREE.Matrix4();
+const tmpM3 = new THREE.Matrix4();
+const tmpQ2 = new THREE.Quaternion();
+const tmpQ3 = new THREE.Quaternion();
+const tmpV1 = new THREE.Vector3();
+const tmpV2 = new THREE.Vector3();
+const tmpS1 = new THREE.Vector3();
+const tmpEu = new THREE.Euler();
+const POUCH = new THREE.Vector3(-0.07, 0.31, -0.25); // torso-local: front mag pouch
+const BELT = new THREE.Vector3(-0.17, 0.12, -0.12); // torso-local: shell caddy
 
 export class Humanoid {
   constructor(faction = 'meridian', weaponId = 'vx4', opts = {}) {
@@ -400,11 +437,49 @@ export class Humanoid {
     this.gun = new THREE.Mesh(baked.geo, gunMaterial());
     this.gun.castShadow = true;
     this.gunPivot.add(this.gun);
+    // Magazine: a child of the gun so it can be pulled out and swapped during reloads.
+    this.magHome = baked.magHome.clone();
+    this.magGrip = baked.magGrip.clone();
+    this.mag = null;
+    if (baked.magGeo) {
+      this.mag = new THREE.Mesh(baked.magGeo, gunMaterial());
+      this.mag.castShadow = true;
+      this.mag.position.copy(this.magHome);
+      this.gun.add(this.mag);
+    }
+    this.ejection = baked.ejection.clone();
     this.muzzle = new THREE.Object3D();
     this.muzzle.position.copy(baked.muzzle);
     this.gunPivot.add(this.muzzle);
     this.gripR = baked.right.clone();
     this.gripL = this.pistol ? new THREE.Vector3(-0.02, -0.05, 0.02) : baked.left.clone().add(new THREE.Vector3(0, -0.01, 0));
+    this.weaponClass = def.class;
+    // Hip / ready carry (torso-local) and the shouldered aiming position (body frame at
+    // shoulder height): the butt sits in the right shoulder pocket, torso bladed.
+    this.hipPos = this.gunPivot.position.clone();
+    this.aimOff = this.pistol ? new THREE.Vector3(0.0, 0.52, -0.46) : new THREE.Vector3(0.11, 0.555, -Math.max(0.22, baked.stockZ) + 0.01);
+    this.blade = this.pistol ? 0.1 : 0.5;
+    this.kickPow = def.class === 'sniper' ? 1.9 : def.class === 'shotgun' ? 1.7 : def.class === 'lmg' ? 1.2 : def.class === 'pistol' ? 1.3 : 1;
+    this.aimBlend = 0;
+    this.kick = 0;
+    this.cycleT = -1;
+    this.cycleKind = null;
+    this.cycleDelay = 0;
+    this.rl = null; // active reload
+    this.reloadBlend = 0;
+    this.onMagDrop = null; // (geometry, material, worldMatrix) => void
+    this.flinchSide = 0;
+    this.deathStyle = 'topple';
+    // Scope glint: snipers aiming at the player flash a reflection off the objective lens.
+    this.glint = null;
+    if (def.class === 'sniper' || def.class === 'marksman') {
+      this.glint = new THREE.Sprite(new THREE.SpriteMaterial({ map: getSpriteTexture('flash'), color: 0xfff4dc, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false, opacity: 0 }));
+      this.glint.position.set(0, baked.sightY ?? 0.09, -0.22);
+      this.glint.visible = false;
+      this.gunPivot.add(this.glint);
+    }
+    this._gp = new THREE.Vector3();
+    this._gq = new THREE.Quaternion();
 
     // Legs.
     this.legs = [];
@@ -444,23 +519,74 @@ export class Humanoid {
     });
   }
 
-  hit() { this.flinch = 1; }
+  /** side: -1 hit from the left, 1 from the right, 0 front/back. */
+  hit(side = 0) {
+    this.flinch = 1;
+    this.flinchSide = side;
+  }
 
-  die(fromDir) {
+  die(fromDir, o = {}) {
     this.dead = true;
     this.deathT = 0;
     this.deathSide = (Math.random() - 0.5) * 0.8;
     this.deathDir = fromDir ?? 1;
+    // Headshots drop on the spot; other hits topple away or twist and fall sideways.
+    this.deathStyle = o.head ? 'crumple' : Math.random() < 0.35 ? 'twist' : 'topple';
+    this.twist = (Math.random() < 0.5 ? -1 : 1);
+    this.rl = null;
+    this.cycleT = -1;
+    if (this.glint) this.glint.visible = false;
+  }
+
+  /** Recoil impulse for one shot. */
+  fire() {
+    this.kick = 1;
+  }
+
+  /** Work the action after a shot: 'bolt' (right hand) or 'pump' (left hand). */
+  cycle(kind) {
+    this.cycleKind = kind;
+    this.cycleDelay = kind === 'bolt' ? 0.22 : 0.08;
+    this.cycleT = 0;
+  }
+
+  /** Visible magazine change. o: { empty, drop, shells }. */
+  reload(dur, o = {}) {
+    if (this.dead) return;
+    this.rl = { t: 0, dur: Math.max(0.5, dur), empty: !!o.empty, drop: !!o.drop && !!this.mag, shells: !!o.shells, released: false };
+  }
+
+  get reloading() { return !!this.rl; }
+
+  /** Show the scope glint (0..1) as seen from `dist` metres. */
+  setGlint(k, dist, t) {
+    if (!this.glint) return;
+    const on = k > 0.02 && !this.dead;
+    this.glint.visible = on;
+    if (!on) return;
+    const pulse = 0.75 + 0.25 * Math.sin(t * 9);
+    this.glint.material.opacity = k * pulse;
+    this.glint.scale.setScalar(0.2 + dist * 0.02);
+  }
+
+  muzzleDir(out) {
+    this.gunPivot.updateWorldMatrix(true, false);
+    return out.set(0, 0, -1).transformDirection(this.gunPivot.matrixWorld);
+  }
+
+  ejectPos(out) {
+    this.gunPivot.updateWorldMatrix(true, false);
+    return out.copy(this.ejection).applyMatrix4(this.gunPivot.matrixWorld);
   }
 
   /** Two-bone IK: shoulder -> elbow -> hand, with the elbow pushed down and out. */
   _solveArm(arm, hand) {
-    const a = 0.29, b = 0.29;
+    const a = ARM_A, b = ARM_B;
     const S = arm.shoulder;
     const d = this._a.subVectors(hand, S);
     let len = d.length();
     const u = d.divideScalar(Math.max(1e-4, len));
-    len = clamp(len, 0.08, a + b - 0.002);
+    len = clamp(len, 0.1, a + b - 0.002);
     const target = this._b.copy(S).addScaledVector(u, len);
     const x = (a * a - b * b + len * len) / (2 * len);
     const h = Math.sqrt(Math.max(0, a * a - x * x));
@@ -473,21 +599,133 @@ export class Humanoid {
     arm.fore.quaternion.setFromUnitVectors(DOWN, this._c.subVectors(target, elbow).normalize());
   }
 
-  _poseArms() {
+  /** Gun-space point -> torso-local. */
+  _g2t(v, out) {
+    return out.copy(v).applyMatrix4(this.gunPivot.matrix);
+  }
+
+  _poseArms(dt = 0) {
     this.gunPivot.updateMatrix();
-    const rh = this._d.copy(this.gripR).applyMatrix4(this.gunPivot.matrix).clone();
-    const lh = this._d.copy(this.gripL).applyMatrix4(this.gunPivot.matrix).clone();
+    const rh = this._g2t(this.gripR, new THREE.Vector3());
+    const lh = this._g2t(this.gripL, new THREE.Vector3());
+    // Support hand: if the handguard is out of reach, slide back along the gun toward the magwell.
+    const S = this.arms[1].shoulder;
+    const reach = ARM_A + ARM_B - 0.015;
+    if (lh.distanceTo(S) > reach && !this.pistol) {
+      const back = this._g2t(tmpV1.set(this.gripL.x, this.gripL.y, Math.max(this.gripL.z, this.magHome.z - 0.04)), new THREE.Vector3());
+      const axis = back.clone().sub(lh);
+      const L = axis.length();
+      if (L > 1e-3) {
+        axis.divideScalar(L);
+        // |lh + t*axis - S| = reach
+        const o = lh.clone().sub(S);
+        const bq = o.dot(axis), cq = o.lengthSq() - reach * reach;
+        const disc = bq * bq - cq;
+        const t = disc >= 0 ? clamp(-bq - Math.sqrt(disc), 0, L) : L;
+        lh.addScaledVector(axis, t);
+      }
+    }
+    // Working the action.
+    if (this.cycleT >= 0 && !this.rl) {
+      if (this.cycleDelay > 0) this.cycleDelay -= dt;
+      else {
+        const dur = this.cycleKind === 'bolt' ? 0.75 : 0.42;
+        this.cycleT += dt / dur;
+        const w = Math.sin(Math.PI * clamp(this.cycleT, 0, 1));
+        if (this.cycleKind === 'bolt') {
+          const bolt = this._g2t(tmpV2.set(0.06, 0.02, 0.07 - w * 0.06), new THREE.Vector3());
+          rh.lerp(bolt, clamp(w * 1.6, 0, 1));
+        } else {
+          lh.add(this._g2t(tmpV2.set(0, 0, 0.11 * w), new THREE.Vector3()).sub(this._g2t(tmpV1.set(0, 0, 0), new THREE.Vector3())));
+        }
+        if (this.cycleT >= 1) this.cycleT = -1;
+      }
+    }
+    // Reload choreography for the support hand (and the magazine).
+    if (this.rl) this._reloadHands(lh);
     this._solveArm(this.arms[0], rh);
     this._solveArm(this.arms[1], lh);
   }
 
-  /** speed: horizontal m/s, crouch: 0..1, pitch: aim pitch (rad), firing: bool. */
-  update(dt, speed, crouch, pitch, firing) {
-    if (this.dead) {
-      this.deathT += dt;
-      const t = clamp(this.deathT / 0.75, 0, 1);
-      const e = t * t;
-      // Knees buckle first, then the body topples.
+  _reloadHands(lh) {
+    const r = this.rl;
+    const t = r.t;
+    const G = lh.clone();
+    if (r.shells) {
+      // Shotgun: shells from the belt caddy into the loading port, four times.
+      const port = this._g2t(tmpV1.set(0, -0.06, -0.06), new THREE.Vector3());
+      if (t > 0.08 && t < 0.86) {
+        const k = ((t - 0.08) / 0.78) * 4;
+        const w = 0.5 - 0.5 * Math.cos(k * Math.PI * 2);
+        lh.copy(port).lerp(BELT, w);
+      } else if (t <= 0.08) lh.copy(G).lerp(port, smooth(t / 0.08));
+      else lh.copy(port).lerp(G, smooth((t - 0.86) / 0.14));
+      return;
+    }
+    const W = this._g2t(this.magGrip, new THREE.Vector3());
+    const Ch = this._g2t(tmpV1.set(-0.035, 0.045, this.pistol ? 0.05 : 0.1), new THREE.Vector3());
+    const tap = W.clone().add(tmpV2.set(0, 0.025, 0));
+    const keys = [[0, G], [0.12, W], [0.22, W], [0.42, POUCH], [0.5, POUCH], [0.62, W], [0.68, tap], [0.76, W], [0.86, r.empty ? Ch : W], [1, G]];
+    let i = 0;
+    while (i < keys.length - 2 && t > keys[i + 1][0]) i++;
+    const [t0, A] = keys[i], [t1, B] = keys[i + 1];
+    lh.copy(A).lerp(B, smooth(clamp((t - t0) / Math.max(1e-3, t1 - t0), 0, 1)));
+    // Magazine follows the hand between release and seating.
+    if (!this.mag) return;
+    const inv = tmpM3.copy(this.gunPivot.matrix).invert();
+    const handInGun = tmpV2.copy(lh).applyMatrix4(inv);
+    const grabOff = tmpV1.subVectors(this.magGrip, this.magHome);
+    if (t >= 0.22 && !r.released) {
+      r.released = true;
+      if (r.drop) {
+        this.gun.updateWorldMatrix(true, true);
+        this.onMagDrop?.(this.mag.geometry, this.mag.material, this.mag.matrixWorld.clone());
+        this.mag.visible = false;
+      }
+    }
+    if (t < 0.22) { this.mag.position.copy(this.magHome); this.mag.visible = true; }
+    else if (t < 0.42) {
+      if (!r.drop) { this.mag.visible = true; this.mag.position.copy(handInGun).sub(grabOff); } // stow the partial mag
+    } else if (t < 0.47) this.mag.visible = false;
+    else if (t < 0.62) { this.mag.visible = true; this.mag.position.copy(handInGun).sub(grabOff); }
+    else { this.mag.visible = true; this.mag.position.copy(this.magHome); }
+  }
+
+  _updateDead(dt) {
+    this.deathT += dt;
+    const st = this.deathStyle;
+    const T = st === 'crumple' ? 0.95 : 0.75;
+    const t = clamp(this.deathT / T, 0, 1);
+    const e = t * t;
+    if (st === 'crumple') {
+      // Knees give out on the spot, then the body pitches forward face-down, legs trailing.
+      const k = smooth(clamp(this.deathT / 0.3, 0, 1));
+      const f = smooth(clamp((this.deathT - 0.25) / 0.65, 0, 1));
+      const buckle = k * (1 - f);
+      this.hips.position.y = damp(this.hips.position.y, lerp(0.95, 0.66, buckle) - f * 0.06, 12, dt);
+      for (const l of this.legs) {
+        l.thigh.rotation.x = damp(l.thigh.rotation.x, lerp(0.75 * buckle + 0.1 * l.side, 0.12 + 0.08 * l.side, f), 10, dt);
+        l.shin.rotation.x = damp(l.shin.rotation.x, lerp(-1.5 * buckle, -0.25, f), 10, dt);
+      }
+      this.body.rotation.x = -f * (Math.PI / 2 - 0.1);
+      this.body.rotation.z = this.deathSide * 0.4 * f;
+      this.body.position.y = 0;
+      this.torso.rotation.x = damp(this.torso.rotation.x, -0.35 * buckle, 6, dt);
+      this.head.rotation.x = damp(this.head.rotation.x, 0.5 * f - 0.3 * buckle, 8, dt);
+      this.head.rotation.y = damp(this.head.rotation.y, this.twist * 0.7 * f, 6, dt);
+    } else if (st === 'twist') {
+      this.body.rotation.y = this.twist * e * 0.9;
+      this.body.rotation.z = this.twist * e * (Math.PI / 2 - 0.1);
+      this.body.rotation.x = this.deathDir * e * 0.25;
+      this.hips.position.y = damp(this.hips.position.y, 0.78, 5, dt);
+      for (const l of this.legs) {
+        l.thigh.rotation.x = damp(l.thigh.rotation.x, 0.3 + 0.35 * l.side * this.twist, 5, dt);
+        l.shin.rotation.x = damp(l.shin.rotation.x, -0.7 - 0.3 * l.side, 5, dt);
+      }
+      this.torso.rotation.x = damp(this.torso.rotation.x, -0.2, 4, dt);
+      this.head.rotation.z = damp(this.head.rotation.z, this.twist * 0.5, 4, dt);
+    } else {
+      // Knees buckle first, then the body topples away from the shot.
       this.body.rotation.x = this.deathDir * e * (Math.PI / 2 - 0.08);
       this.body.rotation.z = this.deathSide * e;
       this.body.position.y = -e * 0.05;
@@ -498,47 +736,107 @@ export class Humanoid {
       }
       this.torso.rotation.x = damp(this.torso.rotation.x, -this.deathDir * 0.3, 4, dt);
       this.head.rotation.x = damp(this.head.rotation.x, -this.deathDir * 0.5, 4, dt);
-      this.gunPivot.rotation.x = damp(this.gunPivot.rotation.x, -this.deathDir * 1.2, 5, dt);
-      this.gunPivot.rotation.z = damp(this.gunPivot.rotation.z, 0.6, 4, dt);
-      this.gunPivot.position.y = damp(this.gunPivot.position.y, 0.2, 4, dt);
-      this._poseArms();
-      return;
     }
+    // The weapon slips out of the firing grip.
+    this.gunPivot.rotation.x = damp(this.gunPivot.rotation.x, -this.deathDir * 1.2, 5, dt);
+    this.gunPivot.rotation.z = damp(this.gunPivot.rotation.z, 0.6, 4, dt);
+    this.gunPivot.position.y = damp(this.gunPivot.position.y, 0.2, 4, dt);
+    this.gunPivot.position.z = damp(this.gunPivot.position.z, -0.25, 4, dt);
+    this._poseArms(dt);
+  }
+
+  /** speed: horizontal m/s, crouch: 0..1, pitch: aim pitch (rad), firing: bool, aim: 0..1 shouldered. */
+  update(dt, speed, crouch, pitch, firing, aim = 0) {
+    if (this.dead) { this._updateDead(dt); return; }
     this.crouch = damp(this.crouch, crouch, 10, dt);
     const c = this.crouch;
     const moving = speed > 0.2;
     const run = clamp((speed - 2.5) / 3, 0, 1);
     this.phase += dt * (moving ? 2.2 + speed * 1.55 : 0);
     const amp = moving ? clamp(speed / 5, 0.32, 0.85) * (1 - c * 0.45) : 0;
+    // Stationary and low: take a knee (right knee down, left foot forward) instead of squatting.
+    this.kneel = damp(this.kneel ?? 0, c > 0.5 && speed < 0.6 ? 1 : 0, 7, dt);
+    const kn = this.kneel * c;
     for (const l of this.legs) {
       const ph = l.side > 0 ? 0 : Math.PI;
       const sw = Math.sin(this.phase + ph) * amp;
       const bend = Math.max(0, Math.sin(this.phase + ph + Math.PI / 2)) * amp * (1.2 + run * 0.6);
-      l.thigh.rotation.x = damp(l.thigh.rotation.x, sw + c * 1.15, 14, dt);
-      l.shin.rotation.x = damp(l.shin.rotation.x, -bend - c * 1.95 - (moving ? 0.08 : 0), 14, dt);
-      l.thigh.rotation.z = damp(l.thigh.rotation.z, -l.side * 0.03, 8, dt);
+      const squatT = sw + c * 1.15, squatS = -bend - c * 1.95 - (moving ? 0.08 : 0);
+      const kneelT = l.side > 0 ? -0.08 : 1.3, kneelS = l.side > 0 ? -1.42 : -1.3;
+      l.thigh.rotation.x = damp(l.thigh.rotation.x, lerp(squatT, kneelT, kn), 14, dt);
+      l.shin.rotation.x = damp(l.shin.rotation.x, lerp(squatS, kneelS, kn), 14, dt);
+      l.thigh.rotation.z = damp(l.thigh.rotation.z, -l.side * (0.03 + kn * 0.08), 8, dt);
     }
     const s = Math.sin(this.phase);
     const bob = moving ? Math.abs(s) * (0.03 + run * 0.03) : 0;
     this.breath += dt;
-    this.hips.position.y = 0.95 - c * 0.42 + bob;
+    this.hips.position.y = 0.95 - c * 0.42 + bob + kn * 0.03;
     this.hips.rotation.y = moving ? Math.sin(this.phase) * 0.08 * amp : 0;
     this.flinch = Math.max(0, this.flinch - dt * 5);
-    // Lean into a run, hunch when crouched, breathe at rest.
-    const lean = -c * 0.22 + (moving ? 0.08 + run * 0.14 : 0) + this.flinch * 0.35 + Math.sin(this.breath * 1.7) * 0.012;
+    this.kick *= Math.exp(-dt * 16);
+
+    // Reload progress.
+    if (this.rl) {
+      this.rl.t += dt / this.rl.dur;
+      if (this.rl.t >= 1) {
+        this.rl = null;
+        if (this.mag) { this.mag.visible = true; this.mag.position.copy(this.magHome); }
+      }
+    }
+    const rt = this.rl ? this.rl.t : 1;
+    const rw = this.rl ? smooth(clamp(rt / 0.1, 0, 1)) * smooth(clamp((1 - rt) / 0.12, 0, 1)) : 0;
+    this.reloadBlend = rw;
+    this.aimBlend = damp(this.aimBlend, aim && !this.rl ? 1 : 0, aim ? 8 : 5, dt);
+    const ab = this.aimBlend;
+
+    // Torso: lean into a run, hunch when crouched, settle into a forward-weighted
+    // stance and blade the body when shouldering the weapon, flinch when hit.
+    const lean = -c * 0.22 * (1 - kn * 0.7) - (moving ? 0.05 + run * 0.12 : 0) * (1 - ab) - ab * 0.07 + this.flinch * 0.35 + this.kick * 0.035 * this.kickPow + Math.sin(this.breath * 1.7) * 0.012;
     this.torso.rotation.x = damp(this.torso.rotation.x, lean, 10, dt);
-    this.torso.rotation.y = -this.hips.rotation.y * 0.8;
-    // Weapon: aim when engaged, carry at low ready when moving without firing.
-    this.lowReady = damp(this.lowReady, moving && !firing && Math.abs(pitch) < 0.01 ? 1 : 0, 5, dt);
+    this.torso.rotation.y = -this.hips.rotation.y * 0.8 - ab * this.blade;
+    this.torso.rotation.z = this.flinchSide * this.flinch * 0.25;
+    // Head: look along the sights with a cheek weld when aiming.
     this.aimPitch = damp(this.aimPitch, pitch, 10, dt);
-    this.gunPivot.rotation.x = this.aimPitch - this.torso.rotation.x - this.lowReady * 0.55;
-    this.gunPivot.rotation.y = this.lowReady * 0.35;
-    this.gunPivot.rotation.z = damp(this.gunPivot.rotation.z, 0, 8, dt);
-    this.gunPivot.position.y = damp(this.gunPivot.position.y, (this.pistol ? 0.4 : 0.42) - this.lowReady * 0.06, 8, dt);
-    this.head.rotation.x = this.aimPitch * 0.6 - this.torso.rotation.x * 0.5;
-    this.head.rotation.y = this.torso.rotation.y * -0.5;
-    this.gun.position.z = firing ? 0.025 : damp(this.gun.position.z, 0, 20, dt);
-    this._poseArms();
+    const tr = this.torso.rotation;
+    this.head.rotation.x = lerp(this.aimPitch * 0.6 - tr.x * 0.5, this.aimPitch - tr.x - 0.2, ab) - rw * 0.35;
+    this.head.rotation.y = -tr.y * (0.5 + 0.5 * ab);
+    this.head.rotation.z = -0.2 * ab * (this.pistol ? 0.3 : 1);
+
+    // Weapon, pose A: hip / ready, low ready when moving out of contact (torso-local).
+    this.lowReady = damp(this.lowReady, moving && !firing && ab < 0.5 && Math.abs(pitch) < 0.01 ? 1 : 0, 5, dt);
+    const gp = this._gp.set(this.hipPos.x, this.hipPos.y - this.lowReady * 0.06, this.hipPos.z);
+    const gq = this._gq.setFromEuler(tmpEu.set(this.aimPitch - tr.x - this.lowReady * 0.55, this.lowReady * 0.35, 0));
+    // Pose B: shouldered, solved in the body frame and brought into torso space.
+    if (ab > 0.001) {
+      this.hips.updateMatrix();
+      this.torso.updateMatrix();
+      const torsoInBody = tmpM2.multiplyMatrices(this.hips.matrix, this.torso.matrix);
+      const off = tmpV1.copy(this.aimOff).applyAxisAngle(tmpV2.set(1, 0, 0), tr.x * 0.8);
+      off.y += this.hips.position.y + this.torso.position.y;
+      const qb = tmpQ2.setFromEuler(tmpEu.set(this.aimPitch, 0, 0));
+      const mb = tmpM3.compose(off, qb, tmpS1.set(1, 1, 1));
+      mb.premultiply(torsoInBody.invert());
+      const pb = new THREE.Vector3(), qbt = tmpQ3;
+      mb.decompose(pb, qbt, tmpS1);
+      gp.lerp(pb, ab);
+      gq.slerp(qbt, ab);
+    }
+    // Pose C: reload — gun brought in, muzzle up and canted toward the support hand.
+    if (rw > 0.001) {
+      const pc = tmpV1.set(this.pistol ? 0.03 : 0.06, this.pistol ? 0.43 : 0.44, this.pistol ? -0.32 : -0.28);
+      const qc = tmpQ2.setFromEuler(tmpEu.set(0.3 - tr.x, -0.2, this.pistol ? 0.2 : 0.6));
+      gp.lerp(pc, rw);
+      gq.slerp(qc, rw);
+    }
+    // Recoil: the gun drives back into the shoulder and the muzzle climbs.
+    if (this.kick > 0.002) {
+      const k = this.kick * this.kickPow;
+      gp.add(tmpV2.set(0, 0.006 * k, 0.03 * k).applyQuaternion(gq));
+      gq.multiply(tmpQ3.setFromAxisAngle(tmpV2.set(1, 0, 0), 0.07 * k));
+    }
+    this.gunPivot.position.copy(gp);
+    this.gunPivot.quaternion.copy(gq);
+    this._poseArms(dt);
   }
 
   dispose() {

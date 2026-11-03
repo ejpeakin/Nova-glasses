@@ -10,11 +10,23 @@ import { clamp, damp, dampAngle, rand, chance, wrapAngle, pick } from '../core/U
 import { raySphere, rayBox } from '../player/Player.js';
 
 export const DIFFICULTY = {
-  recruit: { label: 'Recruit', accuracy: 0.42, reaction: 1.1, damage: 0.32, sight: 45, aggression: 0.3, health: 0.85, grenade: 0.3 },
-  regular: { label: 'Regular', accuracy: 0.6, reaction: 0.8, damage: 0.52, sight: 60, aggression: 0.5, health: 1, grenade: 0.6 },
-  hardened: { label: 'Hardened', accuracy: 0.76, reaction: 0.6, damage: 0.8, sight: 70, aggression: 0.65, health: 1.1, grenade: 0.85 },
-  veteran: { label: 'Veteran', accuracy: 0.88, reaction: 0.42, damage: 1.15, sight: 80, aggression: 0.8, health: 1.2, grenade: 1 },
+  recruit: { label: 'Recruit', accuracy: 0.42, aim: 1.35, settle: 1.7, reaction: 1.1, damage: 0.28, sight: 45, aggression: 0.3, health: 0.85, grenade: 0.3 },
+  regular: { label: 'Regular', accuracy: 0.6, aim: 0.8, settle: 1.3, reaction: 0.8, damage: 0.41, sight: 60, aggression: 0.5, health: 1, grenade: 0.6 },
+  hardened: { label: 'Hardened', accuracy: 0.76, aim: 0.62, settle: 1.0, reaction: 0.6, damage: 0.62, sight: 70, aggression: 0.65, health: 1.1, grenade: 0.85 },
+  veteran: { label: 'Veteran', accuracy: 0.88, aim: 0.5, settle: 0.8, reaction: 0.42, damage: 0.86, sight: 80, aggression: 0.8, health: 1.2, grenade: 1 },
 };
+
+// Aim error multipliers per weapon class (snipers and DMRs shoot tighter, SMGs and pistols wider).
+const CLASS_AIM = { sniper: 0.32, marksman: 0.5, ar: 1, lmg: 1.2, smg: 1.1, pistol: 1.45, shotgun: 1 };
+
+/** Standard normal sample (Box-Muller). */
+function gauss() {
+  let u = 0;
+  while (u === 0) u = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(Math.PI * 2 * Math.random());
+}
+const irand = (a, b) => Math.floor(rand(a, b + 1));
+const UP = new THREE.Vector3(0, 1, 0);
 
 const tmpV = new THREE.Vector3();
 let nextId = 1;
@@ -94,6 +106,12 @@ export class Soldier {
     this.fireT = 0;
     this.burstLeft = 0;
     this.burstPause = 0;
+    this.trackSince = 0; // when the current target came into view (aim settles from here)
+    this.trackTarget = null;
+    this.recoil = 0; // accumulated muzzle climb within a burst (rad)
+    this.reloadT = 0;
+    this.reloadDur = 0;
+    this.reloadCue = 0;
     this.suppression = 0;
     this.grenadeCD = rand(6, 12);
     this.grenades = this.role === 'sniper' ? 0 : this.role === 'boss' ? 99 : (this.mpBot ? 1 : 2);
@@ -119,6 +137,10 @@ export class Soldier {
     this.model = new Humanoid(this.role === 'boss' || this.role === 'heavy' ? 'heavy' : faction, this.weaponId, { colorIndex: o.colorIndex, seed: this.id * 7 + (o.name?.length ?? 0) });
     this.model.root.position.copy(this.pos);
     this.model.root.rotation.y = this.yaw;
+    this.model.onMagDrop = (geo, mat, mw) => {
+      // Only bother simulating mags the player could see land.
+      if (this.pos.distanceTo(game.player.pos) < 40) game.effects.dropProp(geo, mat, mw, this.vel.clone().multiplyScalar(0.8));
+    };
     game.scene.add(this.model.root);
   }
 
@@ -150,7 +172,17 @@ export class Soldier {
     } else {
       this.health -= dmg;
     }
-    if (this.role !== 'boss') this.model.hit();
+    if (this.role !== 'boss') {
+      let side = 0;
+      if (fromPos) {
+        const rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw); // body's right
+        const dx = fromPos.x - this.pos.x, dz = fromPos.z - this.pos.z;
+        side = Math.sign(rx * dx + rz * dz);
+      }
+      this.model.hit(side);
+    }
+    // Being hit throws off aim for a moment.
+    this.trackSince = Math.max(this.trackSince, this.game.time - this.diff.settle * 0.5);
     this.suppression = Math.min(1, this.suppression + 0.35);
     if (attacker && attacker.alive && this.game.hostile(this, attacker)) {
       // Know where the shot came from.
@@ -174,7 +206,7 @@ export class Soldier {
       const dx = fromPos.x - this.pos.x, dz = fromPos.z - this.pos.z;
       dir = fx * dx + fz * dz > 0 ? 1 : -1;
     }
-    this.model.die(dir);
+    this.model.die(dir, { head });
     this.deaths++;
     this.game.onKill(attacker, this, weaponId, head);
   }
@@ -286,6 +318,7 @@ export class Soldier {
       const engaged = this.state === 'combat' || this.state === 'hunt' || this.mpBot || this.friendly;
       if (engaged || this.awareness >= 1) {
         if (best !== this.target || !this.targetVisible) this._acquire(best, engaged && this.state === 'combat');
+        this._track(best, now);
         this.targetVisible = true;
         this.lastSeenT = now;
         this.lastKnown = best.pos.clone();
@@ -298,10 +331,12 @@ export class Soldier {
         if (this.awareness > 0.3) this.lookYaw = Math.atan2(-(best.pos.x - this.pos.x), -(best.pos.z - this.pos.z));
         if (this.awareness >= 1) {
           this._acquire(best, false);
+          this._track(best, now);
           this.targetVisible = true;
           this.lastSeenT = now;
           this.lastKnown = best.pos.clone();
           this.state = 'combat';
+          if (chance(0.6)) this.game.callout(this, this.friendly ? 'Contact front!' : pick(['Contact!', 'There! Enemy!', 'Intruder!']));
           this.squad?.share(best, best.pos, now);
           this._alertSquad();
           if (!this.friendly && this.game.player === best) this.game.onPlayerSpotted(this);
@@ -320,6 +355,13 @@ export class Soldier {
       this.target = null;
       this.targetVisible = false;
     }
+  }
+
+  /** Aim settles onto a target the longer it stays in view; losing sight or switching resets it. */
+  _track(e, now) {
+    if (this.trackTarget !== e || now - (this.trackSeenT ?? -99) > 0.7) this.trackSince = now;
+    this.trackTarget = e;
+    this.trackSeenT = now;
   }
 
   _acquire(e, fast) {
@@ -367,7 +409,8 @@ export class Soldier {
       if (this.pathIdx >= this.path.length) { this.moving = false; return true; }
       return false;
     }
-    let sp = this.runMode ? (this.role === 'boss' ? 2.6 : 4.6) : (this.state === 'patrol' ? 1.6 : 2.6);
+    let sp = this.runMode ? (this.role === 'boss' ? 2.6 : 4.6) : (this.state === 'patrol' ? 1.6 : this.state === 'combat' && this.targetVisible ? 1.9 : 2.6);
+    if (this.health < this.maxHealth * 0.35 && !this.storyChar) sp *= 0.75; // wounded
     if (this.crouch > 0.5) sp = Math.min(sp, 2.2);
     if (this.mpBot && this.runMode) sp = 5.4;
     const nx = dx / d, nz = dz / d;
@@ -447,58 +490,166 @@ export class Soldier {
     return best;
   }
 
+  /** Where to put the crosshair on a target: centre mass, or whatever part is exposed. */
+  _aimPoint(target) {
+    const eye = this.eyePos;
+    const w = this.game.world;
+    let centre, head;
+    if (target.isPlayer) {
+      centre = new THREE.Vector3(target.pos.x, target.pos.y + target.height * 0.6, target.pos.z);
+      head = new THREE.Vector3(target.pos.x, target.pos.y + target.eye + 0.04, target.pos.z);
+    } else {
+      centre = target.chest.setY(target.pos.y + target.headY * 0.62);
+      head = new THREE.Vector3(target.pos.x, target.pos.y + target.headY, target.pos.z);
+    }
+    // Marksmen go for the head; everyone else aims centre mass unless only the head shows.
+    const headHunter = this.weapon.class === 'sniper' ? 0.55 * this.diff.accuracy : this.weapon.class === 'marksman' ? 0.25 : 0.05;
+    if (chance(headHunter) && w.los(eye, head)) return { p: head, part: 'head' };
+    if (w.los(eye, centre)) return { p: centre, part: 'centre' };
+    if (w.los(eye, head)) return { p: head, part: 'head' };
+    const low = centre.clone().setY(target.pos.y + 0.35);
+    if (w.los(eye, low)) return { p: low, part: 'low' };
+    return { p: centre, part: 'hidden' };
+  }
+
+  /** One-sigma aim error (radians) for a shot at this target right now. */
+  _aimError(target, d, now, suppressive) {
+    const wpn = this.weapon;
+    let sigma = THREE.MathUtils.degToRad(this.diff.aim) * (CLASS_AIM[wpn.class] ?? 1);
+    if (wpn.class === 'smg' && d > 25) sigma *= 1 + (d - 25) / 30;
+    if (wpn.class === 'pistol' && d > 15) sigma *= 1 + (d - 15) / 20;
+    // Settling onto a target that just came into view.
+    const settle = (wpn.class === 'sniper' ? 1.6 : 1) * this.diff.settle;
+    const st = clamp((now - this.trackSince) / settle, 0, 1);
+    sigma *= 1 + 2.2 * (1 - st) * (1 - st);
+    // Shooter's own state.
+    const sp = this.speed;
+    if (sp > 0.4) sigma *= 1 + sp * 0.45;
+    else if (this.crouch > 0.5) sigma *= 0.85;
+    sigma *= 1 + this.suppression * 1.5;
+    if (now - this.lastHit < 0.4) sigma *= 2;
+    // Tracking a moving target: aim lags its sideways motion.
+    const tv = target.vel;
+    if (tv) {
+      const dx = target.pos.x - this.pos.x, dz = target.pos.z - this.pos.z;
+      const dl = Math.hypot(dx, dz) || 1;
+      const lateral = Math.abs(tv.x * (-dz / dl) + tv.z * (dx / dl));
+      const vertical = Math.abs(tv.y ?? 0) * 0.5;
+      const lag = 0.05 + (1 - this.diff.accuracy) * 0.14;
+      const err = ((lateral + vertical) / Math.max(2, d)) * lag;
+      sigma = Math.hypot(sigma, err);
+    }
+    // Darkness and haze.
+    const g = this.game;
+    if (g.night && target.isPlayer && !(g.flashlightOn || now - (target.revealed ?? -99) < 1.5)) sigma *= 1.4;
+    if (g.visRange && d > g.visRange * 0.6) sigma *= 1.3;
+    if (suppressive) sigma = sigma * 3 + 0.02;
+    return sigma;
+  }
+
   _shootAt(target, dt, suppressive = false) {
     const now = this.game.time;
+    if (this.reloadT > 0) return false;
     if (now < this.acquiredT && !suppressive) return false;
     if (this.burstPause > 0) { this.burstPause -= dt; return false; }
     this.fireT -= dt;
     if (this.fireT > 0) return false;
     const wpn = this.weapon;
+    if (this.ammo <= 0) { this._startReload(false); return false; }
     const muzzle = this.model.muzzle.getWorldPosition(new THREE.Vector3());
-    const aimAt = suppressive ? this.lastKnown.clone().setY(this.lastKnown.y + 1.2) : (chance(0.15 * this.diff.accuracy) && target.isPlayer ? target.eyePos : target.chest);
-    const d = muzzle.distanceTo(aimAt);
-    if (wpn.class === 'shotgun' && d > 22) return false;
-    if (this.ammo <= 0) {
-      this.ammo = wpn.mag;
-      this.burstPause = wpn.reload;
-      Audio.mech('magIn', this.pos);
-      return false;
+    let aimAt;
+    if (suppressive) aimAt = this.lastKnown.clone().setY(this.lastKnown.y + 1.1);
+    else {
+      const a = this._aimPoint(target);
+      aimAt = a.p;
     }
-    // Spread in metres at the target.
-    let spread = (0.25 + d * 0.022) * (1.7 - this.diff.accuracy);
-    if (this.moving) spread *= 1.8;
-    if (target.speed > 3) spread *= 1.35;
-    spread *= 1 + this.suppression * 1.2;
-    if (now - this.acquiredT < 1.2) spread *= 1.8; // first shots are wild
-    if (suppressive) spread *= 2.5;
-    if (target.isPlayer && target.stance === 'prone') spread *= 1.2;
-    if (wpn.class === 'sniper') spread *= 0.35;
+    const d = muzzle.distanceTo(aimAt);
+    // Snipers take their time: no shot until the crosshair has settled.
+    if (wpn.class === 'sniper' && !suppressive && now - this.trackSince < this.diff.settle * 1.6 * 0.75) return false;
+    if (wpn.class === 'shotgun' && d > 24) return false;
+    if (wpn.class === 'pistol' && d > 45) return false;
+    const sigma = this._aimError(target, d, now, suppressive);
+    // Muzzle climb accumulated through the burst pushes later rounds high.
+    const climb = this.recoil;
+    const base = aimAt.sub(muzzle).normalize();
+    const right = new THREE.Vector3().crossVectors(base, UP).normalize();
+    const up = new THREE.Vector3().crossVectors(right, base);
     const pellets = wpn.pellets ?? 1;
+    const ex = gauss() * sigma, ey = gauss() * sigma + climb * 0.8;
     for (let i = 0; i < pellets; i++) {
-      const aim = aimAt.clone().add(new THREE.Vector3(rand(-1, 1), rand(-0.8, 0.8), rand(-1, 1)).multiplyScalar(spread * (pellets > 1 ? 1.5 : 1)));
-      const dir = aim.sub(muzzle).normalize();
+      const spread = pellets > 1 ? 0.04 : 0;
+      const dir = base.clone()
+        .addScaledVector(right, ex + gauss() * spread + (gauss() * climb * 0.3))
+        .addScaledVector(up, ey + gauss() * spread)
+        .normalize();
       const hit = this.game.fireBullet(muzzle, dir, {
         shooter: this, weaponId: this.weaponId, damage: wpn.damage, range: wpn.range, headMult: wpn.headMult,
         maxDist: 250, dmgMult: target.isPlayer ? this.diff.damage : (this.outMult ?? 1),
       });
-      if (i === 0 && (chance(0.5) || wpn.class === 'sniper')) this.game.effects.tracer(muzzle, hit ? hit.point : muzzle.clone().addScaledVector(dir, 150), 300);
+      if (i === 0 && (chance(0.45) || wpn.class === 'sniper')) this.game.effects.tracer(muzzle, hit ? hit.point : muzzle.clone().addScaledVector(dir, 150), 300);
     }
     this.ammo--;
-    this.game.effects.muzzle(muzzle, new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw)), 0.9, chance(0.5));
+    this.recoil += THREE.MathUtils.degToRad((wpn.recoil?.v ?? 0.6) * 0.42) * (1.3 - this.diff.accuracy * 0.6);
+    const fwd = this.model.muzzleDir(new THREE.Vector3());
+    this.game.effects.muzzle(muzzle, fwd, wpn.suppressed ? 0.35 : 0.9, !wpn.suppressed && chance(0.5));
+    const cam = this.game.player.pos;
+    if (Math.abs(muzzle.x - cam.x) + Math.abs(muzzle.z - cam.z) < 30 && pellets === 1) {
+      const ej = this.model.ejectPos(new THREE.Vector3());
+      this.game.effects.casing(ej, right);
+    }
+    this.model.fire(wpn);
     Audio.gunshot(wpn.sound, muzzle, false);
     this.lastShotTime = now;
     this.revealed = now;
     this.noiseTimer -= 1;
     if (this.noiseTimer <= 0) { this.game.emitNoise(this.pos, 60, this); this.noiseTimer = 4; }
-    const rpm = wpn.mode === 'bolt' ? 25 : wpn.mode === 'pump' ? 55 : Math.min(wpn.rpm * 0.85, 700);
+    // Rate of fire and trigger discipline: long bursts up close, short bursts and
+    // aimed singles at range, LMGs lay down longer strings.
+    const rpm = wpn.mode === 'bolt' ? 26 : wpn.mode === 'pump' ? 60 : Math.min(wpn.rpm * 0.9, 750);
     this.fireT = 60 / rpm;
-    if (wpn.mode === 'semi') this.fireT = Math.max(this.fireT, rand(0.25, 0.5));
+    if (wpn.mode === 'semi') this.fireT = Math.max(this.fireT, d > 30 ? rand(0.32, 0.55) : rand(0.18, 0.32));
+    if (wpn.mode === 'bolt') this.model.cycle('bolt');
+    else if (wpn.mode === 'pump') this.model.cycle('pump');
     this.burstLeft--;
     if (this.burstLeft <= 0) {
-      this.burstLeft = wpn.mode === 'auto' ? Math.floor(rand(3, 8)) : Math.floor(rand(1, 4));
-      this.burstPause = rand(0.35, 1.0) * (wpn.class === 'sniper' ? 2.5 : 1) * (1 + this.suppression);
+      if (wpn.mode === 'auto') {
+        this.burstLeft = wpn.class === 'lmg' ? irand(5, 10) : suppressive ? irand(3, 6) : d < 12 ? irand(4, 8) : d < 30 ? irand(2, 4) : irand(1, 2);
+      } else this.burstLeft = wpn.mode === 'semi' ? irand(2, 4) : 1;
+      const pause = d < 12 ? rand(0.15, 0.4) : d < 30 ? rand(0.3, 0.65) : rand(0.4, 0.85);
+      this.burstPause = pause * (wpn.class === 'sniper' ? 2 : 1) * (1 + this.suppression);
     }
     return true;
+  }
+
+  /** Change magazines. Tactical reloads keep the old mag; empty ones drop it. */
+  _startReload(tactical) {
+    if (this.reloadT > 0 || this.ammo >= this.weapon.mag) return;
+    const wpn = this.weapon;
+    const empty = this.ammo <= 0;
+    const base = empty ? (wpn.reloadEmpty ?? wpn.reload) : wpn.reload;
+    this.reloadDur = this.reloadT = base * rand(1.0, 1.2) * (this.mpBot ? 0.9 : 1);
+    this.reloadCue = 0;
+    this.reloadEmpty = empty;
+    this.burstLeft = 0;
+    this.model.reload(this.reloadDur, { empty, drop: !tactical && wpn.class !== 'shotgun', shells: wpn.class === 'shotgun' });
+    if (chance(0.45)) this.game.callout(this, this.friendly ? pick(['Reloading!', 'Changing mags!', 'Cover me, reloading!']) : pick(['Reloading!', 'Cover me!', 'Changing mag!']));
+  }
+
+  _updateReload(dt) {
+    if (this.reloadT <= 0) return;
+    this.reloadT -= dt;
+    const t = 1 - this.reloadT / this.reloadDur;
+    const shotgun = this.weapon.class === 'shotgun';
+    const cues = shotgun ? [[0.15, 'shell'], [0.35, 'shell'], [0.55, 'shell'], [0.75, 'shell'], [0.9, 'pump']]
+      : [[0.22, 'magOut'], [0.62, 'magIn'], ...(this.reloadEmpty ? [[0.84, this.weapon.class === 'pistol' ? 'slide' : this.weapon.mode === 'bolt' ? 'bolt' : 'bolt']] : [])];
+    while (this.reloadCue < cues.length && t >= cues[this.reloadCue][0]) {
+      Audio.mech(cues[this.reloadCue][1], this.pos);
+      this.reloadCue++;
+    }
+    if (this.reloadT <= 0) {
+      this.reloadT = 0;
+      this.ammo = this.weapon.mag;
+    }
   }
 
   _throwGrenade(at) {
@@ -537,6 +688,8 @@ export class Soldier {
     const now = this.game.time;
     this.stunT = Math.max(0, this.stunT - dt);
     this.suppression = Math.max(0, this.suppression - dt * 0.35);
+    this.recoil *= Math.exp(-dt * 5);
+    this._updateReload(dt);
     this.grenadeCD -= dt;
     if (this.friendly && this.storyChar && now - this.lastHit > 5) this.health = Math.min(this.maxHealth, this.health + dt * 20);
 
@@ -552,6 +705,7 @@ export class Soldier {
     let wantCrouch = 0;
     let firing = false;
     let faceYaw = this.lookYaw;
+    let aiming = false;
 
     if (this.stunT > 0) {
       // Flashed: stagger, shoot wildly sometimes.
@@ -626,6 +780,7 @@ export class Soldier {
           wantCrouch = r.crouch;
           firing = r.firing;
           faceYaw = r.face ?? faceYaw;
+          aiming = (this.targetVisible || now - this.lastShotTime < 0.8) && !(this.runMode && this.moving) && this.reloadT <= 0;
           break;
         }
         default:
@@ -633,8 +788,8 @@ export class Soldier {
       }
     }
 
-    // Turn toward desired facing.
-    this.lookYaw = dampAngle(this.lookYaw, faceYaw, this.state === 'combat' ? 9 : 4, dt);
+    // Turn toward desired facing (snappier when tracking a visible target).
+    this.lookYaw = dampAngle(this.lookYaw, faceYaw, this.state === 'combat' ? (this.targetVisible ? 12 : 8) : 4, dt);
     this.yaw = this.lookYaw;
     this._integrate(dt);
     this.crouch = wantCrouch;
@@ -642,14 +797,21 @@ export class Soldier {
     // Aim pitch.
     let pitch = 0;
     if (this.state === 'combat' && this.target) {
-      const tp = this.targetVisible ? this.target.chest : this.lastKnown ?? this.target.pos;
+      const tp = this.targetVisible ? this.target.chest : (this.lastKnown ?? this.target.pos).clone().setY((this.lastKnown ?? this.target.pos).y + 1.1);
       const e = this.eyePos;
-      pitch = Math.atan2(tp.y - (e.y - 0.3), Math.hypot(tp.x - e.x, tp.z - e.z));
+      pitch = Math.atan2(tp.y - (e.y - 0.1), Math.hypot(tp.x - e.x, tp.z - e.z));
     }
     this.pitch = pitch;
     this.model.root.position.copy(this.pos);
     this.model.root.rotation.y = this.yaw;
-    this.model.update(dt, this.speed, this.crouch, this.pitch, firing);
+    this.model.update(dt, this.speed, this.crouch, this.pitch, firing, aiming ? 1 : 0);
+    if (this.model.glint) {
+      const p = this.game.player;
+      const d = this.pos.distanceTo(p.pos);
+      const want = aiming && this.target === p && this.targetVisible && d > 15 ? 1 : 0;
+      this.glintK = damp(this.glintK ?? 0, want, want ? 3 : 6, dt);
+      this.model.setGlint(this.glintK * (this.game.night ? 0.6 : 1), d, now);
+    }
   }
 
   _velYaw() {
@@ -719,9 +881,12 @@ export class Soldier {
       this._pathTo(this.game.player.pos, true);
     }
 
+    // Top up the magazine during a lull in the fight.
+    if (!this.targetVisible && sinceSeen > 1.5 && this.ammo < this.weapon.mag * 0.5) this._startReload(this.ammo > 0);
+
     // Stationary shooters (snipers in towers, perched guards).
     if (this.stationary) {
-      res.crouch = this.targetVisible ? 0 : 1;
+      res.crouch = this.targetVisible && this.reloadT <= 0 ? 0 : 1;
       if (this.targetVisible) res.firing = this._shootAt(tgt, dt);
       return res;
     }
@@ -744,7 +909,8 @@ export class Soldier {
     // Moving to a destination?
     if (this.path && this.moving) {
       this._followPath(dt);
-      if (this.targetVisible && (this.mpBot || chance(0.85))) res.firing = this._shootAt(tgt, dt);
+      const canFire = this.mpBot || !this.runMode || distT < 10;
+      if (this.targetVisible && canFire) res.firing = this._shootAt(tgt, dt);
       if (!this.moving && this.cover) { this.coverPhase = 'hide'; this.coverT = rand(0.6, 1.4); }
       return res;
     }
@@ -775,7 +941,7 @@ export class Soldier {
             const toward = lk.clone().sub(this.pos).setY(0).normalize();
             const side = new THREE.Vector3(-toward.z, 0, toward.x).multiplyScalar(rand(-6, 6));
             const goal = this.pos.clone().addScaledVector(toward, Math.min(10, distT * 0.5)).add(side);
-            this._pathTo(goal, true);
+            this._pathTo(goal, !this.targetVisible || distT > 35);
           } else if (chance(0.5)) {
             const toward = lk.clone().sub(this.pos).setY(0).normalize();
             const goal = this.pos.clone().add(new THREE.Vector3(-toward.z, 0, toward.x).multiplyScalar(rand(-4, 4)));
@@ -807,8 +973,10 @@ export class Soldier {
             this.coverT = rand(0.8, 2.2) * (1 + this.suppression * 2);
           }
         }
+        if (this.coverPhase === 'peek' && (this.reloadT > 0 || this.ammo <= 0)) { this.coverPhase = 'hide'; this.coverT = rand(0.4, 0.8); }
         if (this.coverPhase === 'hide') {
           res.crouch = 1;
+          if (this.ammo < this.weapon.mag * 0.4 && this.reloadT <= 0) this._startReload(this.ammo > 0);
           // Drift back to the cover spot.
           const dx = this.cover.x - this.pos.x, dz = this.cover.z - this.pos.z;
           this.vel.x += dx * 4 * dt; this.vel.z += dz * 4 * dt;
@@ -825,7 +993,8 @@ export class Soldier {
         this._pathTo(new THREE.Vector3(this.cover.x, 0, this.cover.z), true);
       }
     } else if (this.targetVisible) {
-      res.crouch = distT > 15 && chance(0.5) ? 1 : 0;
+      if (think) this.kneel = distT > 15 && chance(0.6);
+      res.crouch = this.kneel || this.reloadT > 0 ? 1 : 0;
       res.firing = this._shootAt(tgt, dt);
     } else if (think && sinceSeen > 3 && !this.path) {
       // Push toward last known position.
