@@ -49,11 +49,10 @@ export const POSES = {
 let GLOVE = null, ARMOR = null, STRAP = null;
 function materials() {
   if (GLOVE) return;
-  // Synthetic tactical glove: matte, slightly worn coyote-black.
-  // Coyote-tan tactical gloves with a dark hard-shell knuckle guard.
-  GLOVE = new THREE.MeshStandardMaterial({ color: 0x8a7556, map: getTexture('fabric', 256), roughness: 0.88, metalness: 0.02 });
-  ARMOR = new THREE.MeshStandardMaterial({ color: 0x2a2824, roughness: 0.5, metalness: 0.05 });
-  STRAP = new THREE.MeshStandardMaterial({ color: 0x24231f, roughness: 0.9, metalness: 0 });
+  // Black tactical gloves (synthetic leather) with a hard-shell knuckle guard.
+  GLOVE = new THREE.MeshStandardMaterial({ color: 0x222224, map: getTexture('fabric', 256), roughness: 0.68, metalness: 0.04 });
+  ARMOR = new THREE.MeshStandardMaterial({ color: 0x313136, roughness: 0.42, metalness: 0.06 });
+  STRAP = new THREE.MeshStandardMaterial({ color: 0x141415, roughness: 0.85, metalness: 0 });
 }
 
 /** Rotate a joint chain from its rest pose: each pivot bends the rest of the finger toward `toward`. */
@@ -78,9 +77,11 @@ function bendChain(names, angles, startK, rest, bones, toward) {
  * A posable gloved hand. root: add to the scene; pose(name); place(quat, target)
  * puts the hand so its grip point sits on `target` with orientation `quat`.
  */
-export function makeHand(side) {
+export function makeHand(side, scale = 1.3) {
   materials();
   const root = SkeletonUtils.clone(templates[side]);
+  // A touch larger than life: gloved hands read properly next to the weapon at viewmodel distance.
+  root.scale.setScalar(scale);
   const bones = {};
   root.traverse((o) => {
     if (o.isBone) bones[o.name] = o;
@@ -123,7 +124,7 @@ export function makeHand(side) {
     },
     place(quat, target) {
       root.quaternion.copy(quat);
-      root.position.copy(target).sub(gripPoint.clone().applyQuaternion(quat));
+      root.position.copy(target).sub(gripPoint.clone().multiplyScalar(scale).applyQuaternion(quat));
       root.updateMatrixWorld(true);
     },
   };

@@ -914,7 +914,7 @@ function makeReticleSprite(kind) {
  * weapon. Otherwise: simple tapered sleeves and primitive gloved hands.
  */
 export function buildArms(sleeveColor = 0x4d5340) {
-  if (handsReady()) return buildRealArms(sleeveColor);
+  if (handsReady()) return buildRealArms();
   const t = textures();
   const sleeve = new THREE.MeshStandardMaterial({ color: sleeveColor, map: t.cloth, roughness: 0.95, metalness: 0 });
   const cuffM = new THREE.MeshStandardMaterial({ color: 0x2c2e27, roughness: 0.9, metalness: 0 });
@@ -980,20 +980,95 @@ const Q_LEFT = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.12, 0.25, M
 const Q_FREE = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(
   new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, 1), new THREE.Vector3(-1, 0, 0)));
 
-function buildRealArms(sleeveColor) {
-  const t = textures();
-  const sleeveM = new THREE.MeshStandardMaterial({ color: sleeveColor, map: t.cloth, roughness: 0.95, metalness: 0 });
-  const cuffM = new THREE.MeshStandardMaterial({ color: new THREE.Color(sleeveColor).multiplyScalar(0.72), map: t.cloth, roughness: 0.95, metalness: 0 });
+let CAMO = null;
+/** Woodland-arid camouflage print (green, tan and brown blotches over an olive base). */
+function camoTexture() {
+  if (CAMO) return CAMO;
+  const S = 512, c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  g.fillStyle = '#7f7c57';
+  g.fillRect(0, 0, S, S);
+  const blob = (x, y, r, col) => {
+    g.fillStyle = col;
+    g.beginPath();
+    const n = 9 + Math.floor(rnd() * 5);
+    for (let i = 0; i <= n; i++) {
+      const a = (i / n) * Math.PI * 2, rr = r * (0.55 + rnd() * 0.65);
+      const px = x + Math.cos(a) * rr * 1.35, py = y + Math.sin(a) * rr;
+      if (i === 0) g.moveTo(px, py); else g.quadraticCurveTo(x + Math.cos(a - 0.3) * rr * 1.6, y + Math.sin(a - 0.3) * rr * 1.2, px, py);
+    }
+    g.closePath();
+    g.fill();
+  };
+  // Draw every blob wrapped so the print tiles seamlessly.
+  const layer = (n, rMin, rMax, cols) => {
+    for (let i = 0; i < n; i++) {
+      const x = rnd() * S, y = rnd() * S, r = rMin + rnd() * (rMax - rMin), col = cols[Math.floor(rnd() * cols.length)];
+      for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) if (x + ox > -rMax * 2 && x + ox < S + rMax * 2 && y + oy > -rMax * 2 && y + oy < S + rMax * 2) blob(x + ox, y + oy, r, col);
+    }
+  };
+  layer(26, 30, 70, ['#9c946a', '#a89f75']); // tan
+  layer(34, 22, 55, ['#5d6a3f', '#66713f']); // green
+  layer(30, 12, 34, ['#4a3e2d', '#54452f']); // brown
+  layer(40, 5, 14, ['#b5ab84', '#3f4a2c', '#6e6a45']); // fine speckle
+  // Woven ripstop grid and fibre noise.
+  g.globalAlpha = 0.07;
+  g.strokeStyle = '#000';
+  for (let i = 0; i < S; i += 8) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, S); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(S, i); g.stroke(); }
+  g.globalAlpha = 1;
+  const img = g.getImageData(0, 0, S, S), d = img.data;
+  for (let i = 0; i < d.length; i += 4) { const n = (rnd() - 0.5) * 18; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
+  g.putImageData(img, 0, 0);
+  CAMO = new THREE.CanvasTexture(c);
+  CAMO.wrapS = CAMO.wrapT = THREE.RepeatWrapping;
+  CAMO.colorSpace = THREE.SRGBColorSpace;
+  CAMO.anisotropy = 4;
+  return CAMO;
+}
+
+/** Fitted combat-shirt forearm: oval, tapering to the wrist, with folds that bunch at the cuff. */
+function sleeveGeometry() {
+  const geo = new THREE.CylinderGeometry(1, 1, 1, 24, 18, true);
+  const P = geo.attributes.position;
+  for (let i = 0; i < P.count; i++) {
+    const x = P.getX(i), y = P.getY(i), z = P.getZ(i);
+    const a = Math.atan2(z, x);
+    const s = 0.5 - y; // 0 at the elbow, 1 at the wrist
+    let r = 0.044 + (0.0335 - 0.044) * s;
+    r *= 1 + 0.045 * Math.sin(a * 3 + s * 11) * (0.35 + s) + 0.03 * Math.sin(a * 5 - s * 7) * s; // fabric folds
+    if (s > 0.78) r *= 1 + 0.05 * Math.max(0, Math.sin((s - 0.78) * 70)) * (s - 0.78) * 4.5; // bunching above the cuff
+    P.setXYZ(i, Math.cos(a) * r, y, Math.sin(a) * r * 0.86);
+  }
+  const uv = geo.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 1.6, uv.getY(i) * 2.2);
+  geo.computeVertexNormals();
+  geo.rotateX(Math.PI / 2);
+  geo.translate(0, 0, -0.5);
+  return geo;
+}
+
+function buildRealArms() {
+  const camo = camoTexture();
+  const sleeveM = new THREE.MeshStandardMaterial({ map: camo, roughness: 0.93, metalness: 0 });
+  const cuffM = new THREE.MeshStandardMaterial({ map: camo, color: 0xc9c9c9, roughness: 0.95, metalness: 0 });
+  const tabM = new THREE.MeshStandardMaterial({ color: 0x4f4a36, roughness: 0.95, metalness: 0 });
+  const sleeveGeo = sleeveGeometry();
   const make = (side) => {
     const group = new THREE.Group();
-    // Sleeve: a tapered tube from the elbow (z=0) to z=-1, stretched to reach the wrist.
-    const geo = new THREE.CylinderGeometry(0.039, 0.05, 1, 16, 1, true);
-    geo.rotateX(Math.PI / 2);
-    geo.translate(0, 0, -0.5);
-    const sleeve = new THREE.Mesh(geo, sleeveM);
-    // Rolled cuff and a seam, kept at a fixed size near the wrist.
-    const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.043, 0.06, 16), cuffM);
-    cuff.rotation.x = Math.PI / 2;
+    // Sleeve: from the elbow (z=0) to z=-1, stretched to reach the wrist.
+    const sleeve = new THREE.Mesh(sleeveGeo, sleeveM);
+    // Fitted cuff with a velcro adjustment tab, kept at a fixed size near the wrist.
+    const cuff = new THREE.Group();
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0365, 0.0355, 0.04, 20, 1, true), cuffM);
+    band.rotation.x = Math.PI / 2;
+    band.scale.set(1, 1, 0.88);
+    const tab = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.005, 0.034), tabM);
+    tab.position.set(side === 'right' ? 0.012 : -0.012, 0.031, 0.002);
+    tab.rotation.z = side === 'right' ? -0.35 : 0.35;
+    cuff.add(band, tab);
     const fore = new THREE.Group();
     fore.add(sleeve, cuff);
     group.add(fore);
@@ -1008,8 +1083,8 @@ function buildRealArms(sleeveColor) {
     a.fore.position.copy(elbow);
     a.fore.lookAt(_w.copy(wrist));
     a.fore.rotateY(Math.PI);
-    a.sleeve.scale.set(1, 1, Math.max(0.05, len - 0.03));
-    a.cuff.position.set(0, 0, -(len - 0.055));
+    a.sleeve.scale.set(1, 1, Math.max(0.05, len - 0.02));
+    a.cuff.position.set(0, 0, -(len - 0.035));
   };
   return {
     real: true,
