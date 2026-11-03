@@ -342,8 +342,11 @@ export class CampaignMode {
       const prop = buildObjectiveProp(this.game, o, pos, toward);
       o.actionProp = prop;
       this.props.push(prop);
+      // Range is measured from where the work actually is (a prop may sit off the
+      // scripted point, e.g. a man pulled clear of a wreck).
+      const at = new THREE.Vector3(prop.work.x, pos.y, prop.work.z);
       o.interact = this.game.addInteractable({
-        pos, label: o.label, duration: o.duration, model: false, prop, onComplete: () => {
+        pos: at, label: o.label, duration: o.duration, model: false, prop, onComplete: () => {
           prop.complete();
           if (o.aa) this._destroyAA(o);
           this._complete();
@@ -454,7 +457,8 @@ export class CampaignMode {
         break;
       }
       case 'interact': {
-        markers.push({ pos: tpos.clone().setY(tpos.y + 0.6), label: 'INTERACT', kind: 'interact' });
+        const ip = o.interact?.pos ?? tpos;
+        markers.push({ pos: ip.clone().setY(ip.y + 0.6), label: 'INTERACT', kind: 'interact' });
         break;
       }
       case 'eliminate': {
