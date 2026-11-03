@@ -80,7 +80,7 @@ export class Game {
     this.camera.add(this.flashlight, this.flashlight.target);
     if (this.night || this.mapId === 'blacksite') this.hud?.hint('F: flashlight   N: night vision', 6);
     Audio.setAmbience(mode.ambience ?? this.mapInfo.ambience);
-    Audio.setReverb(this.world.indoor ? 0.5 : 0.2);
+    Audio.setAcoustics(this.world.indoor ? 'indoor' : this.mapId);
     this.smokeColumns = mode.smokeColumns ?? [];
     mode.setup(this);
     this.resize();
@@ -138,10 +138,13 @@ export class Game {
       const hp = this.player.eyePos;
       const t = clamp(hp.clone().sub(origin).dot(dir), 0, maxT);
       const closest = origin.clone().addScaledVector(dir, t);
-      if (closest.distanceTo(hp) < 1.6 && t > 3) {
-        Audio.whiz(closest);
-        this.player.suppressed = 1;
+      const miss = closest.distanceTo(hp);
+      // Rounds passing close crack overhead (supersonic) or zip past; within ~1.6 m they suppress.
+      if (miss < 5 && t > 4 && t < maxT - 0.3) {
+        const wd = WEAPONS[o.weaponId];
+        Audio.bulletPass(closest, miss, (wd?.velocity ?? 800) > 360, wd?.class === 'sniper' ? 1.4 : 1);
       }
+      if (miss < 1.6 && t > 3) this.player.suppressed = 1;
     }
     if (shooter === this.player) {
       for (const a of this.actors) {
@@ -170,6 +173,7 @@ export class Game {
     if (wHit) {
       this.effects.impact(wHit.point, wHit.normal, wHit.mat);
       if (Math.random() < 0.5) Audio.impact(wHit.mat, wHit.point);
+      if ((wHit.mat === 'metal' || wHit.mat === 'concrete') && Math.random() < 0.1 && wHit.point.distanceTo(this.player.pos) < 30) Audio.ricochet(wHit.point);
       return { point: wHit.point, normal: wHit.normal, mat: wHit.mat, t: wHit.t };
     }
     return null;

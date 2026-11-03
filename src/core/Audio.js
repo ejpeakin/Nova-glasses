@@ -3,8 +3,52 @@
 import { Store } from './Storage.js';
 import { clamp, rand, pick } from './Utils.js';
 
+/**
+ * Level acoustics: the reverb impulse is generated from these. early = discrete
+ * reflections [time s, gain]; echoes = smeared, darker returns off distant
+ * buildings / hills / mountains [time, gain, width s, lowpass Hz]; rt = decay of
+ * the diffuse tail (RT60); lpStart/lpEnd = how the tail darkens; wet = send level.
+ */
+const ACOUSTICS = {
+  default: { len: 1.8, rt: 1.3, tail: 0.6, lpStart: 6000, lpEnd: 900, pre: 0.01, early: [[0.012, 0.5], [0.023, 0.35], [0.041, 0.25]], echoes: [], wet: 0.25 },
+  // Open desert: hesco and compound walls nearby, dunes and ridges far off. Dry, with late rolling returns.
+  desert: {
+    len: 3.2, rt: 1.5, tail: 0.3, lpStart: 4500, lpEnd: 600, pre: 0.02,
+    early: [[0.03, 0.35], [0.07, 0.3], [0.12, 0.22], [0.19, 0.15]],
+    echoes: [[0.55, 0.35, 0.12, 1800], [1.15, 0.45, 0.3, 900], [1.9, 0.25, 0.4, 600]], wet: 0.34,
+  },
+  // Urban canyon: hard facades slap back quickly and flutter between the blocks.
+  downtown: {
+    len: 3.0, rt: 2.1, tail: 0.55, lpStart: 7000, lpEnd: 900, pre: 0.01,
+    early: [[0.018, 0.6], [0.035, 0.5], [0.052, 0.45], [0.078, 0.4], [0.105, 0.36], [0.14, 0.3], [0.19, 0.25]],
+    echoes: [[0.24, 0.5, 0.05, 3500], [0.38, 0.42, 0.07, 2800], [0.55, 0.32, 0.1, 2000], [0.8, 0.25, 0.15, 1500], [1.15, 0.16, 0.22, 1100]], wet: 0.5,
+  },
+  // Mountain valley in snow: snow soaks up the highs; the peaks send back long rolling thunder.
+  snowfall: {
+    len: 3.6, rt: 2.6, tail: 0.28, lpStart: 3200, lpEnd: 450, pre: 0.02,
+    early: [[0.04, 0.25], [0.09, 0.2], [0.16, 0.15]],
+    echoes: [[0.7, 0.42, 0.18, 1400], [1.25, 0.36, 0.3, 1000], [1.85, 0.24, 0.4, 700], [2.6, 0.14, 0.5, 500]], wet: 0.4,
+  },
+  // Container stacks ring bright and metallic; warehouses answer from across the water.
+  harbor: {
+    len: 3.2, rt: 2.0, tail: 0.5, lpStart: 8000, lpEnd: 1000, pre: 0.008,
+    early: [[0.014, 0.55], [0.03, 0.45], [0.047, 0.4], [0.066, 0.3], [0.09, 0.25]],
+    echoes: [[0.32, 0.4, 0.06, 3000], [0.6, 0.35, 0.12, 2000], [1.0, 0.28, 0.25, 1200], [1.6, 0.16, 0.35, 800]], wet: 0.44,
+  },
+  // Concrete interiors: dense, boomy, short; corridors flutter.
+  indoor: {
+    len: 1.6, rt: 1.05, tail: 1.0, lpStart: 7000, lpEnd: 1600, pre: 0.003,
+    early: [[0.004, 0.8], [0.009, 0.7], [0.013, 0.65], [0.019, 0.6], [0.026, 0.5], [0.034, 0.45], [0.045, 0.4], [0.058, 0.32]],
+    echoes: [[0.09, 0.35, 0.03, 3500], [0.16, 0.25, 0.05, 2500]], wet: 0.62,
+  },
+};
+
+const SPEED_OF_SOUND = 343;
+
 class AudioEngine {
   constructor() {
+    this._gunVoices = [];
+    this._acoustics = 'default';
     this.ctx = null;
     this.ready = false;
     this.listenerPos = { x: 0, y: 0, z: 0 };
@@ -40,7 +84,15 @@ class AudioEngine {
     this.muffle.connect(this.compressor);
     this.music.connect(this.compressor);
     this.compressor.connect(this.master);
-    this.master.connect(c.destination);
+    // Final brickwall limiter so stacked gunfire and explosions never hard-clip.
+    this.limiter = c.createDynamicsCompressor();
+    this.limiter.threshold.value = -3;
+    this.limiter.knee.value = 0;
+    this.limiter.ratio.value = 20;
+    this.limiter.attack.value = 0.0005;
+    this.limiter.release.value = 0.08;
+    this.master.connect(this.limiter);
+    this.limiter.connect(c.destination);
 
     // Shared noise buffers.
     const len = c.sampleRate * 2;
@@ -54,21 +106,31 @@ class AudioEngine {
       last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
       b[i] = last * 3.5;
     }
-    // Small synthetic reverb impulse for gunshot tails.
-    const irLen = Math.floor(c.sampleRate * 1.6);
-    this.ir = c.createBuffer(2, irLen, c.sampleRate);
-    for (let ch = 0; ch < 2; ch++) {
-      const data = this.ir.getChannelData(ch);
-      for (let i = 0; i < irLen; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / irLen, 3.2);
-    }
+    // Gunfire bus: soft saturation and a fast compressor give shots the slam of a
+    // real close-range recording, where the blast overdrives the mic.
+    this.guns = c.createGain();
+    this.gunShaper = c.createWaveShaper();
+    this.gunShaper.curve = this._satCurve(2.4);
+    this.gunShaper.oversample = '2x';
+    this.gunComp = c.createDynamicsCompressor();
+    this.gunComp.threshold.value = -20;
+    this.gunComp.knee.value = 6;
+    this.gunComp.ratio.value = 5;
+    this.gunComp.attack.value = 0.0008;
+    this.gunComp.release.value = 0.09;
+    this.guns.connect(this.gunShaper);
+    this.gunShaper.connect(this.gunComp);
+    this.gunComp.connect(this.sfx);
+
+    // Level acoustics (echo and reverb), generated per map.
     this.reverb = c.createConvolver();
-    this.reverb.buffer = this.ir;
     this.reverbGain = c.createGain();
-    this.reverbGain.gain.value = 0.22;
+    this.reverbGain.gain.value = 0.25;
     this.reverb.connect(this.reverbGain);
     this.reverbGain.connect(this.muffle);
 
     this.ready = true;
+    this.setAcoustics(this._acoustics);
     this.applyVolumes();
   }
 
@@ -99,6 +161,68 @@ class AudioEngine {
 
   setReverb(amount) {
     if (this.ready) this.reverbGain.gain.setTargetAtTime(amount, this.now, 0.3);
+  }
+
+  /** Switch the echo/reverb character: a map id, 'indoor' or 'default'. */
+  setAcoustics(name) {
+    this._acoustics = name;
+    if (!this.ready) return;
+    const P = ACOUSTICS[name] ?? ACOUSTICS.default;
+    this.reverb.buffer = this._makeIR(P);
+    this.reverbGain.gain.setTargetAtTime(P.wet, this.now, 0.05);
+  }
+
+  _satCurve(k) {
+    const n = 2048, curve = new Float32Array(n), norm = Math.tanh(k);
+    for (let i = 0; i < n; i++) {
+      const x = (i / (n - 1)) * 2 - 1;
+      curve[i] = Math.tanh(k * x) / norm;
+    }
+    return curve;
+  }
+
+  /** Build a stereo impulse response: discrete early reflections, smeared distant echoes, damped diffuse tail. */
+  _makeIR(P) {
+    const c = this.ctx, sr = c.sampleRate;
+    const len = Math.floor(sr * P.len);
+    const buf = c.createBuffer(2, len, sr);
+    const onePoleGainComp = (a) => 1 / Math.sqrt(a / (2 - a)); // keeps filtered-noise loudness comparable
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      // Diffuse tail that darkens as it decays.
+      const pre = P.pre ?? 0.01;
+      let y = 0;
+      for (let i = Math.floor(pre * sr); i < len; i++) {
+        const t = i / sr - pre;
+        const env = Math.exp(-6.9 * t / P.rt) * Math.min(1, t / 0.025);
+        const fc = P.lpEnd + (P.lpStart - P.lpEnd) * Math.exp(-t / (P.rt * 0.35));
+        const a = 1 - Math.exp(-2 * Math.PI * fc / sr);
+        y += a * ((Math.random() * 2 - 1) - y);
+        d[i] = y * env * P.tail * onePoleGainComp(a);
+      }
+      // Early reflections: short bright bursts, slightly different per ear.
+      for (const [et, g] of P.early) {
+        const i0 = Math.floor(et * (1 + (ch ? 0.05 : -0.05) * Math.random()) * sr);
+        const n = Math.floor(sr * 0.0025);
+        for (let k = 0; k < n && i0 + k < len; k++) d[i0 + k] += (Math.random() * 2 - 1) * g * (1 - k / n);
+      }
+      // Distant echoes: fast rise, slower fall, filtered darker the further they travel.
+      for (const [et, g, w, lp] of P.echoes ?? []) {
+        const center = et * sr * (1 + (ch ? 0.025 : -0.025));
+        const half = Math.max(1, w * sr * 0.5);
+        const a = 1 - Math.exp(-2 * Math.PI * (lp ?? 1500) / sr);
+        const comp = onePoleGainComp(a);
+        let z = 0;
+        const i0 = Math.max(0, Math.floor(center - half)), i1 = Math.min(len, Math.floor(center + half * 3));
+        for (let i = i0; i < i1; i++) {
+          const x = (i - center) / half;
+          const env = x < 0 ? Math.exp(-x * x * 5) : Math.exp(-x * 1.4);
+          z += a * ((Math.random() * 2 - 1) - z);
+          d[i] += z * env * g * comp * 0.5;
+        }
+      }
+    }
+    return buf;
   }
 
   /** Temporarily muffle all world sound (flashbangs, near explosions). */
@@ -140,8 +264,12 @@ class AudioEngine {
       lp.connect(p);
       p.connect(opts.bus ?? this.sfx);
       if (opts.verb) {
+        // Reverberant level falls off more slowly than the direct sound, so distant
+        // sources become mostly echo, but they are still quieter than nearby ones.
+        const ref = opts.ref ?? 4;
+        const direct = ref / (ref + (opts.rolloff ?? 1.1) * Math.max(0, dist - ref));
         const send = c.createGain();
-        send.gain.value = opts.verb * clamp(dist / 40, 0.3, 1.5);
+        send.gain.value = opts.verb * Math.min(opts.verbMax ?? 1.5, 0.9 * Math.sqrt(direct) * clamp(dist / 12, 0.35, 1));
         lp.connect(send);
         send.connect(this.reverb);
       }
@@ -151,7 +279,7 @@ class AudioEngine {
     gain.connect(opts.bus ?? this.sfx);
     if (opts.verb) {
       const send = c.createGain();
-      send.gain.value = opts.verb * 0.4;
+      send.gain.value = opts.verb * (opts.ownVerb ?? 0.4);
       gain.connect(send);
       send.connect(this.reverb);
     }
@@ -200,28 +328,85 @@ class AudioEngine {
    */
   gunshot(profile, pos = null, suppressed = false) {
     if (!this.ready) return;
-    const t = this.now;
     const p = profile;
-    const pitch = (p.pitch ?? 1) * rand(0.96, 1.04);
+    const now = this.now;
+    const own = !pos;
+    const pitch = (p.pitch ?? 1) * rand(0.97, 1.03);
+    // Busy firefights: cap how many distant reports start in the same instant.
+    if (!own) {
+      this._gunVoices = this._gunVoices.filter((t) => t > now - 0.06);
+      if (this._gunVoices.length > 8) return;
+      this._gunVoices.push(now);
+    }
     if (suppressed) {
-      const out = this._out(pos, { gain: pos ? 0.5 : 0.55, ref: 2, rolloff: 1.6, maxDist: 60 });
+      const out = this._out(pos, { gain: own ? 0.6 : 0.55, ref: 2.5, rolloff: 1.5, maxDist: 70, verb: 0.25, ownVerb: 0.3, bus: this.guns });
       if (!out) return;
-      this._noise(out, t, 0.09, { type: 'bandpass', freq: 1400 * pitch, q: 0.8, gain: 0.9 });
-      this._noise(out, t, 0.05, { type: 'highpass', freq: 3000, gain: 0.4 });
-      this._tone(out, t, 0.06, { freq: 180 * pitch, freqEnd: 70, gain: 0.5 });
+      const t = now + (own ? 0 : out._dist / SPEED_OF_SOUND);
+      // A suppressed rifle is still a sharp "thwap", plus the action slamming.
+      this._noise(out, t, 0.06, { type: 'bandpass', freq: 1500 * pitch, q: 0.9, gain: 1.1, decay: 0.05, attack: 0.0006 });
+      this._noise(out, t, 0.12, { type: 'lowpass', freq: 600 * pitch, gain: 0.8, decay: 0.1, brown: true });
+      this._tone(out, t, 0.07, { freq: 200 * pitch, freqEnd: 60, gain: 0.6, attack: 0.0008 });
+      if (own || out._dist < 12) this._action(out, t, own ? 0.38 : 0.18);
       return;
     }
-    const out = this._out(pos, { gain: (pos ? 1.25 : 0.95) * (p.gain ?? 1), ref: 6, rolloff: 0.9, verb: p.tail ?? 0.6 });
+    const out = this._out(pos, {
+      gain: (own ? 1.0 : 1.5) * (p.gain ?? 1), ref: 7, rolloff: 1.0, maxDist: 650,
+      verb: (p.tail ?? 0.6) * 1.2, ownVerb: 0.75, verbMax: 2.2, bus: this.guns,
+    });
     if (!out) return;
-    const far = out._dist > 45;
-    // Supersonic crack (sharp, bright).
-    if (!far) this._noise(out, t, 0.05, { type: 'highpass', freq: 2200 * pitch, gain: (p.crack ?? 0.8) * 1.1, decay: 0.045 });
-    // Body (the "bang").
-    this._noise(out, t, 0.22, { type: 'lowpass', freq: (p.body ?? 2200) * pitch, freqEnd: 400, q: 1.2, gain: 1.4, decay: 0.2 });
-    // Low thump.
-    this._tone(out, t, 0.16, { freq: (p.thump ?? 140) * pitch, freqEnd: 42, gain: 1.1 });
-    // Tail / slap off the environment.
-    this._noise(out, t + 0.01, 0.6 * (p.tail ?? 0.6) + 0.15, { type: 'lowpass', freq: 900, freqEnd: 200, gain: 0.35, attack: 0.02 });
+    const d = out._dist;
+    // Sound travels at ~343 m/s: distant shots are heard after the muzzle flash
+    // (and after the bullet's crack, for shots aimed at you).
+    const t = now + (own ? 0 : Math.min(2, d / SPEED_OF_SOUND));
+    const near = clamp(1 - d / 70, 0, 1);
+    const crack = p.crack ?? 0.8;
+    // 1. Muzzle blast: a hard, broadband slap with an instant attack.
+    if (d < 110) this._noise(out, t, 0.02, { type: 'highpass', freq: 1100 * pitch, gain: (1.3 + crack) * (0.3 + 0.7 * near), decay: 0.018, attack: 0.0004 });
+    // 2. Bark: the mid-range bang.
+    this._noise(out, t, 0.15, { type: 'bandpass', freq: (p.body ?? 2200) * 0.55 * pitch, freqEnd: 320, q: 0.7, gain: 2.0, decay: 0.12, attack: 0.0006 });
+    // 3. Pressure punch: a fast pitch-dropping low thump you feel in your chest.
+    this._tone(out, t, own ? 0.24 : 0.17, { freq: (p.thump ?? 140) * 1.55 * pitch, freqEnd: 36, gain: own ? 2.0 : 1.4, attack: 0.0008 });
+    // 4. Boom: low, rumbling body that carries furthest.
+    this._noise(out, t, own ? 0.4 : 0.34, { type: 'lowpass', freq: 520 * pitch, q: 0.8, gain: own ? 1.6 : 1.3, decay: own ? 0.34 : 0.3, attack: 0.001, brown: true });
+    // 5. The action cycling, close to the gun.
+    if (own || d < 12) this._action(out, t, own ? 0.3 : 0.14);
+  }
+
+  /** Bolt carrier slamming home and its spring. */
+  _action(out, t, g) {
+    this._noise(out, t + 0.026, 0.028, { type: 'bandpass', freq: 3300 * rand(0.92, 1.08), q: 5, gain: g, attack: 0.0005 });
+    this._tone(out, t + 0.03, 0.045, { type: 'triangle', freq: 1900 * rand(0.94, 1.06), freqEnd: 1250, gain: g * 0.35 });
+  }
+
+  /**
+   * A bullet passing the listener. Supersonic rounds make a whip-like shockwave
+   * crack (heard before the distant report); close passes also rip the air.
+   */
+  bulletPass(pos, miss, supersonic = true, heavy = 1) {
+    if (!this.ready) return;
+    const out = this._out(pos, { gain: 1, ref: 1.5, rolloff: 1, maxDist: 14, bus: this.guns });
+    if (!out) return;
+    const t = this.now;
+    if (supersonic) {
+      const g = clamp(1.7 / (0.7 + miss), 0.25, 2.2) * heavy;
+      this._noise(out, t, 0.008, { type: 'highpass', freq: 1700, gain: g, attack: 0.0002, decay: 0.007 });
+      this._noise(out, t + 0.001, 0.035, { type: 'bandpass', freq: 3000, q: 1.4, gain: g * 0.45, decay: 0.03 });
+      this._tone(out, t, 0.014, { type: 'square', freq: 950, freqEnd: 480, gain: g * 0.12, attack: 0.0003 });
+    }
+    if (miss < 1.6) {
+      this._noise(out, t, 0.13, { type: 'bandpass', freq: supersonic ? 5200 : 3600, freqEnd: 1400, q: 3, gain: 0.75 * (1.6 - miss), attack: 0.02 });
+    }
+  }
+
+  /** Ricochet whine off hard surfaces. */
+  ricochet(pos) {
+    if (!this.ready) return;
+    const out = this._out(pos, { gain: 0.45, ref: 3, rolloff: 1.4, maxDist: 45, verb: 0.35, bus: this.guns });
+    if (!out) return;
+    const t = this.now;
+    const f0 = rand(2600, 4300);
+    this._tone(out, t + 0.01, rand(0.28, 0.55), { type: 'sine', freq: f0, freqEnd: f0 * rand(0.3, 0.5), gain: 0.32, attack: 0.006 });
+    this._noise(out, t, 0.03, { type: 'highpass', freq: 2500, gain: 0.55 });
   }
 
   dryFire() {
@@ -290,9 +475,10 @@ class AudioEngine {
 
   explosion(pos, size = 1) {
     if (!this.ready) return;
-    const t = this.now;
-    const out = this._out(pos, { gain: 1.8 * size, ref: 10, rolloff: 0.7, verb: 1.2, maxDist: 500 });
+    const out = this._out(pos, { gain: 1.8 * size, ref: 10, rolloff: 0.75, verb: 1.3, verbMax: 2.2, maxDist: 700, bus: this.guns });
     if (!out) return;
+    const t = this.now + Math.min(2.5, out._dist / SPEED_OF_SOUND);
+    if (out._dist < 120) this._noise(out, t, 0.03, { type: 'highpass', freq: 900, gain: 1.6, attack: 0.0005, decay: 0.028 });
     this._noise(out, t, 1.8, { type: 'lowpass', freq: 1800, freqEnd: 120, gain: 1.6, decay: 1.6, brown: false });
     this._noise(out, t, 2.4, { type: 'lowpass', freq: 400, freqEnd: 60, gain: 2.0, brown: true });
     this._tone(out, t, 0.8, { freq: 75, freqEnd: 28, gain: 1.6 });
@@ -339,6 +525,7 @@ class AudioEngine {
 
   whiz(pos) {
     if (!this.ready) return;
+    if (pos) { this.bulletPass(pos, 1, false); return; }
     const out = this._out(pos, { gain: 0.5, ref: 1, rolloff: 1.5, maxDist: 8 });
     if (!out) return;
     this._noise(out, this.now, 0.14, { type: 'bandpass', freq: 4000, freqEnd: 1500, q: 4, gain: 0.8, attack: 0.03 });
