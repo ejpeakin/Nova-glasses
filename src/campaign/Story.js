@@ -428,6 +428,7 @@ export const MISSIONS = [
       { type: 'extract', text: 'Get to the boat at the west pier', target: [-62, 36], radius: 6 },
     ],
     outro: [
+      { who: 'WATCHTOWER', text: 'The key on the dock was a fake, and the ship was bait to pull us away. The real key never left Facility 6: it is in a sealed launch vault three floors below the labs you raided, with Hart and Vasko.' },
       { who: 'REYES', text: 'Everyone we have. Everything we have. We go back down into Facility 6 tonight, all the way to the bottom.' },
     ],
   },
