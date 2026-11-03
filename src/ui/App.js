@@ -20,19 +20,9 @@ import {
   allowedAttachments, resolveAttachments, computeStats, ratings,
 } from '../weapons/WeaponData.js';
 import { escapeHtml, formatTime, clamp } from '../core/Utils.js';
+import { rankOf } from '../core/Ranks.js';
 
-const RANKS = [
-  [0, 'Private'], [1500, 'Private First Class'], [4000, 'Corporal'], [8000, 'Sergeant'], [14000, 'Staff Sergeant'],
-  [22000, 'Sergeant First Class'], [32000, 'Master Sergeant'], [45000, 'Second Lieutenant'], [60000, 'First Lieutenant'],
-  [80000, 'Captain'], [105000, 'Major'], [135000, 'Lieutenant Colonel'], [170000, 'Colonel'],
-];
-
-export function rankOf(xp) {
-  let i = 0;
-  while (i + 1 < RANKS.length && xp >= RANKS[i + 1][0]) i++;
-  const cur = RANKS[i], next = RANKS[i + 1];
-  return { index: i + 1, name: cur[1], progress: next ? (xp - cur[0]) / (next[0] - cur[0]) : 1, next: next ? next[0] : null };
-}
+export { rankOf };
 
 const CONTROLS = [
   ['W A S D', 'Move'], ['Mouse', 'Look / aim'], ['Left click', 'Fire'], ['Right click / Left Alt', 'Aim down sights / scope'],
@@ -216,7 +206,7 @@ export class App {
         <div class="main-left">
           <h1 class="logo small"><span class="logo-op">TASK FORCE ORION</span><span class="logo-main">FIELD OF HONOR</span><span class="logo-sub">US ARMY SPECIAL FORCES</span></h1>
           <nav class="main-nav">
-            <button class="nav-btn" data-go="campaign"><span>CAMPAIGN</span><small>8 missions · the HALCYON affair</small></button>
+            <button class="nav-btn" data-go="campaign"><span>CAMPAIGN</span><small>9 missions · the HALCYON affair</small></button>
             <button class="nav-btn" data-go="multiplayer"><span>MULTIPLAYER</span><small>TDM · FFA · Domination · vs bots</small></button>
             <button class="nav-btn" data-go="survival"><span>SURVIVAL</span><small>Endless escalating waves</small></button>
             <button class="nav-btn" data-go="armory"><span>ARMORY</span><small>Loadout & gunsmith</small></button>
@@ -369,11 +359,12 @@ export class App {
           <div class="brief-map">${MAP_INFO[m.map].name.toUpperCase()}<small>${MAP_INFO[m.map].blurb}</small></div>
           <div class="lbl">CONDITIONS</div>
           <div class="brief-cond">${m.lighting.toUpperCase()}${m.weather !== 'none' ? ' · ' + m.weather.toUpperCase() : ''}${m.timer ? ` · ${formatTime(m.timer)} TIME LIMIT` : ''}${m.stealth ? ' · STEALTH ADVISED' : ''}</div>
-          <div class="lbl">LOADOUT</div>
+          <div class="lbl">ISSUED KIT</div>
           <div class="brief-lo">
             <div><b>${WEAPONS[lo.primary].name}</b><small>${CLASSES[WEAPONS[lo.primary].class]}${lo.attachments?.[lo.primary] ? ' · ' + Object.values(resolveAttachments(lo.primary, lo.attachments[lo.primary])).map((a, i) => ATTACHMENTS[Object.keys(SLOT_NAMES)[i]][a]).filter((a) => a && a.desc).map((a) => a.name).join(', ') : ''}</small></div>
             <div><b>${WEAPONS[lo.secondary].name}</b><small>${CLASSES[WEAPONS[lo.secondary].class]}</small></div>
             <div><b>${EQUIPMENT[lo.lethal].name}</b> · <b>${EQUIPMENT[lo.tactical].name}</b></div>
+            <div class="brief-armory">You pick your primary and sidearm from the armory ${m.insertion ? 'in the helicopter' : 'at the start'}. Better weapons unlock with rank (you: ${escapeHtml(rankOf(Store.stats.xp).name)}).</div>
           </div>
           <div class="lbl">SQUAD</div>
           <div class="brief-squad">${m.squad.map((s) => `<span>${escapeHtml(SPEAKER[s.name.toUpperCase()] ?? s.name)}</span>`).join('')}</div>
@@ -879,7 +870,8 @@ export class App {
       <div class="results">
         <div class="scr-sub">MISSION ${r.index + 1} · ${m.location}</div>
         <h2 class="res-title">${m.finale ? 'OPERATION COMPLETE' : 'MISSION COMPLETE'}</h2>
-        <div class="res-mission">${m.title.toUpperCase()}</div>
+        <div class="res-mission">${m.title.toUpperCase()}${r.xp ? ` · +${r.xp.toLocaleString()} MISSION XP` : ''}</div>
+        ${r.rankUp ? `<div class="res-rankup">PROMOTED TO ${escapeHtml(r.rankUp.toUpperCase())} · new weapons in the armory</div>` : ''}
         <div class="tiles">
           <div class="tile"><div class="tile-v">${formatTime(r.time)}</div><div class="tile-k">Time</div></div>
           <div class="tile"><div class="tile-v">${r.kills}</div><div class="tile-k">Kills</div></div>

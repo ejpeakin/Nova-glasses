@@ -1029,21 +1029,69 @@ function camoTexture() {
   return CAMO;
 }
 
-/** Fitted combat-shirt forearm: oval, tapering to the wrist, with folds that bunch at the cuff. */
+let WEAVE = null;
+/**
+ * Height map for the sleeve fabric: a ripstop grid (thicker threads every few
+ * millimetres), fibre noise, and a flat-felled seam with stitching running
+ * down the underside of the forearm (u = 0.5).
+ */
+function weaveTexture() {
+  if (WEAVE) return WEAVE;
+  const S = 512, c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  let seed = 11;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  g.fillStyle = '#808080';
+  g.fillRect(0, 0, S, S);
+  const img = g.getImageData(0, 0, S, S), d = img.data;
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const i = (y * S + x) * 4;
+    let v = 128 + ((x + y) % 2 ? 9 : -9) + (rnd() - 0.5) * 26; // plain weave and fibre noise
+    if (x % 16 === 0 || y % 16 === 0) v += 34; // ripstop threads
+    d[i] = d[i + 1] = d[i + 2] = v;
+  }
+  g.putImageData(img, 0, 0);
+  // Seam: two raised folds of fabric with a line of stitches on each.
+  const sx = S / 2;
+  const grad = g.createLinearGradient(sx - 14, 0, sx + 14, 0);
+  grad.addColorStop(0, 'rgba(128,128,128,0)');
+  grad.addColorStop(0.25, 'rgba(200,200,200,0.9)');
+  grad.addColorStop(0.5, 'rgba(60,60,60,0.95)');
+  grad.addColorStop(0.75, 'rgba(200,200,200,0.9)');
+  grad.addColorStop(1, 'rgba(128,128,128,0)');
+  g.fillStyle = grad;
+  g.fillRect(sx - 14, 0, 28, S);
+  g.fillStyle = 'rgba(40,40,40,0.9)';
+  for (let y = 0; y < S; y += 8) { g.fillRect(sx - 9, y, 2, 5); g.fillRect(sx + 7, y + 4, 2, 5); }
+  WEAVE = new THREE.CanvasTexture(c);
+  WEAVE.wrapS = WEAVE.wrapT = THREE.RepeatWrapping;
+  WEAVE.anisotropy = 4;
+  return WEAVE;
+}
+
+/**
+ * Combat-shirt forearm: oval in section, tapering to the wrist, with soft
+ * lengthwise drape, folds that bunch above the cuff, and slight sag underneath.
+ */
 function sleeveGeometry() {
-  const geo = new THREE.CylinderGeometry(1, 1, 1, 24, 18, true);
+  const geo = new THREE.CylinderGeometry(1, 1, 1, 32, 26, true);
   const P = geo.attributes.position;
   for (let i = 0; i < P.count; i++) {
     const x = P.getX(i), y = P.getY(i), z = P.getZ(i);
     const a = Math.atan2(z, x);
     const s = 0.5 - y; // 0 at the elbow, 1 at the wrist
-    let r = 0.044 + (0.0335 - 0.044) * s;
-    r *= 1 + 0.045 * Math.sin(a * 3 + s * 11) * (0.35 + s) + 0.03 * Math.sin(a * 5 - s * 7) * s; // fabric folds
-    if (s > 0.78) r *= 1 + 0.05 * Math.max(0, Math.sin((s - 0.78) * 70)) * (s - 0.78) * 4.5; // bunching above the cuff
-    P.setXYZ(i, Math.cos(a) * r, y, Math.sin(a) * r * 0.86);
+    let r = 0.054 + (0.042 - 0.054) * s;
+    r *= 1 + 0.035 * Math.sin(a * 2 + 0.6) + 0.025 * Math.sin(a * 3 + s * 9) * (0.4 + s); // drape
+    r *= 1 + 0.03 * Math.sin(a * 5 - s * 6) * s * s; // creases toward the wrist
+    if (s > 0.72) {
+      const k = (s - 0.72) / 0.28; // bunching where the sleeve rides on the glove cuff
+      r *= 1 + 0.07 * Math.max(0, Math.sin(k * Math.PI * 3.2 + a * 0.8)) * k + 0.03 * k;
+    }
+    // Fabric hangs under the forearm (local +z ends up pointing down after rotateX).
+    const sag = Math.max(0, Math.sin(a)) * 0.04 * (1 - s);
+    P.setXYZ(i, Math.cos(a) * r, y, Math.sin(a) * r * 0.88 + sag * r);
   }
-  const uv = geo.attributes.uv;
-  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 1.6, uv.getY(i) * 2.2);
   geo.computeVertexNormals();
   geo.rotateX(Math.PI / 2);
   geo.translate(0, 0, -0.5);
@@ -1051,24 +1099,36 @@ function sleeveGeometry() {
 }
 
 function buildRealArms() {
-  const camo = camoTexture();
-  const sleeveM = new THREE.MeshStandardMaterial({ map: camo, roughness: 0.93, metalness: 0 });
-  const cuffM = new THREE.MeshStandardMaterial({ map: camo, color: 0xc9c9c9, roughness: 0.95, metalness: 0 });
-  const tabM = new THREE.MeshStandardMaterial({ color: 0x4f4a36, roughness: 0.95, metalness: 0 });
+  const camo = camoTexture().clone();
+  camo.repeat.set(1.7, 2.3);
+  camo.needsUpdate = true;
+  const weave = weaveTexture();
+  const cloth = (extra = {}) => new THREE.MeshPhysicalMaterial({
+    map: camo, bumpMap: weave, bumpScale: 1.6, roughness: 0.94, metalness: 0,
+    sheen: 0.7, sheenRoughness: 0.75, sheenColor: new THREE.Color(0x9a9878), ...extra,
+  });
+  // Double-sided so the inside of the sleeve shows fabric, not a hole, at the cuff.
+  const sleeveM = cloth({ side: THREE.DoubleSide });
+  const cuffM = cloth({ color: 0xcfcfcf, side: THREE.DoubleSide });
+  const tabM = new THREE.MeshStandardMaterial({ color: 0x4a4632, bumpMap: weave, bumpScale: 2.5, roughness: 0.96, metalness: 0 });
+  const hemM = new THREE.MeshStandardMaterial({ color: 0x3b3a2c, roughness: 0.95, metalness: 0 });
   const sleeveGeo = sleeveGeometry();
   const make = (side) => {
     const group = new THREE.Group();
     // Sleeve: from the elbow (z=0) to z=-1, stretched to reach the wrist.
     const sleeve = new THREE.Mesh(sleeveGeo, sleeveM);
-    // Fitted cuff with a velcro adjustment tab, kept at a fixed size near the wrist.
+    // Fitted cuff: a doubled hem band with stitching and a velcro adjustment tab.
     const cuff = new THREE.Group();
-    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0365, 0.0355, 0.04, 20, 1, true), cuffM);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0455, 0.0435, 0.042, 28, 1, true), cuffM);
     band.rotation.x = Math.PI / 2;
     band.scale.set(1, 1, 0.88);
-    const tab = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.005, 0.034), tabM);
-    tab.position.set(side === 'right' ? 0.012 : -0.012, 0.031, 0.002);
-    tab.rotation.z = side === 'right' ? -0.35 : 0.35;
-    cuff.add(band, tab);
+    const hem = new THREE.Mesh(new THREE.TorusGeometry(0.0438, 0.0028, 8, 36), hemM);
+    hem.position.z = -0.02;
+    hem.scale.set(1, 0.88, 1);
+    const tab = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.006, 0.036), tabM);
+    tab.position.set(side === 'right' ? 0.014 : -0.014, 0.0385, 0.002);
+    tab.rotation.z = side === 'right' ? -0.32 : 0.32;
+    cuff.add(band, hem, tab);
     const fore = new THREE.Group();
     fore.add(sleeve, cuff);
     group.add(fore);
@@ -1094,7 +1154,7 @@ function buildRealArms() {
      * side 'left' | 'right'; gunQuat: weapon orientation (null = free hand);
      * target: where the grip point goes; elbow: fixed shoulder-side anchor; pose: grip name.
      */
-    attach(side, gunQuat, target, elbow, pose, handQuat = null) {
+    attach(side, gunQuat, target, elbow, pose, handQuat = null, anchor = 'grip') {
       const a = side === 'right' ? R : L;
       a.hand.pose(pose);
       if (handQuat) _q.copy(handQuat);
@@ -1105,7 +1165,7 @@ function buildRealArms() {
         _m.lookAt(_w.set(0, 0, 0), _v, new THREE.Vector3(0, 1, 0));
         _q.setFromRotationMatrix(_m).multiply(Q_FREE);
       }
-      a.hand.place(_q, target);
+      a.hand.place(_q, target, anchor);
       orient(a, elbow, a.hand.wrist());
     },
     place() {},

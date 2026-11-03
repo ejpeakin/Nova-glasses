@@ -162,7 +162,8 @@ export class Insertion {
 
   /** Camera driver while the player is aboard or on the rope. */
   update(dt, camera) {
-    this.t += dt;
+    // While the weapon rack is open the aircraft loiters out at the start of the run.
+    this.t = this.holdFlight ? Math.min(this.t + dt * 0.1, 1.2) : this.t + dt;
     const g = this.game;
     const input = g.input;
     const md = g.lastMouse ?? { x: 0, y: 0 };

@@ -8,6 +8,7 @@ import { getSpriteTexture } from '../world/Textures.js';
 import { Audio } from '../core/Audio.js';
 import { Store } from '../core/Storage.js';
 import { clamp, damp, lerp, rand, smoothstep } from '../core/Utils.js';
+import { buildTools, actionHands } from './Actions.js';
 
 const DEG = Math.PI / 180;
 
@@ -230,7 +231,8 @@ export class WeaponSystem {
     this.fireTimer -= dt;
     this.bloom = Math.max(0, this.bloom - dt * 6);
 
-    const canAct = player.alive && !this.game.paused;
+    // Busy with an objective (hacking, planting, cuffing...): weapon is lowered.
+    const canAct = player.alive && !this.game.paused && !this.game.action;
     // Variable-power optics: the mouse wheel zooms while scoped (instead of switching weapons).
     if (s.zoomSteps && this.ads > 0.6 && input.wheel !== 0) {
       const n = s.zoomSteps.length;
@@ -720,13 +722,21 @@ export class WeaponSystem {
       w.model.action.position.z = w.model.actionHome.z + back;
     }
 
+    // Hands busy with an objective: the weapon drops out of view first.
+    const actB = this.arms.real ? (this.game.action?.blend ?? 0) : 0;
+    if (actB > 0) {
+      const e = smoothstep(Math.min(1, actB * 2));
+      pos.y -= 0.42 * e;
+      pos.x += 0.05 * e;
+      rot.x -= 0.75 * e;
+    }
     this.rig.position.copy(pos);
     this.rig.rotation.copy(rot);
     w.model.group.position.set(0, 0, 0);
 
     // Scope hides the model.
     const scope = this.scopeInfo();
-    this.rig.visible = !scope.active && !player.rappel;
+    this.rig.visible = !scope.active && !player.rappel && actB < 0.5;
     this.arms.left.visible = this.arms.right.visible = !scope.active;
 
     // Arms: elbows fixed below-outside the view, hands on grip / foregrip.
@@ -742,7 +752,24 @@ export class WeaponSystem {
       lh.lerp(pump, sb);
     }
     const elbowR = new THREE.Vector3(0.28, -0.42, 0.05), elbowL = new THREE.Vector3(-0.22, -0.45, -0.05);
-    if (this.arms.real && player.rappel) {
+    if (this.arms.real && actB >= 0.5) {
+      // Working on an objective: hands come up from below to the work.
+      this.tools ??= buildTools(this.arms.hands.right);
+      const cam = this.game.camera, act = this.game.action;
+      const hands = actionHands(act);
+      const rise = smoothstep((actB - 0.5) * 2);
+      const k = Math.tan((cam.fov * Math.PI) / 360) / Math.tan((this.viewCam.fov * Math.PI) / 360);
+      const camQi = cam.getWorldQuaternion(new THREE.Quaternion()).invert();
+      for (const side of ['left', 'right']) {
+        const h = hands[side];
+        const v = h.pos.clone().applyMatrix4(cam.matrixWorldInverse);
+        v.x /= k; v.y /= k;
+        v.lerp(new THREE.Vector3(v.x * 0.6 + (side === 'right' ? 0.15 : -0.15), -0.55, -0.25), 1 - rise);
+        const qv = camQi.clone().multiply(h.quat);
+        this.arms.attach(side, null, v, side === 'right' ? elbowR : elbowL, h.pose, qv, 'fist');
+      }
+      for (const [name, t] of Object.entries(this.tools)) t.visible = hands.tool === name;
+    } else if (this.arms.real && player.rappel) {
       // On the rappel rope: guide hand up the line in front of the chest, brake hand low by the hip.
       const cam = this.game.camera, plan = player.rappel.plan;
       const tw = plan.toWall;
@@ -771,6 +798,7 @@ export class WeaponSystem {
       this.arms.place(this.arms.right, elbowR, grip);
       this.arms.place(this.arms.left, elbowL, lh);
     }
+    if (this.tools && actB < 0.5) for (const t of Object.values(this.tools)) t.visible = false;
     if (this._shellHand && !scope.active) {
       this.shell.visible = true;
       this.shell.position.copy(this._shellHand).add(new THREE.Vector3(0.012, 0.02, -0.01)).applyMatrix4(this.rig.matrixWorld);

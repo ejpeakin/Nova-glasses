@@ -628,6 +628,45 @@ class AudioEngine {
     }
   }
 
+  /** Hands-on sounds for objective work, at a world position. */
+  foley(kind, pos = null) {
+    if (!this.ready) return;
+    const out = this._out(pos, { gain: 0.5, ref: 2, maxDist: 40 });
+    if (!out) return;
+    const t = this.now;
+    if (kind === 'key') {
+      this._noise(out, t, 0.014, { type: 'highpass', freq: 3500 + Math.random() * 1500, gain: 0.35, attack: 0.001 });
+      this._noise(out, t, 0.02, { type: 'bandpass', freq: 900, q: 2, gain: 0.15 });
+    } else if (kind === 'zip') {
+      // Ratcheting zip tie: a fast run of tiny clicks.
+      for (let i = 0; i < 14; i++) this._noise(out, t + i * 0.022, 0.008, { type: 'highpass', freq: 4200 - i * 90, gain: 0.45 });
+    } else if (kind === 'cut') {
+      this._noise(out, t, 0.11, { type: 'bandpass', freq: 2200, q: 1.4, gain: 0.45, attack: 0.01 });
+      this._noise(out, t + 0.09, 0.03, { type: 'highpass', freq: 5000, gain: 0.3 });
+    } else if (kind === 'spark') {
+      for (let i = 0; i < 6; i++) this._noise(out, t + Math.random() * 0.12, 0.012, { type: 'highpass', freq: 3000 + Math.random() * 4000, gain: 0.5 });
+      this._noise(out, t, 0.18, { type: 'bandpass', freq: 1800, q: 0.8, gain: 0.12 });
+    } else if (kind === 'drag') {
+      this._noise(out, t, 0.42, { type: 'lowpass', freq: 650, gain: 0.5, attack: 0.05, brown: true });
+    } else if (kind === 'slide') {
+      this._noise(out, t, 0.28, { type: 'bandpass', freq: 1400, freqEnd: 2600, q: 1.2, gain: 0.3, attack: 0.02 });
+      this._noise(out, t + 0.27, 0.02, { type: 'highpass', freq: 3000, gain: 0.35 });
+    } else if (kind === 'stick') {
+      this._noise(out, t, 0.06, { type: 'lowpass', freq: 380, gain: 0.7, brown: true });
+      this._noise(out, t + 0.01, 0.012, { type: 'highpass', freq: 3500, gain: 0.3 });
+    } else if (kind === 'pick') {
+      // Picks scratching the pins.
+      this._noise(out, t, 0.02, { type: 'highpass', freq: 5200 + Math.random() * 2000, gain: 0.25 });
+      if (Math.random() < 0.4) this._noise(out, t + 0.03, 0.008, { type: 'bandpass', freq: 3200, q: 3, gain: 0.3 });
+    } else if (kind === 'unlock') {
+      this._noise(out, t, 0.03, { type: 'bandpass', freq: 1800, q: 2, gain: 0.6 });
+      this._noise(out, t + 0.05, 0.05, { type: 'lowpass', freq: 600, gain: 0.5 });
+    } else if (kind === 'beep') {
+      // Electronic device beep (a real tone here: it is a piezo buzzer).
+      this._tone(out, t, 0.07, { type: 'square', freq: 3100, gain: 0.07 });
+    }
+  }
+
   /** Radio squelch: keying up to talk (key) or an incoming transmission. */
   radio(key = false) {
     if (!this.ready) return;

@@ -61,6 +61,7 @@ export class Soldier {
     this.mpBot = !!o.mpBot;
     this.hunter = !!o.hunter; // always pushes toward its goal (survival / MP)
     this.stationary = !!o.stationary;
+    this.suppressed = !!o.suppressed; // suppressed weapon: quiet report, small flash, little noise
     this.diff = DIFFICULTY[o.difficulty ?? 'regular'];
     this.weaponId = o.weapon ?? (this.role === 'sniper' ? 'longbow' : this.role === 'heavy' || this.role === 'boss' ? 'juggernaut' : 'vx4');
     this.weapon = WEAPONS[this.weaponId];
@@ -620,18 +621,19 @@ export class Soldier {
     this.ammo--;
     this.recoil += THREE.MathUtils.degToRad((wpn.recoil?.v ?? 0.6) * 0.42) * (1.3 - this.diff.accuracy * 0.6);
     const fwd = this.model.muzzleDir(new THREE.Vector3());
-    this.game.effects.muzzle(muzzle, fwd, wpn.suppressed ? 0.35 : 0.9, !wpn.suppressed && chance(0.5));
+    const quiet = wpn.suppressed || this.suppressed;
+    this.game.effects.muzzle(muzzle, fwd, quiet ? 0.35 : 0.9, !quiet && chance(0.5));
     const cam = this.game.player.pos;
     if (Math.abs(muzzle.x - cam.x) + Math.abs(muzzle.z - cam.z) < 30 && pellets === 1) {
       const ej = this.model.ejectPos(new THREE.Vector3());
       this.game.effects.casing(ej, right);
     }
     this.model.fire(wpn);
-    Audio.gunshot(wpn.sound, muzzle, false);
+    Audio.gunshot(wpn.sound, muzzle, quiet);
     this.lastShotTime = now;
     this.revealed = now;
     this.noiseTimer -= 1;
-    if (this.noiseTimer <= 0) { this.game.emitNoise(this.pos, 60, this); this.noiseTimer = 4; }
+    if (this.noiseTimer <= 0) { this.game.emitNoise(this.pos, quiet ? 12 : 60, this); this.noiseTimer = 4; }
     // Rate of fire and trigger discipline: long bursts up close, short bursts and
     // aimed singles at range, LMGs lay down longer strings.
     const rpm = wpn.mode === 'bolt' ? 26 : wpn.mode === 'pump' ? 60 : Math.min(wpn.rpm * 0.9, 750);

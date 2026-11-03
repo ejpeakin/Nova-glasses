@@ -16,7 +16,7 @@ import { WEAPONS } from './weapons/WeaponData.js';
 import { buildLowGun } from './ai/Humanoid.js';
 import { Audio } from './core/Audio.js';
 import { Store } from './core/Storage.js';
-import { clamp, lerp, rand } from './core/Utils.js';
+import { clamp, lerp, rand, damp, dampAngle } from './core/Utils.js';
 import { Comms } from './player/Comms.js';
 
 export class Game {
@@ -33,6 +33,7 @@ export class Game {
     this.actors = [];
     this.pickups = [];
     this.interactables = [];
+    this.action = null; // hands-on objective work in progress (see _updateAction)
     this.flashlightOn = false;
     this.flashlightVisible = false; // white light enemies can see (the IR illuminator is invisible to them)
     this.bodies = []; // fallen soldiers other guards can discover
@@ -556,7 +557,7 @@ export class Game {
   /** Hold-E interaction (plant charge, hack terminal...). */
   addInteractable(o) {
     const it = { radius: 2.2, duration: 2, progress: 0, active: true, ...o };
-    if (!it.mesh && it.model !== false) {
+    if (!it.mesh && it.model !== false && !it.prop) {
       const g = new THREE.Group();
       const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.35), new THREE.MeshStandardMaterial({ color: 0x2a2e30, roughness: 0.5, metalness: 0.5 }));
       base.position.y = 0.17;
@@ -616,15 +617,18 @@ export class Game {
     this.pickups = this.pickups.filter((pk) => !pk.dead);
 
     // Interactables (hold E).
+    let acting = null;
     for (const it of this.interactables) {
       if (!it.active) continue;
       if (it.light) it.light.material.color.setHSL(0.38, 1, 0.4 + Math.sin(this.time * 6) * 0.15);
       const d = p.pos.distanceTo(it.pos.clone().setY(p.pos.y));
-      if (d > it.radius || Math.abs(it.pos.y - p.pos.y) > 2) { it.progress = Math.max(0, it.progress - dt); continue; }
+      // Work done stays done if you step away (a half-planted charge, a partial download).
+      if (d > it.radius || Math.abs(it.pos.y - p.pos.y) > 2) { if (!it.prop) it.progress = Math.max(0, it.progress - dt); continue; }
       prompt = `Hold <b>E</b> to ${it.label}`;
       if (this.input.isDown('KeyE')) {
         it.progress += dt;
         progress = it.progress / it.duration;
+        acting = it;
         if (it.progress >= it.duration) {
           it.active = false;
           if (it.light) it.light.material.color.set(0x2060ff);
@@ -633,12 +637,52 @@ export class Game {
           it.onComplete?.();
           prompt = null;
         }
-      } else {
+      } else if (!it.prop) {
         it.progress = 0;
       }
     }
     if (!prompt && p.vaultPlan && !p.mantle) prompt = `Press <b>SPACE</b> to ${p.vaultPlan.vault ? 'vault over' : 'climb up'}`;
     this.hud?.prompt(prompt, progress);
+    this._updateAction(dt, acting);
+  }
+
+  /**
+   * Hands-on objective work: while E is held at an objective with a prop, step up
+   * to it, get down to its height, look at the work, and let the viewmodel show
+   * the hands doing the job (WeaponSystem reads this.action).
+   */
+  _updateAction(dt, it) {
+    const p = this.player;
+    let a = this.action;
+    if (it?.prop) {
+      if (!a || a.it !== it) a = this.action = { it, kind: it.prop.kind, t: 0, blend: a?.blend ?? 0, stance: p.stance };
+      a.on = true;
+      a.k = Math.min(1, it.progress / it.duration);
+    } else if (a) a.on = false;
+    if (!a) return;
+    const prop = a.it.prop;
+    a.t += dt;
+    a.blend = clamp(a.blend + (a.on ? dt * 2.8 : -dt * 2.4), 0, 1);
+    a.work = prop.work;
+    a.n = prop.n;
+    if (a.on) {
+      const spot = a.work.clone().addScaledVector(a.n, prop.stand ?? 0.5);
+      const dx = spot.x - p.pos.x, dz = spot.z - p.pos.z, d = Math.hypot(dx, dz);
+      if (d > 0.04) {
+        const hit = this.world.raycast(p.pos.x, p.pos.y + 0.5, p.pos.z, dx / d, 0, dz / d, d + 0.3);
+        if (!hit || hit.t > d + 0.25) { const st = Math.min(d, dt * 2.4); p.pos.x += (dx / d) * st; p.pos.z += (dz / d) * st; }
+      }
+      p.vel.x = p.vel.z = 0;
+      if (prop.crouch && p.stance === 'stand') p.stance = 'crouch';
+      const e = p.eyePos;
+      const tx = a.work.x - e.x, ty = a.work.y - e.y, tz = a.work.z - e.z;
+      p.yaw = dampAngle(p.yaw, Math.atan2(-tx, -tz), 7, dt);
+      p.pitch = damp(p.pitch, clamp(Math.atan2(ty, Math.hypot(tx, tz)), -1.2, 0.6), 7, dt);
+    }
+    if (!a.on && a.blend <= 0) {
+      if (prop.crouch && a.stance === 'stand' && p.stance === 'crouch') p.stance = 'stand';
+      this.action = null;
+    }
   }
 
   // ---------- frame ----------
@@ -746,7 +790,8 @@ export class Game {
     if (nvg) r.setRenderTarget(this.nvgFx.rt);
     r.clear();
     r.render(this.scene, this.camera);
-    if (!this.cinematic && this.player.alive) {
+    // (Not while gearing up at the armory: the weapon in hand is about to change.)
+    if (!this.cinematic && this.player.alive && !this.mode.armory) {
       r.clearDepth();
       r.render(this.weapons.viewScene, this.weapons.viewCam);
     } else if (this.cinematic?.showHands && this.cinematic.viewScene) {

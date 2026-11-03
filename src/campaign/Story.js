@@ -450,8 +450,103 @@ export const MISSIONS = [
         doneSay: [{ who: 'VASKO', text: 'You think this ends with me? Balance always returns, Sergeant.' }, { who: 'REYES', text: 'Not today. Watchtower — mission complete. Package secured.' }] },
     ],
     outro: [
-      { who: 'WATCHTOWER', text: 'HALCYON\'s constellation was de-orbited over the Pacific at 0400. Dr. Hart was captured at a border crossing two days later.' },
-      { who: 'WATCHTOWER', text: 'Anton Vasko awaits trial at a location that does not exist.' },
+      { who: 'WATCHTOWER', text: 'HALCYON\'s constellation was de-orbited over the Pacific at 0400. Anton Vasko awaits trial at a location that does not exist.' },
+      { who: 'WATCHTOWER', text: 'Dr. Lena Hart was not on the base. She crossed into Vel Harat the same night, with what is left of MERIDIAN.' },
+      { who: 'REYES', text: 'Then we go and get her. Quietly.' },
+    ],
+  },
+  // ------------------------------------------------------------------ 9
+  {
+    id: 'm9', title: 'Quiet Hours', map: 'downtown', lighting: 'night', weather: 'none',
+    location: 'VEL HARAT — OLD QUARTER', time: 'DAY 31 — 03:40 LOCAL',
+    summary: 'Night raid on a MERIDIAN safehouse. Move quietly, stack on the door, pick the lock and clear it room by room. Free the hostages and bring Dr. Hart out — without waking the street.',
+    loadout: { primary: 'viper', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { viper: { muzzle: 'suppressor', optic: 'holo', underbarrel: 'laser' }, p11: { muzzle: 'suppressor' } } },
+    loadoutNote: 'Quiet kit: suppressed K-45 Viper and P-11, lock picks, flashbangs for the rooms. The squad carries suppressed weapons too.',
+    kitHint: 'Crouch to move quietly  ·  V from behind: silent takedown  ·  Y: squad radio  ·  hold E: pick the lock, cut ties, cuff',
+    start: { pos: [-3, 11], yaw: -Math.PI / 2 },
+    squad: [
+      { name: 'Reyes', weapon: 'vx4', suppressed: true },
+      { name: 'Hatch', weapon: 'wasp', suppressed: true },
+      { name: 'Tex', weapon: 'viper', suppressed: true },
+    ],
+    stealth: true,
+    alarmGroup: 'response',
+    alarmTimer: 60,
+    timerText: 'HOSTAGES',
+    timerFail: ['The hostages were executed.', 'They heard ORION coming. Crouch, stay suppressed and take them from behind.'],
+    // The safehouse: the ground floor of the brick block on the north-east corner,
+    // partitioned into a hallway, a bedroom where the hostages are held and an office.
+    doors: { south: { x: 13, z: 14.15, w: 1.7, h: 2.35, axis: 'x', out: -1 } },
+    civilians: [{ pos: [9.5, 23.0], yaw: Math.PI * 0.85 }, { pos: [11.6, 23.1], yaw: -Math.PI * 0.85 }],
+    build(b) {
+      b.keepClear(8, 14, 24, 24);
+      const h = 3.05, t = 0.15;
+      b.wall('x', 8.3, 23.7, 18.8, 0, h, t, 'plaster', [{ at: 11.2, w: 1.1, top: 2.2 }, { at: 19.5, w: 1.1, top: 2.2 }]);
+      b.wall('z', 18.95, 23.7, 15.8, 0, h, t, 'plaster', [{ at: 21.3, w: 1.0, top: 2.2 }]);
+      b.box(8.15, 0, 21, 0.5, 2.4, 1.8, 'woodDark'); // back door, barricaded from inside
+      // Hallway: living area and kitchen.
+      b.box(10.2, 0, 15.0, 2.2, 0.8, 0.85, 'fabric');
+      b.box(10.2, 0, 16.4, 1.2, 0.45, 0.6, 'wood');
+      b.box(17.4, 0, 16.6, 1.8, 0.76, 1.0, 'wood');
+      b.box(16.3, 0, 16.6, 0.45, 0.9, 0.45, 'woodDark');
+      b.box(18.5, 0, 16.6, 0.45, 0.9, 0.45, 'woodDark');
+      b.box(21.6, 0, 18.35, 1.6, 0.92, 0.6, 'tiles');
+      b.box(8.6, 0, 17.0, 0.5, 1.8, 1.4, 'woodDark');
+      // Bedroom: beds and a wardrobe.
+      b.box(13.6, 0, 22.7, 1.8, 0.55, 1.9, 'fabric');
+      b.box(8.7, 0, 19.6, 0.6, 2.0, 1.2, 'woodDark');
+      // Office: desk and filing cabinets.
+      b.box(21.0, 0, 23.0, 1.8, 0.76, 0.8, 'wood');
+      b.box(23.2, 0, 19.6, 0.5, 1.3, 0.9, 'metalDark');
+      b.box(23.2, 0, 20.6, 0.5, 1.3, 0.9, 'metalDark');
+      // Low warm lamps inside, and the team van.
+      b.light(12, 2.8, 16.5, 0xffc890, 7, 9);
+      b.light(11.5, 2.8, 21.5, 0xffb070, 5, 7);
+      b.light(19.5, 2.8, 21.5, 0xfff0d0, 6, 8);
+      b.car(-8, 13, 'x', 'carWhite');
+      b.patrol('safehouse', [[6, 11.2], [22, 11.2]]);
+    },
+    briefing: [
+      { who: 'WATCHTOWER', text: 'Dr. Lena Hart is in a MERIDIAN safehouse in Vel Harat\'s old quarter. Ground floor of the brick block on the north-east corner.' },
+      { who: 'WATCHTOWER', text: 'They are holding the building\'s tenants as a shield. If they hear you coming, the hostages die.' },
+      { who: 'REYES', text: 'Suppressed weapons, lock picks, hand signals. We clear it room by room and nobody on that street wakes up.' },
+    ],
+    groups: {
+      street: { units: [{ pos: [12.2, 11.6] }, { pos: [18, 11.2], patrol: 'safehouse' }] },
+      hall: { units: [{ pos: [17.6, 15.4] }, { pos: [21.0, 16.2], weapon: 'wasp' }] },
+      bedroom: { units: [{ pos: [13.8, 20.1] }, { pos: [10.1, 20.0], weapon: 'rk74' }] },
+      office: { units: [{ pos: [17.3, 22.8], weapon: 'breaker' }] },
+      response: { spawnOn: 'alarm', hunter: true, units: [{ pos: [44, 10], weapon: 'rk74' }, { pos: [40, -8] }, { pos: [-14, 12] }, { pos: [20, 40] }, { pos: [32, 28], weapon: 'breaker' }] },
+    },
+    objectives: [
+      { type: 'goto', text: 'Move up to the corner of the block — quietly', target: [2, 12.5], radius: 2.5,
+        say: [{ who: 'REYES', text: 'Comms quiet from here. Hand signals. Wraith, you have point. Crouch and keep it slow.' }] },
+      { type: 'eliminate', text: 'Take down the two sentries without a sound', groups: ['street'],
+        say: [{ who: 'HATCH', text: 'Two on the door, one walking the block. From behind, or one suppressed round each.' }] },
+      { type: 'goto', text: 'Stack up on the south door', target: [13.2, 13.2], radius: 1.0,
+        stack: [[11.7, 13.5], [11.1, 13.3], [10.5, 13.5]], stackYaw: -Math.PI / 2,
+        say: [{ who: 'TEX', text: '(whisper) Stacked on the door. It\'s locked. Your call.' }] },
+      { type: 'interact', text: 'Pick the lock', target: [13.6, 0, 13.6], label: 'pick the lock', duration: 5, door: 'south',
+        doneSay: [{ who: 'REYES', text: '(whisper) We\'re in. Slow is smooth. Two in the hall.' }] },
+      { type: 'eliminate', text: 'Clear the hallway', groups: ['hall'], squadFollow: true,
+        say: [{ who: 'HATCH', text: '(whisper) Left man\'s yours. I\'ve got the kitchen.' }] },
+      { type: 'goto', text: 'Stack on the bedroom door', target: [11.2, 17.9], radius: 0.9,
+        stack: [[10.2, 18.15], [9.6, 18.15], [12.3, 18.15]], stackYaw: Math.PI,
+        say: [{ who: 'REYES', text: '(whisper) Hostages are in there with two guards. Flash it or go in quiet. On you.' }] },
+      { type: 'eliminate', text: 'Clear the bedroom — don\'t hit the hostages', groups: ['bedroom'], squadFollow: true },
+      { type: 'interact', text: 'Cut the hostages free', target: [10.6, 0, 21.9], label: 'cut the hostages free', duration: 3, freeCivilians: true, stopTimer: true,
+        doneSay: [{ who: 'HOSTAGE', text: 'Thank you... thank you. She is in the office. She has a gun.' }, { who: 'TEX', text: 'Stay down. You\'re safe now.' }] },
+      { type: 'eliminate', text: 'Clear the office', groups: ['office'],
+        say: [{ who: 'REYES', text: '(whisper) One bodyguard and Hart. I want her breathing.' }] },
+      { type: 'interact', text: 'Detain Dr. Lena Hart', target: [19.6, 0, 21.6], label: 'detain Dr. Hart', duration: 3, detainee: 'civilian',
+        say: [{ who: 'HART', text: 'Don\'t shoot! I\'m not armed. I\'m not armed!' }],
+        doneSay: [{ who: 'HART', text: 'You have no idea what you have just done.' }, { who: 'REYES', text: 'We\'ll talk about it on the plane, Doctor. Hatch, she\'s yours.' }] },
+      { type: 'extract', text: 'Get back to the van', target: [-4, 11], radius: 3.5,
+        say: [{ who: 'WATCHTOWER', text: 'Street is still asleep. Clean work, ORION. Bring them home.' }] },
+    ],
+    outro: [
+      { who: 'WATCHTOWER', text: 'Dr. Lena Hart is in custody. The last copy of the HALCYON source was on her laptop. It no longer exists.' },
+      { who: 'WATCHTOWER', text: 'Eleven tenants walked out of that building at dawn. None of them will ever know who you were.' },
       { who: 'REYES', text: 'Task Force ORION was never activated. None of this happened. Good work, Wraith.' },
     ],
     finale: true,

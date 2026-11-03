@@ -27,6 +27,10 @@ export const FACTIONS = {
     fabric: 0xe2e6ea, pants: 0xd2d7dc, vest: 0x80878e, gear: 0x6c7279, helmet: 0xdadfe4, boots: 0x3b3d3f,
     gloves: 0x4b4d4f, mask: 'balaclava', maskColor: 0xd4d8dc, headgear: ['helmet', 'helmet', 'beanie'], band: 0x9a1c1c,
   },
+  civilian: {
+    fabric: 0x5d6673, pants: 0x2c313a, vest: 0x5d6673, gear: 0x515a66, helmet: 0x5d6673, boots: 0x2a2421,
+    gloves: 0xb58a6a, mask: 'none', headgear: ['none'], band: 0x5d6673, civilian: true, // plain clothes: no carrier, pouches or kit
+  },
   heavy: {
     fabric: 0x2e2f30, pants: 0x2a2b2c, vest: 0x1c1d1e, gear: 0x232425, helmet: 0x18191a, boots: 0x151515,
     gloves: 0x18181a, mask: 'none', headgear: ['juggernaut'], band: 0xb01e1e, heavy: true,
@@ -195,28 +199,30 @@ function torsoGeo(f, v) {
   p.lathe(bodyProfile, f.fabric, FABRIC, [0, 0, 0], [0, 0, 0], [1.22, 1, 0.8], 16);
   p.sphere(0.074, f.fabric, FABRIC, [-0.2, 0.495, 0], [1, 0.95, 1.05], [0, 0, 0], 10, 8); // deltoids
   p.sphere(0.074, f.fabric, FABRIC, [0.2, 0.495, 0], [1, 0.95, 1.05], [0, 0, 0], 10, 8);
-  // Plate carrier: a padded shell around the ribcage with soft-edged plates front and back.
-  p.lathe([[0, 0.19], [0.158, 0.2], [0.172, 0.24], [0.181, 0.34], [0.19, 0.43], [0.184, 0.495], [0.12, 0.528], [0, 0.534]], f.vest, PLAIN, [0, 0, 0], [0, 0, 0], [1.2, 1, 0.93], 16);
-  p.rbox(0.3, 0.29, 0.05, 0.022, f.vest, PLAIN, [0, 0.37, -0.15]);
-  p.rbox(0.3, 0.31, 0.05, 0.022, f.vest, PLAIN, [0, 0.38, 0.145]);
-  p.rbox(0.07, 0.04, 0.3, 0.018, f.vest, PLAIN, [-0.1, 0.528, 0]); // shoulder straps
-  p.rbox(0.07, 0.04, 0.3, 0.018, f.vest, PLAIN, [0.1, 0.528, 0]);
-  // Triple mag pouch + admin pouch.
-  for (const x of [-0.09, 0, 0.09]) {
-    p.rbox(0.08, 0.11, 0.055, 0.016, f.gear, PLAIN, [x, 0.285, -0.2]);
-    p.rbox(0.03, 0.03, 0.05, 0.009, 0x1d1e20, PLAIN, [x, 0.35, -0.2]); // magazine baseplate
-  }
-  p.rbox(0.2, 0.08, 0.035, 0.013, f.gear, PLAIN, [0, 0.43, -0.19]);
-  // Side pouches.
-  p.rbox(0.06, 0.12, 0.09, 0.018, f.gear, PLAIN, [-0.215, 0.27, 0.02]);
-  p.rbox(0.06, 0.1, 0.08, 0.018, f.gear, PLAIN, [0.215, 0.27, 0.04]);
-  if (v.radio) {
-    p.rbox(0.07, 0.15, 0.06, 0.016, f.gear, PLAIN, [-0.12, 0.42, 0.19]);
-    p.cyl(0.006, 0.004, 0.42, 0x111111, PLAIN, [-0.13, 0.68, 0.2], [0.15, 0, 0.1], [1, 1, 1], 5); // antenna
-  }
-  if (v.pack) {
-    p.rbox(0.3, 0.34, 0.15, 0.05, f.gear, PLAIN, [0, 0.36, 0.245]);
-    p.rbox(0.28, 0.09, 0.16, 0.04, f.vest, PLAIN, [0, 0.55, 0.245]);
+  if (!f.civilian) {
+    // Plate carrier: a padded shell around the ribcage with soft-edged plates front and back.
+    p.lathe([[0, 0.19], [0.158, 0.2], [0.172, 0.24], [0.181, 0.34], [0.19, 0.43], [0.184, 0.495], [0.12, 0.528], [0, 0.534]], f.vest, PLAIN, [0, 0, 0], [0, 0, 0], [1.2, 1, 0.93], 16);
+    p.rbox(0.3, 0.29, 0.05, 0.022, f.vest, PLAIN, [0, 0.37, -0.15]);
+    p.rbox(0.3, 0.31, 0.05, 0.022, f.vest, PLAIN, [0, 0.38, 0.145]);
+    p.rbox(0.07, 0.04, 0.3, 0.018, f.vest, PLAIN, [-0.1, 0.528, 0]); // shoulder straps
+    p.rbox(0.07, 0.04, 0.3, 0.018, f.vest, PLAIN, [0.1, 0.528, 0]);
+    // Triple mag pouch + admin pouch.
+    for (const x of [-0.09, 0, 0.09]) {
+      p.rbox(0.08, 0.11, 0.055, 0.016, f.gear, PLAIN, [x, 0.285, -0.2]);
+      p.rbox(0.03, 0.03, 0.05, 0.009, 0x1d1e20, PLAIN, [x, 0.35, -0.2]); // magazine baseplate
+    }
+    p.rbox(0.2, 0.08, 0.035, 0.013, f.gear, PLAIN, [0, 0.43, -0.19]);
+    // Side pouches.
+    p.rbox(0.06, 0.12, 0.09, 0.018, f.gear, PLAIN, [-0.215, 0.27, 0.02]);
+    p.rbox(0.06, 0.1, 0.08, 0.018, f.gear, PLAIN, [0.215, 0.27, 0.04]);
+    if (v.radio) {
+      p.rbox(0.07, 0.15, 0.06, 0.016, f.gear, PLAIN, [-0.12, 0.42, 0.19]);
+      p.cyl(0.006, 0.004, 0.42, 0x111111, PLAIN, [-0.13, 0.68, 0.2], [0.15, 0, 0.1], [1, 1, 1], 5); // antenna
+    }
+    if (v.pack) {
+      p.rbox(0.3, 0.34, 0.15, 0.05, f.gear, PLAIN, [0, 0.36, 0.245]);
+      p.rbox(0.28, 0.09, 0.16, 0.04, f.vest, PLAIN, [0, 0.55, 0.245]);
+    }
   }
   // Neck.
   const neckCol = f.mask === 'balaclava' ? f.maskColor : f.mask === 'shemagh' ? f.scarf : v.skin;
@@ -695,8 +701,28 @@ export class Humanoid {
       tmpV2.set(-0.2, 0.24 + sw * 0.07, -0.16 - sw * 0.17);
       lh.lerp(tmpV2, this.sprintBlend);
     }
+    if (this.captive === 'back') {
+      // Wrists together behind the back (bound hostage, cuffed prisoner).
+      rh.set(0.05, 0.07, 0.17);
+      lh.set(-0.05, 0.07, 0.17);
+    } else if (this.captive === 'head') {
+      // Hands on the head: surrendering.
+      rh.set(0.09, 0.74, -0.02);
+      lh.set(-0.09, 0.74, -0.02);
+    } else if (this.captive === 'side') {
+      // Unarmed, arms relaxed at the sides.
+      rh.set(0.23, -0.18, -0.02);
+      lh.set(-0.23, -0.18, -0.02);
+    }
     this._solveArm(this.arms[0], rh);
     this._solveArm(this.arms[1], lh);
+  }
+
+  /** Unarmed pose: 'back' (wrists bound behind), 'head' (hands on head), 'side', or false (armed). */
+  setCaptive(mode) {
+    this.captive = mode === true ? 'back' : mode;
+    this.gun.visible = !mode;
+    if (this.mag) this.mag.visible = !mode;
   }
 
   _reloadHands(lh) {

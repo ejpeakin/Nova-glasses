@@ -257,6 +257,11 @@ export class MapBuilder {
    * Multi-storey building with doors, windows, interior stairs and optional roof access.
    * doors: [{ side: 'n'|'s'|'e'|'w', at: offset from side centre, w }]
    */
+  /** Leave buildings over this area without random furniture (for a scripted interior). */
+  keepClear(x0, z0, x1, z1) {
+    (this.clearAreas ??= []).push({ x0, z0, x1, z1 });
+  }
+
   building(o) {
     const {
       x, z, w, d, floors = 1, fh = 3.3, mat = 'concrete', floorMat = 'tiles',
@@ -336,7 +341,9 @@ export class MapBuilder {
       // Ceiling light panel (emissive, cheap) in each floor.
       this.boxMinMax(x - 0.6, sy - 0.29, z - 0.3, x + 0.6, sy - 0.25, z + 0.3, 'lightPanel', false);
       // Interior props.
-      if (props && w >= 5 && d >= 5) {
+      // (A mission can keep an interior clear for its own layout: see keepClear.)
+      const keep = (this.clearAreas ?? []).some((a) => a.x0 < x1 && a.x1 > x0 && a.z0 < z1 && a.z1 > z0);
+      if (props && w >= 5 && d >= 5 && !keep) {
         const r = this.rng;
         const n = Math.floor((w * d) / 30);
         for (let k = 0; k < n; k++) {

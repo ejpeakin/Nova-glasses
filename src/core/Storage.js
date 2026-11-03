@@ -28,7 +28,7 @@ const DEFAULTS = {
     matchesPlayed: 0, matchesWon: 0, missionsCompleted: 0, wavesSurvived: 0, bestWave: 0,
     playTime: 0, longestKill: 0, xp: 0, weaponKills: {},
   },
-  campaign: { unlocked: 1, completed: {}, bestTimes: {}, seenIntro: false },
+  campaign: { unlocked: 1, completed: {}, bestTimes: {}, seenIntro: false, kit: {} }, // kit: missionId -> { primary, secondary } last drawn from the armory
   loadout: { primary: 'vx4', secondary: 'p11', lethal: 'frag', tactical: 'flash' },
   attachments: {}, // weaponId -> { optic, muzzle, barrel, underbarrel, magazine, stock }
   laser: {}, // weaponId -> laser module on at the start of a match

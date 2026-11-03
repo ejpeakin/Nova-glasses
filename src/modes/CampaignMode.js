@@ -9,6 +9,9 @@ import { Insertion } from './Insertion.js';
 import { Audio } from '../core/Audio.js';
 import { Store } from '../core/Storage.js';
 import { formatTime } from '../core/Utils.js';
+import { Armory } from '../ui/Armory.js';
+import { buildObjectiveProp, buildDoor } from '../world/ObjectiveProps.js';
+import { rankOf } from '../core/Ranks.js';
 
 const DEATH_QUOTES = [
   ['"The more you sweat in training, the less you bleed in combat."', 'Military proverb'],
@@ -45,7 +48,8 @@ export class CampaignMode {
   }
 
   loadout() {
-    const lo = this.mission.loadout;
+    // What you drew from the armory, or the mission's issued kit until then.
+    const lo = this.chosen ?? this.mission.loadout;
     return { ...lo, attachments: lo.attachments ?? {} };
   }
 
@@ -75,6 +79,7 @@ export class CampaignMode {
     p.invulnerable = 0;
     this.checkpoint = { pos: sp.clone(), yaw: m.start.yaw };
     this.squad = [];
+    this.props = [];
     m.squad.forEach((s, i) => this._spawnFriend(s, i));
     for (const [id, g] of Object.entries(m.groups)) {
       this.groups[id] = { def: g, spawned: false, units: [], squad: new Squad(id) };
@@ -94,6 +99,17 @@ export class CampaignMode {
       }
     }
     if (m.timer) this.timeLeft = m.timer;
+    // Locked doors (picked open by an objective) and civilians held in the building.
+    this.doors = {};
+    for (const [id, spec] of Object.entries(m.doors ?? {})) this.doors[id] = buildDoor(game, spec);
+    this.civilians = (m.civilians ?? []).map((c) => {
+      const h = new Humanoid('civilian', 'p11', { seed: Math.round(c.pos[0] * 31 + c.pos[1] * 17) });
+      h.root.position.set(c.pos[0], 0, c.pos[1]);
+      h.root.rotation.y = c.yaw ?? 0;
+      h.setCaptive(c.pose ?? 'back');
+      game.scene.add(h.root);
+      return { model: h, crouch: 1, freed: false, yaw: c.yaw ?? 0 };
+    });
     // Weapon caches (e.g. a suppressed rifle left on a rooftop by an asset).
     for (const c of m.caches ?? []) game.addPickup('weapon', new THREE.Vector3(c.pos[0], c.pos[1], c.pos[2]), c.weapon, c.attachments ?? null);
     // Intro cinematic, then hand control to the player.
@@ -117,15 +133,35 @@ export class CampaignMode {
       });
       game.cinematic = this.insertion;
       game.hud.insertion(true);
+      // Pick your weapons off the cabin rack before the run in.
+      this.insertion.holdFlight = true;
+      this.armory = new Armory(game, m, 'heli', (lo) => { this.chosen = lo; this.armory = null; this.insertion.holdFlight = false; });
     } else {
-      game.cinematic = new Cinematic(introKeys(sp, m.start.yaw, focus), 8, () => this._beginPlay());
+      game.cinematic = new Cinematic(introKeys(sp, m.start.yaw, focus), 8, () => this._gearUp());
       game.hud.letterbox(true);
     }
     game.hud.locationCard([m.title.toUpperCase(), m.location, m.time, 'Sgt. Elias "Wraith" Cole — Task Force ORION']);
     Audio.playMusic('tension');
   }
 
+  /** On-foot starts: gear up from the armory after the intro, then go. */
+  _gearUp() {
+    const g = this.game;
+    g.cinematic = null;
+    g.hud.letterbox(false);
+    // Nobody spots or shoots you while you are at the rack.
+    g.stealthGrace = g.time + 9999;
+    g.player.invulnerable = 9999;
+    this.armory = new Armory(g, this.mission, 'ground', (lo) => {
+      this.chosen = lo;
+      this.armory = null;
+      g.player.invulnerable = 1;
+      this._beginPlay();
+    });
+  }
+
   skipCinematic() {
+    this.armory?.confirm();
     const c = this.game.cinematic;
     if (c?.skip) c.skip(); else c?.finish();
   }
@@ -189,7 +225,7 @@ export class CampaignMode {
     const off = new THREE.Vector3(-2 + i * 2, 0, 3).applyAxisAngle(new THREE.Vector3(0, 1, 0), p.yaw);
     const unit = spawnSoldier(g, {
       pos: [p.pos.x + off.x, p.pos.z + off.z], yaw: p.yaw, team: 'a', friendly: true, storyChar: true, name: s.name,
-      weapon: s.weapon, difficulty: 'hardened', followIndex: i, faction: 'orion',
+      weapon: s.weapon, difficulty: 'hardened', followIndex: i, faction: 'orion', suppressed: s.suppressed,
     });
     unit.outMult = 0.5;
     this.squad.push(unit);
@@ -228,6 +264,9 @@ export class CampaignMode {
   _complete() {
     const o = this.objective;
     if (o.doneSay) this.game.hud.say(o.doneSay);
+    if (o.freeCivilians) for (const c of this.civilians) { c.freed = true; c.model.setCaptive('side'); }
+    if (o.stopTimer && this.timeLeft !== undefined) { this.timeLeft = undefined; this.game.hud.el.timer.hidden = true; }
+    if (o.stopTimer) this.hostagesSafe = true;
     for (const a of o.onComplete ?? []) this._action(a);
     if (o.interact) o.interact.active = false;
     if (o.type !== 'cutscene') {
@@ -248,6 +287,8 @@ export class CampaignMode {
     if (this.alarmed) return;
     this.alarmed = true;
     const m = this.mission;
+    // Hostage ops: once they know you're here, the clock starts on the hostages.
+    if (m.alarmTimer && !this.hostagesSafe && this.timeLeft === undefined) this.timeLeft = m.alarmTimer;
     if (m.alarmGroup) this._spawnTrigger('alarm');
     if (spotter) {
       this.game.hud.toast('YOU HAVE BEEN SPOTTED', 'warn');
@@ -279,17 +320,34 @@ export class CampaignMode {
     if (o.id) this._spawnTrigger(o.id);
     if (o.type === 'cutscene') { this._playCutscene(o); return; }
     if (o.say) this.game.hud.say(o.say);
+    // Squad drills: stack up on a door (hold crouched at given spots), or flow in behind you.
+    if (o.stack) {
+      this.squad.forEach((s, i) => {
+        const st = o.stack[i % o.stack.length];
+        s.command('hold', new THREE.Vector3(st[0], 0, st[1]), o.stackYaw ?? 0);
+      });
+    }
+    if (o.squadFollow) for (const s of this.squad) s.order = null;
     this.game.hud.objective(o.text);
     o.started = this.elapsed;
     o.waveDone = new Set();
     if (o.type === 'interact') {
       const pos = new THREE.Vector3(o.target[0], o.target[1], o.target[2]);
+      // The real thing to work on (laptop, charge, hostage, prisoner...) and the hands doing it.
+      if (o.vasko) o.model = this.vaskoModel;
+      if (o.door) o.doorRef = this.doors[o.door];
+      const toward = this.game.player.pos.clone().sub(pos).setY(0).normalize();
+      const prop = buildObjectiveProp(this.game, o, pos, toward);
+      o.actionProp = prop;
+      this.props.push(prop);
       o.interact = this.game.addInteractable({
-        pos, label: o.label, duration: o.duration, model: !o.aa && !o.vasko, onComplete: () => {
+        pos, label: o.label, duration: o.duration, model: false, prop, onComplete: () => {
+          prop.complete();
           if (o.aa) this._destroyAA(o);
           this._complete();
         },
       });
+      prop._it = o.interact;
     }
     if (o.type === 'eliminate' || o.type === 'boss') {
       for (const id of o.groups ?? [o.group]) this._spawnGroup(id);
@@ -328,6 +386,7 @@ export class CampaignMode {
     const pos = new THREE.Vector3(o.target[0], 0.5, o.target[2] + 1.4);
     this.timers.push({
       t: 2.5, fn: () => {
+        o.actionProp?.detonate?.();
         this.game.effects.explosion(pos, 1.6);
         Audio.explosion(pos, 1.4);
         this.game.player.shake = Math.min(1.2, this.game.player.shake + 0.6);
@@ -342,6 +401,19 @@ export class CampaignMode {
     const g = this.game;
     // Helicopter keeps flying (squad roping, departure) after the player is down.
     if (this.insertion && g.cinematic !== this.insertion) this.insertion.tick(dt);
+    // The armory takes the keys first, so locking in does not also skip the flight.
+    this.armory?.update(dt, g.input);
+    for (const d of Object.values(this.doors ?? {})) { d.update(dt); d.block(g.player); }
+    for (const c of this.civilians ?? []) {
+      if (c.freed) c.crouch = Math.max(0, c.crouch - dt * 1.2);
+      c.model.update(dt, 0, c.crouch, 0, false);
+    }
+    // Objective props animate (screens, LEDs, people) whether or not you are at them.
+    for (const pr of this.props ?? []) {
+      const it = pr._it;
+      const k = !it ? 0 : !it.active ? 1 : Math.min(1, it.progress / it.duration);
+      pr.update(dt, k, !!(it && g.action?.it === it && g.action.on), g.time);
+    }
     if (this.frozen) {
       if (g.cinematic && (g.input.pressed('Space') || g.input.pressed('Enter') || g.input.mousePressed[0])) this.skipCinematic();
       this.markers = [];
@@ -356,7 +428,8 @@ export class CampaignMode {
       this.timeLeft -= dt;
       g.hud.timer(`${this.mission.timerText ?? 'TIME'}  ${formatTime(this.timeLeft)}`, this.timeLeft < 60);
       if (this.timeLeft <= 0) {
-        this._fail('HALCYON has launched.', 'The uplink went live before ORION could stop it.');
+        const [ft, fr] = this.mission.timerFail ?? ['HALCYON has launched.', 'The uplink went live before ORION could stop it.'];
+        this._fail(ft, fr);
         return;
       }
     }
@@ -480,6 +553,11 @@ export class CampaignMode {
     const g = this.game;
     const m = this.mission;
     Store.stats.missionsCompleted++;
+    // Mission XP (more on harder difficulties): rank unlocks better guns in the armory.
+    const before = rankOf(Store.stats.xp);
+    const xp = Math.round(1500 * ({ recruit: 0.7, regular: 1, hardened: 1.4, veteran: 1.8 }[this.difficulty] ?? 1));
+    Store.stats.xp += xp;
+    const after = rankOf(Store.stats.xp);
     const camp = Store.campaign;
     camp.completed[m.id] = camp.completed[m.id] ? Math.max(camp.completed[m.id], diffRank(this.difficulty)) : diffRank(this.difficulty);
     camp.unlocked = Math.max(camp.unlocked, Math.min(MISSIONS.length, this.index + 2));
@@ -491,7 +569,7 @@ export class CampaignMode {
     setTimeout(() => {
       g.app.missionComplete({
         mission: m, index: this.index, time: this.elapsed, kills: this.kills, deaths: g.player.deaths,
-        difficulty: this.difficulty,
+        difficulty: this.difficulty, xp, rankUp: after.index > before.index ? after.name : null,
       });
     }, m.finale ? 3500 : 2200);
     g.hud.say(m.finale ? [] : [{ who: 'WATCHTOWER', text: 'Objective complete. Good work, ORION.' }]);
@@ -500,6 +578,10 @@ export class CampaignMode {
   hudInfo() { return null; }
 
   dispose() {
+    this.armory?.dispose();
+    for (const pr of this.props ?? []) pr.dispose();
+    for (const d of Object.values(this.doors ?? {})) d.dispose();
+    for (const c of this.civilians ?? []) c.model.root.removeFromParent();
     this.insertion?.dispose();
     this.vaskoModel?.dispose();
   }
