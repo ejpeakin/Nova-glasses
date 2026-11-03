@@ -266,7 +266,7 @@ export class Soldier {
     // Fog, snow and smoke-thick air limit how far anyone can actually see.
     range = Math.min(range, this.game.visRange ?? range);
     if (this.game.night) {
-      const lit = e.isPlayer && (this.game.flashlightOn || now - (e.revealed ?? -99) < 1.5);
+      const lit = e.isPlayer && (this.game.flashlightVisible || now - (e.revealed ?? -99) < 1.5);
       range *= lit ? 1 : 0.5;
     }
     if (d > range) return 0;
@@ -541,7 +541,7 @@ export class Soldier {
     }
     // Darkness and haze.
     const g = this.game;
-    if (g.night && target.isPlayer && !(g.flashlightOn || now - (target.revealed ?? -99) < 1.5)) sigma *= 1.4;
+    if (g.night && target.isPlayer && !(g.flashlightVisible || now - (target.revealed ?? -99) < 1.5)) sigma *= 1.4;
     if (g.visRange && d > g.visRange * 0.6) sigma *= 1.3;
     if (suppressive) sigma = sigma * 3 + 0.02;
     return sigma;

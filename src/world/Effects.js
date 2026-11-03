@@ -32,7 +32,7 @@ class ParticlePool {
     geo.setAttribute('rot', new THREE.BufferAttribute(this.rot, 1).setUsage(THREE.DynamicDrawUsage));
     geo.setDrawRange(0, 0);
     const mat = new THREE.ShaderMaterial({
-      uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { map: { value: texture }, scale: { value: 600 } }]),
+      uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { map: { value: texture }, scale: { value: 600 }, tint: { value: 1 } }]),
       vertexShader: `
         attribute float size; attribute vec4 color; attribute float rot;
         varying vec4 vColor; varying float vRot;
@@ -46,14 +46,14 @@ class ParticlePool {
           #include <fog_vertex>
         }`,
       fragmentShader: `
-        uniform sampler2D map; varying vec4 vColor; varying float vRot;
+        uniform sampler2D map; uniform float tint; varying vec4 vColor; varying float vRot;
         #include <fog_pars_fragment>
         void main() {
           vec2 c = gl_PointCoord - 0.5;
           float s = sin(vRot), co = cos(vRot);
           vec2 uv = vec2(co * c.x - s * c.y, s * c.x + co * c.y) + 0.5;
           vec4 t = texture2D(map, uv);
-          gl_FragColor = vec4(vColor.rgb * t.rgb, vColor.a * t.a);
+          gl_FragColor = vec4(vColor.rgb * t.rgb * tint, vColor.a * t.a);
           if (gl_FragColor.a < 0.003) discard;
           #include <fog_fragment>
         }`,
@@ -200,6 +200,40 @@ export class Effects {
     // Dropped magazines (pooled, created on demand).
     this.props = [];
     this.propIndex = 0;
+
+    // Blast meshes: a fireball / flash bubble and a ground shockwave ring (pooled).
+    this.blasts = [];
+    const ballGeo = new THREE.SphereGeometry(1, 20, 14);
+    const ringGeo = new THREE.RingGeometry(0.9, 1, 64);
+    ringGeo.rotateX(-Math.PI / 2);
+    for (let i = 0; i < 4; i++) {
+      const ball = new THREE.Mesh(ballGeo, new THREE.MeshBasicMaterial({ color: 0xffb060, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false }));
+      const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xd8cbb0, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
+      ball.visible = ring.visible = false;
+      ball.frustumCulled = ring.frustumCulled = false;
+      scene.add(ball, ring);
+      this.blasts.push({ ball, ring, t: 1, dur: 1, size: 1, kind: 'frag', active: false });
+    }
+    this.blastIndex = 0;
+    // Smoke that keeps pouring from a blast site for a few seconds.
+    this.lingers = [];
+  }
+
+  _blast(pos, size, kind) {
+    const b = this.blasts[this.blastIndex];
+    this.blastIndex = (this.blastIndex + 1) % this.blasts.length;
+    b.active = true; b.t = 0; b.size = size; b.kind = kind;
+    b.dur = kind === 'flash' ? 0.32 : 0.55;
+    b.ball.position.copy(pos);
+    b.ball.material.color.setHex(kind === 'flash' ? 0xffffff : 0xffa64a);
+    b.ring.position.set(pos.x, pos.y - Math.min(pos.y, 0.25) + 0.08, pos.z);
+    b.ring.material.color.setHex(kind === 'flash' ? 0xe8e8e8 : 0xcbbd9e);
+    b.ball.visible = b.ring.visible = true;
+  }
+
+  /** Unlit smoke/dust/blood is scaled by how bright the level is, so it doesn't glow at night. */
+  setAmbient(k) {
+    this.smoke.points.material.uniforms.tint.value = k;
   }
 
   resize(h, fov) {
@@ -316,38 +350,64 @@ export class Effects {
 
   explosion(pos, size = 1) {
     const q = this.quality === 'low' ? 0.5 : 1;
-    for (let i = 0; i < 26 * q; i++) {
-      const a = Math.random() * Math.PI * 2, e = Math.random() * 1.2, sp = rand(2, 7) * size;
-      this.fire.emit(pos.x, pos.y + 0.3, pos.z, Math.cos(a) * Math.cos(e) * sp, Math.sin(e) * sp + 1, Math.sin(a) * Math.cos(e) * sp,
-        { life: rand(0.25, 0.6), size: 0.8 * size, sizeEnd: 2.4 * size, color: [1, 0.75, 0.4], colorEnd: [0.6, 0.15, 0.02], alpha: 0.9, drag: 5 });
+    const S = size;
+    const P = (x, y, z) => [pos.x + x, pos.y + y, pos.z + z];
+    // Fireball core: dense, blinding, gone in a fraction of a second.
+    for (let i = 0; i < 46 * q; i++) {
+      const a = Math.random() * Math.PI * 2, e = Math.random() * 1.3, sp = rand(3, 11) * S;
+      const [x, y, z] = P(rand(-0.3, 0.3) * S, 0.4 * S, rand(-0.3, 0.3) * S);
+      this.fire.emit(x, y, z, Math.cos(a) * Math.cos(e) * sp, Math.sin(e) * sp + 2, Math.sin(a) * Math.cos(e) * sp,
+        { life: rand(0.2, 0.5), size: 1.3 * S, sizeEnd: 4.4 * S, color: [1, 0.86, 0.58], colorEnd: [0.75, 0.2, 0.03], alpha: 1, drag: 6 });
     }
-    for (let i = 0; i < 30 * q; i++) {
-      const a = Math.random() * Math.PI * 2, sp = rand(1, 5) * size;
-      this.smoke.emit(pos.x + rand(-0.5, 0.5), pos.y + rand(0.2, 1.2), pos.z + rand(-0.5, 0.5), Math.cos(a) * sp, rand(1, 4), Math.sin(a) * sp,
-        { life: rand(2, 4.5), size: 1 * size, sizeEnd: 5 * size, color: [0.25, 0.23, 0.21], colorEnd: [0.45, 0.43, 0.4], alpha: 0.7, drag: 1.5, spin: 0.4 });
+    // Flame tongues licking upward.
+    for (let i = 0; i < 18 * q; i++) {
+      const a = Math.random() * Math.PI * 2;
+      this.fire.emit(pos.x, pos.y + 0.3, pos.z, Math.cos(a) * rand(1, 4) * S, rand(6, 13) * S, Math.sin(a) * rand(1, 4) * S,
+        { life: rand(0.4, 0.85), size: 0.7 * S, sizeEnd: 2.6 * S, color: [1, 0.7, 0.32], colorEnd: [0.45, 0.1, 0.02], alpha: 0.9, drag: 3.5 });
     }
-    for (let i = 0; i < 30 * q; i++) {
-      this.sparks.emit(pos.x, pos.y + 0.3, pos.z, rand(-9, 9), rand(3, 12), rand(-9, 9),
-        { life: rand(0.5, 1.4), size: 0.06, sizeEnd: 0.02, color: [1, 0.7, 0.3], gravity: 12 });
+    // Thick black-grey smoke billowing up and out.
+    for (let i = 0; i < 52 * q; i++) {
+      const a = Math.random() * Math.PI * 2, sp = rand(1, 6) * S;
+      this.smoke.emit(pos.x + rand(-0.8, 0.8) * S, pos.y + rand(0.3, 1.8) * S, pos.z + rand(-0.8, 0.8) * S, Math.cos(a) * sp, rand(1.5, 5) * S, Math.sin(a) * sp,
+        { life: rand(3.5, 7.5), size: 1.4 * S, sizeEnd: rand(6, 9.5) * S, color: [0.17, 0.16, 0.15], colorEnd: [0.44, 0.42, 0.39], alpha: 0.78, drag: 1.3, spin: 0.35 });
     }
-    // Ground dust ring.
-    for (let i = 0; i < 16 * q; i++) {
-      const a = (i / 16) * Math.PI * 2;
-      this.smoke.emit(pos.x, 0.3, pos.z, Math.cos(a) * 8 * size, 0.3, Math.sin(a) * 8 * size,
-        { life: 1.6, size: 0.8, sizeEnd: 3, color: [0.6, 0.55, 0.48], alpha: 0.5, drag: 3 });
+    // Dirt and debris thrown high, falling back to earth.
+    for (let i = 0; i < 44 * q; i++) {
+      const a = Math.random() * Math.PI * 2, sp = rand(2, 9) * S;
+      this.smoke.emit(pos.x, pos.y + 0.2, pos.z, Math.cos(a) * sp, rand(6, 17) * S, Math.sin(a) * sp,
+        { life: rand(1.2, 2.4), size: rand(0.1, 0.22) * S, sizeEnd: rand(0.25, 0.5) * S, color: [0.24, 0.2, 0.16], alpha: 0.95, gravity: 15, drag: 0.4 });
     }
-    this.flash(pos.clone().setY(pos.y + 1), 0xff9040, 60 * size, 0.35, 30);
-    if (pos.y < 0.6) this.decal(new THREE.Vector3(pos.x, 0.01, pos.z), new THREE.Vector3(0, 1, 0), 3.2 * size, this.scorchMat);
+    // Fragments and sparks.
+    for (let i = 0; i < 70 * q; i++) {
+      this.sparks.emit(pos.x, pos.y + 0.3, pos.z, rand(-17, 17) * S, rand(2, 15) * S, rand(-17, 17) * S,
+        { life: rand(0.4, 1.5), size: 0.08, sizeEnd: 0.02, color: [1, 0.74, 0.34], gravity: 12 });
+    }
+    // Shockwave dust wave hugging the ground.
+    for (let i = 0; i < 36 * q; i++) {
+      const a = (i / (36 * q)) * Math.PI * 2;
+      this.smoke.emit(pos.x, 0.3, pos.z, Math.cos(a) * 15 * S, 0.5, Math.sin(a) * 15 * S,
+        { life: 2.0, size: 1.0, sizeEnd: 4.5 * S, color: [0.62, 0.57, 0.5], alpha: 0.55, drag: 2.6 });
+    }
+    this._blast(pos.clone().setY(pos.y + 0.5 * S), S, 'frag');
+    this.lingers.push({ pos: pos.clone(), t: 0, dur: 5 * S, size: S });
+    this.flash(pos.clone().setY(pos.y + 1), 0xff9a40, 170 * S, 0.5, 34 * S);
+    if (pos.y < 0.6) this.decal(new THREE.Vector3(pos.x, 0.01, pos.z), new THREE.Vector3(0, 1, 0), 4.6 * S, this.scorchMat);
   }
 
-  flashbang(pos) {
-    for (let i = 0; i < 10; i++) {
-      this.fire.emit(pos.x, pos.y + 0.2, pos.z, rand(-1, 1), rand(0, 1), rand(-1, 1), { life: 0.25, size: 1.5, sizeEnd: 3, color: [1, 1, 1], alpha: 1 });
+  flashbang(pos, size = 1) {
+    const S = size;
+    // A blinding white burst, a crackle of sparks and a puff of smoke.
+    for (let i = 0; i < 26; i++) {
+      this.fire.emit(pos.x, pos.y + 0.3, pos.z, rand(-3, 3), rand(0, 3), rand(-3, 3), { life: rand(0.18, 0.35), size: 2.5 * S, sizeEnd: 8 * S, color: [1, 1, 1], alpha: 1, drag: 4 });
     }
-    for (let i = 0; i < 12; i++) {
-      this.smoke.emit(pos.x, pos.y + 0.3, pos.z, rand(-2, 2), rand(0.5, 2), rand(-2, 2), { life: 2.5, size: 0.5, sizeEnd: 2.5, color: [0.85, 0.85, 0.85], alpha: 0.4, drag: 2 });
+    for (let i = 0; i < 40; i++) {
+      this.sparks.emit(pos.x, pos.y + 0.2, pos.z, rand(-8, 8), rand(1, 8), rand(-8, 8), { life: rand(0.3, 0.9), size: 0.06, sizeEnd: 0.02, color: [1, 1, 0.9], gravity: 10 });
     }
-    this.flash(pos.clone().setY(pos.y + 0.5), 0xffffff, 120, 0.3, 30);
+    for (let i = 0; i < 22; i++) {
+      this.smoke.emit(pos.x, pos.y + 0.3, pos.z, rand(-2.5, 2.5), rand(0.5, 2.5), rand(-2.5, 2.5), { life: rand(2.5, 4), size: 0.7, sizeEnd: rand(3, 4.5) * S, color: [0.86, 0.86, 0.86], alpha: 0.45, drag: 2 });
+    }
+    this._blast(pos.clone().setY(pos.y + 0.3), 1.6 * S, 'flash');
+    this.flash(pos.clone().setY(pos.y + 0.5), 0xffffff, 520 * S, 0.42, 48);
   }
 
   smokeCloud(pos, dt, strength = 1) {
@@ -399,6 +459,29 @@ export class Effects {
         c.vel.x *= 0.5; c.vel.z *= 0.5;
       }
     }
+    for (const b of this.blasts) {
+      if (!b.active) continue;
+      b.t += dt;
+      const k = b.t / b.dur;
+      if (k >= 1) { b.active = false; b.ball.visible = b.ring.visible = false; continue; }
+      const e = 1 - Math.pow(1 - k, 3);
+      // Fireball swells and fades in the first third; the ring races outward.
+      const flash = b.kind === 'flash';
+      const kb = Math.min(1, b.t / (b.dur * (flash ? 0.35 : 0.25)));
+      b.ball.scale.setScalar((0.5 + (flash ? 3.0 : 1.9) * (1 - Math.pow(1 - kb, 2))) * b.size);
+      b.ball.material.opacity = (1 - kb) * (1 - kb) * (flash ? 1 : 0.5);
+      b.ring.scale.setScalar((1 + 13 * e) * b.size);
+      b.ring.material.opacity = (1 - k) * (1 - k) * 0.22;
+    }
+    for (const l of this.lingers) {
+      l.t += dt;
+      if (Math.random() < dt * 9 * l.size) {
+        const f = 1 - l.t / l.dur;
+        this.smoke.emit(l.pos.x + rand(-0.6, 0.6), l.pos.y + 0.3, l.pos.z + rand(-0.6, 0.6), rand(-0.4, 0.4), rand(1.2, 2.6), rand(-0.4, 0.4),
+          { life: rand(4, 7), size: 1.2 * l.size, sizeEnd: rand(4, 6.5) * l.size, color: [0.2, 0.19, 0.18], colorEnd: [0.42, 0.41, 0.39], alpha: 0.5 * f, drag: 0.3, spin: 0.2 });
+      }
+    }
+    this.lingers = this.lingers.filter((l) => l.t < l.dur);
     for (const p of this.props) {
       if (!p.mesh.visible) continue;
       p.life -= dt;
@@ -427,5 +510,6 @@ export class Effects {
     for (const f of this.flashLights) this.scene.remove(f.light);
     for (const c of this.casings) this.scene.remove(c.mesh);
     for (const p of this.props) this.scene.remove(p.mesh);
+    for (const b of this.blasts) { this.scene.remove(b.ball, b.ring); b.ball.material.dispose(); b.ring.material.dispose(); }
   }
 }

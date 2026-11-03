@@ -19,6 +19,7 @@ export class HUD {
     root.innerHTML = `
       <div class="hud-vignette" id="h-vig"></div>
       <div class="hud-suppress" id="h-sup"></div>
+      <canvas class="hud-after" id="h-after" width="480" height="270"></canvas>
       <div class="hud-flash" id="h-flash"></div>
       <div class="scope" id="h-scope" hidden>
         <div class="scope-mask"></div>
@@ -181,6 +182,16 @@ export class HUD {
     this.root.classList.toggle('insertion', on);
   }
 
+  /** Burn the frame the flashbang went off on into the afterimage layer. */
+  flashAfterimage(canvas) {
+    const c = (this._afterEl ??= this.root.querySelector('#h-after'));
+    try {
+      const x = c.getContext('2d');
+      x.clearRect(0, 0, c.width, c.height);
+      x.drawImage(canvas, 0, 0, c.width, c.height);
+    } catch { /* tainted or unavailable: white-out only */ }
+  }
+
   nvg(on) {
     if (this._nvg === on) return;
     this._nvg = on;
@@ -323,8 +334,12 @@ export class HUD {
       if (this.beat <= 0) { this.beat = 0.9; Audio.heartbeat(); }
     }
     this.el.sup.style.opacity = clamp(p.suppressed ?? 0, 0, 1) * 0.6;
-    const fl = p.flashed > 0 ? clamp(p.flashed / 1.5, 0, 1) : 0;
-    this.el.flash.style.opacity = fl;
+    // Flashbang: solid white-out, then a burned-in afterimage of the moment it went off.
+    const fl = p.flashed > 0 ? clamp((p.flashed - 0.5) / 1.9, 0, 1) : 0;
+    this.el.flash.style.opacity = fl * fl * (3 - 2 * fl);
+    const after = (this._afterEl ??= this.root.querySelector('#h-after'));
+    const ao = p.flashed > 0 ? clamp(p.flashed / 3.2, 0, 1) * 0.9 : 0;
+    if (ao !== this._ao) { after.style.opacity = ao; this._ao = ao; }
 
     // Stealth meter (campaign): fills as an unalerted enemy notices you.
     const det = game.mode.type === 'campaign' && p.alive && !game.cinematic ? (p.detection ?? 0) : 0;

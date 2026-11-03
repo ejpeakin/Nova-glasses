@@ -264,10 +264,10 @@ export function ratings(s) {
 }
 
 export const EQUIPMENT = {
-  frag: { short: 'Frag', name: 'M67-X Frag', type: 'lethal', fuse: 3.5, radius: 8, damage: 160, count: 2, cook: true, desc: 'Cookable fragmentation grenade.' },
-  semtex: { short: 'Semtex', name: 'Sticky Semtex', type: 'lethal', fuse: 2.2, radius: 6.5, damage: 150, count: 2, sticky: true, desc: 'Sticks to the first surface it hits.' },
-  c4: { short: 'C4', name: 'C4 Charge', type: 'lethal', fuse: Infinity, radius: 9, damage: 200, count: 1, remote: true, desc: 'Throw, then press the key again to detonate.' },
-  flash: { short: 'Flash', name: 'M84-S Flashbang', type: 'tactical', fuse: 1.6, radius: 14, count: 2, flash: true, desc: 'Blinds and deafens everyone facing it.' },
+  frag: { short: 'Frag', name: 'M67-X Frag', type: 'lethal', fuse: 3.5, radius: 10, damage: 160, fx: 1.5, count: 2, cook: true, desc: 'Cookable fragmentation grenade.' },
+  semtex: { short: 'Semtex', name: 'Sticky Semtex', type: 'lethal', fuse: 2.2, radius: 8, damage: 150, fx: 1.35, count: 2, sticky: true, desc: 'Sticks to the first surface it hits.' },
+  c4: { short: 'C4', name: 'C4 Charge', type: 'lethal', fuse: Infinity, radius: 12, damage: 200, fx: 2, count: 1, remote: true, desc: 'Throw, then press the key again to detonate.' },
+  flash: { short: 'Flash', name: 'M84-S Flashbang', type: 'tactical', fuse: 1.6, radius: 20, count: 2, flash: true, fx: 1.3, desc: 'Blinds and deafens everyone facing it.' },
   smoke: { short: 'Smoke', name: 'Smoke Screen', type: 'tactical', fuse: 1.4, radius: 7, count: 2, smoke: true, desc: 'Thick cloud that blocks line of sight for 20 s.' },
   stim: { short: 'Stim', name: 'Combat Stim', type: 'tactical', count: 1, stim: true, desc: 'Instantly restores health and resets regeneration.' },
 };

@@ -35,7 +35,7 @@ Use a desktop browser (Chrome, Edge or Firefox) with a keyboard and mouse. Headp
 | Q | Tactical equipment |
 | V | Melee |
 | B | Toggle fire mode |
-| F | Flashlight |
+| F | Flashlight. With night vision down it becomes an IR illuminator that enemies can't see |
 | N | Night vision goggles (flip down / up) |
 | Tab | Scoreboard |
 | Esc | Pause |
@@ -64,7 +64,7 @@ Every weapon has its own synthesized firing sound, damage and range falloff, fir
 
 The Gunsmith has six attachment slots: optic, muzzle, barrel, underbarrel, magazine and stock. There are 19 attachments, including a suppressor, compensator, extended and fast mags, grips, a laser, and reflex, holo, 3×, 8× and thermal optics. Each one changes stats and shows up on the model.
 
-Equipment: frag (cookable), sticky semtex, remote C4, flashbang, smoke (blocks AI line of sight) and a combat stim.
+Equipment: frag (cookable), sticky semtex, remote C4, flashbang, smoke (blocks AI line of sight) and a combat stim. Explosions are big: a blinding fireball, a shockwave ring and a dust wave racing along the ground, dirt and fragments thrown high, and a smoke column that keeps pouring. There's heavy camera shake and muffled hearing up close. Flashbangs white you out, then leave a burned-in afterimage of what you were looking at, with ringing ears. They're worse through night vision.
 
 **Enemy AI**
 - Enemies patrol routes and stand guard.
@@ -101,7 +101,8 @@ Equipment: frag (cookable), sticky semtex, remote C4, flashbang, smoke (blocks A
 - Weather: rain with lightning, snow, dust and ash.
 - Fog, soft shadows, ACES tone mapping and a sky-based environment map.
 - Particle explosions, smoke columns, smoke grenades, muzzle flashes, tracers, sparks, impact dust, bullet-hole and scorch decals, and ejected brass.
-- Night-vision goggles: a light-amplification pass with phosphor bloom, grain and a dual-tube view that flips down. Green or white phosphor; optionally on automatically for night missions (Settings).
+- Night-vision goggles modelled on a Gen 3 image intensifier. Automatic brightness control opens up in the dark and clamps down when a flash or explosion floods the tube. Bright sources get proper halos. The image is crisp, with photon-limited scintillation noise and a faint microchannel honeycomb, seen through a dual-tube view that flips down. Green or white phosphor; optionally on automatically for night missions (Settings).
+- Through the goggles you and your squad carry IR aiming lasers that show as beams, and the flashlight becomes an invisible IR flood.
 - Weapons are built from real side profiles with bevelled edges: picatinny rails, slotted handguards, flash hiders, ejection ports, charging handles, open-tube red dots, holographic sights and turreted scopes, with anodised-metal, stippled-polymer and wood-grain finishes.
 - Maps are dressed with building facades (window frames, glass, door frames, rooftop units), vegetation, road markings, street furniture, power lines, wire, debris, puddles, tyre tracks and distant backdrops.
 

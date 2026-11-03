@@ -8,6 +8,7 @@ import { buildMap, MAP_INFO } from './world/Maps.js';
 import { Environment } from './world/Environment.js';
 import { Effects } from './world/Effects.js';
 import { NightVision } from './world/NightVision.js';
+import { getSpriteTexture } from './world/Textures.js';
 import { Player } from './player/Player.js';
 import { WeaponSystem } from './weapons/WeaponSystem.js';
 import { Grenades } from './weapons/Grenades.js';
@@ -32,6 +33,7 @@ export class Game {
     this.pickups = [];
     this.interactables = [];
     this.flashlightOn = false;
+    this.flashlightVisible = false; // white light enemies can see (the IR illuminator is invisible to them)
     this.nvg = false;
     this.lastMouse = { x: 0, y: 0 };
     this.killfeed = [];
@@ -69,6 +71,10 @@ export class Game {
     this.visRange = Math.max(35, Math.min(200, 0.95 / (this.env.preset.fogDensity || 0.008)));
     if (this.night && weather === 'rain') this.env.enableLightning();
     this.effects = new Effects(this.scene, q);
+    // Unlit particles (smoke, dust, weather) are dimmed to the level's light so they don't glow at night.
+    const ambient = { night: 0.14, indoor: 0.55, dusk: 0.55, dawn: 0.6, overcast: 0.85 }[lighting] ?? 1;
+    this.effects.setAmbient(ambient);
+    if (this.env.particles) this.env.particles.pts.material.color.multiplyScalar(Math.max(0.25, ambient));
     this.grenades = new Grenades(this);
     this.player = new Player(this);
     this.player.damageMult = mode.playerDamageMult ?? 1;
@@ -78,6 +84,7 @@ export class Game {
     this.flashlight.position.set(0.2, -0.2, 0);
     this.flashlight.target.position.set(0, 0, -5);
     this.camera.add(this.flashlight, this.flashlight.target);
+    this._initLasers();
     if (this.night || this.mapId === 'blacksite') this.hud?.hint('F: flashlight   N: night vision', 6);
     Audio.setAmbience(mode.ambience ?? this.mapInfo.ambience);
     Audio.setAcoustics(this.world.indoor ? 'indoor' : this.mapId);
@@ -91,6 +98,64 @@ export class Game {
     this.renderer.compile(this.scene, this.camera);
     this.renderer.compile(this.weapons.viewScene, this.weapons.viewCam);
     this.renderer.setRenderTarget(null);
+    this.nvgFx.warm?.();
+  }
+
+  // ---------- IR lasers (visible only through night vision) ----------
+  _initLasers() {
+    this.lasers = [];
+    const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false });
+    const dotMat = new THREE.SpriteMaterial({ map: getSpriteTexture('flash'), color: 0xffffff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false, fog: false });
+    for (let i = 0; i < 6; i++) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(6), 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute([2.4, 2.4, 2.4, 0.35, 0.35, 0.35], 3));
+      const line = new THREE.Line(g, mat);
+      line.frustumCulled = false;
+      line.visible = false;
+      const dot = new THREE.Sprite(dotMat);
+      dot.visible = false;
+      this.scene.add(line, dot);
+      this.lasers.push({ line, dot });
+    }
+  }
+
+  _updateLasers() {
+    const on = this.nvgFx.active && this.nvgFx.amount > 0.6 && this.nvg;
+    let i = 0;
+    const beam = (from, dir) => {
+      const L = this.lasers[i++];
+      const hit = this.world.raycast(from.x, from.y, from.z, dir.x, dir.y, dir.z, 150);
+      const len = hit ? hit.t : 150;
+      const pa = L.line.geometry.attributes.position;
+      pa.setXYZ(0, from.x, from.y, from.z);
+      pa.setXYZ(1, from.x + dir.x * len, from.y + dir.y * len, from.z + dir.z * len);
+      pa.needsUpdate = true;
+      L.line.visible = true;
+      L.dot.visible = !!hit;
+      if (hit) { L.dot.position.copy(hit.point).addScaledVector(dir, -0.03); L.dot.scale.setScalar(0.05 + len * 0.005); }
+    };
+    if (on) {
+      const cam = this.camera;
+      if (this.player.alive && !this.cinematic) {
+        // From the weapon's laser module, converging on the point of aim.
+        const q = cam.quaternion;
+        const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
+        const aim = this.world.raycast(cam.position.x, cam.position.y, cam.position.z, fwd.x, fwd.y, fwd.z, 250);
+        const aimPt = cam.position.clone().addScaledVector(fwd, aim ? aim.t : 250);
+        const from = cam.position.clone().add(new THREE.Vector3(0.085, -0.1, -0.4).applyQuaternion(q));
+        beam(from, aimPt.sub(from).normalize());
+      }
+      for (const a of this.actors) {
+        if (i >= this.lasers.length) break;
+        if (!a.alive || !a.friendly || a.mpBot || a.scripted) continue;
+        if (a.pos.distanceTo(this.player.pos) > 90) continue;
+        const from = a.model.muzzle.getWorldPosition(new THREE.Vector3());
+        const dir = a.model.muzzleDir(new THREE.Vector3());
+        beam(from.addScaledVector(dir, 0.02), dir);
+      }
+    }
+    for (; i < this.lasers.length; i++) { this.lasers[i].line.visible = false; this.lasers[i].dot.visible = false; }
   }
 
   // ---------- relations ----------
@@ -180,8 +245,9 @@ export class Game {
   }
 
   explode(pos, def, owner, weaponId = 'frag') {
-    this.effects.explosion(pos, def.damage > 180 ? 1.3 : 1);
-    Audio.explosion(pos, 1);
+    const size = def.fx ?? 1.5;
+    this.effects.explosion(pos, size);
+    Audio.explosion(pos, Math.min(1.6, 0.7 + size * 0.4));
     const center = pos.clone().setY(pos.y + 0.3);
     const victims = [this.player, ...this.actors];
     for (const v of victims) {
@@ -197,32 +263,38 @@ export class Game {
       v.takeDamage(dmg, pos, owner, false, weaponId);
     }
     const pd = this.player.pos.distanceTo(pos);
-    this.player.shake = Math.min(1.2, this.player.shake + clamp(1 - pd / 30, 0, 1) * 1.2);
-    if (pd < 9) Audio.muffleFor(1.5, 600);
+    this.player.shake = Math.min(1.8, this.player.shake + clamp(1 - pd / (24 * size), 0, 1) * 1.8);
+    if (pd < def.radius * 1.3) Audio.muffleFor(1.2 + (1 - pd / (def.radius * 1.3)) * 1.5, 500);
     this.emitNoise(pos, 120, owner);
   }
 
   flashbang(pos, def, owner) {
-    this.effects.flashbang(pos);
+    this.effects.flashbang(pos, def.fx ?? 1);
     Audio.flashbang(pos);
     const p = this.player;
     const ep = p.eyePos;
     const d = ep.distanceTo(pos);
+    this.player.shake = Math.min(1.2, this.player.shake + clamp(1 - d / 12, 0, 1) * 0.8);
     if (d < def.radius && this.world.los(pos.clone().setY(pos.y + 0.2), ep, true)) {
       const fwd = p.forward;
       const to = pos.clone().sub(ep).normalize();
       const facing = fwd.dot(to);
-      const t = (1 - d / def.radius) * (facing > 0.2 ? 4.5 : 1.8) + 0.6;
+      // Looking at it: a long white-out. Night vision amplifies the flash even more.
+      let t = (1 - d / def.radius) * (facing > 0.2 ? 6.5 : 2.6) + 0.8;
+      if (this.nvgFx?.active) t *= 1.4;
       p.flashed = Math.max(p.flashed, t);
       this.flashedMax = Math.max(p.flashed, 0.1);
-      Audio.muffleFor(t, 300);
-      Audio.tinnitus(t);
+      this._captureFlash = true; // burn the current frame into an afterimage
+      Audio.muffleFor(t, 260);
+      Audio.tinnitus(t + 1);
+    } else if (d < def.radius * 1.6) {
+      Audio.muffleFor(1.2, 900);
     }
     for (const a of this.actors) {
       if (!a.alive) continue;
       const ad = a.eyePos.distanceTo(pos);
       if (ad < def.radius && this.world.los(pos.clone().setY(pos.y + 0.2), a.eyePos, true)) {
-        a.flashed(3.5 * (1 - ad / def.radius) + 1);
+        a.flashed(4.5 * (1 - ad / def.radius) + 1.2);
       }
     }
     this.emitNoise(pos, 50, owner);
@@ -469,7 +541,14 @@ export class Game {
     if (input.pressed('KeyN') && p.alive && !this.over) this.setNvg(!this.nvg);
     this.nvgFx.update(dt);
     this.hud?.nvg(this.nvg);
-    this.flashlight.intensity = this.flashlightOn ? 60 : 0;
+    // With the goggles down the light is an IR illuminator: a wide flood only the
+    // goggles can see, so it doesn't give you away.
+    const ir = this.nvg;
+    this.flashlightVisible = this.flashlightOn && !ir;
+    this.flashlight.intensity = this.flashlightOn ? (ir ? (this.nvgFx.amount > 0.5 ? 34 : 0) : 60) : 0;
+    this.flashlight.angle = ir ? 0.65 : 0.42;
+    this.flashlight.distance = ir ? 75 : 40;
+    if (this.nvg && !this._irHint) { this._irHint = true; this.hud?.hint('F: IR illuminator (invisible to enemies)', 5); }
     for (const a of this.actors) {
       a.update(dt);
       const th = this.weapons.stats.thermal && this.weapons.scopeInfo().active;
@@ -502,6 +581,7 @@ export class Game {
     Audio.setListener(camPos, this.camera.getWorldDirection(new THREE.Vector3()));
     this.weapons.updateLighting(this.env, this.camera);
     if (p.suppressed) p.suppressed = Math.max(0, p.suppressed - dt * 1.5);
+    this._updateLasers();
     this.hud?.update(this, dt);
     this.render();
   }
@@ -535,6 +615,7 @@ export class Game {
       r.render(this.cinematic.viewScene, this.cinematic.viewCam);
     }
     if (nvg) this.nvgFx.present(this.time, this.nvgGain, Store.settings.nvgPhosphor);
+    if (this._captureFlash) { this._captureFlash = false; this.hud?.flashAfterimage(r.domElement); }
   }
 
   resize() {
