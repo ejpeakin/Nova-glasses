@@ -176,6 +176,8 @@ export class CampaignMode {
     this.frozen = false;
     Audio.playMusic('none');
     g.hud.hint(this.mission.kitHint ?? 'T at a roof edge: rappel down  ·  SPACE at a ledge: climb  ·  V from behind: silent takedown  ·  aim at enemies to tag them', 8);
+    // Say plainly what this mission is for, before the first objective's radio chatter.
+    if (this.mission.goal) g.hud.say([{ who: 'YOUR JOB', text: this.mission.goal }]);
     this._nextObjective();
   }
 

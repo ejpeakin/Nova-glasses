@@ -533,3 +533,11 @@ body.nvg #nvg-overlay { display: block; }
   .ac-tag { margin-top: 3px; }
   .ar-row { margin: 5px 0; }
 }
+
+/* campaign story blocks */
+.md-story { margin: 10px 0 12px; }
+.md-story p { margin: 4px 0 0; font-size: 16px; line-height: 1.45; color: #d6dfcb; }
+.md-story.goal { border-left: 3px solid var(--accent); padding-left: 10px; }
+.md-story.goal p { color: #eef5e4; }
+.res-next { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line, rgba(255,255,255,0.12)); }
+.res-next p { margin: 4px 0 0; color: #d6dfcb; font-size: 15px; line-height: 1.4; }

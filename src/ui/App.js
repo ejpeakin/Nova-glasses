@@ -275,8 +275,9 @@ export class App {
             <div class="md-tag">MISSION ${selected + 1} · ${MAP_INFO[m.map].name.toUpperCase()} · ${m.lighting.toUpperCase()}${m.weather !== 'none' ? ' · ' + m.weather.toUpperCase() : ''}</div>
             <h3 class="md-title">${m.title.toUpperCase()}</h3>
             <div class="md-loc">${m.location} — ${m.time}</div>
-            <p class="md-sum">${m.summary}</p>
-            <div class="md-objs"><div class="lbl">OBJECTIVES</div>${m.objectives.map((o) => `<div class="md-obj">◆ ${escapeHtml(o.text)}</div>`).join('')}</div>
+            ${m.recap ? `<div class="md-story"><div class="lbl">THE STORY SO FAR</div><p>${escapeHtml(m.recap)}</p></div>` : `<p class="md-sum">${m.summary}</p>`}
+            ${m.goal ? `<div class="md-story goal"><div class="lbl">YOUR JOB</div><p>${escapeHtml(m.goal)}</p></div>` : ''}
+            <div class="md-objs"><div class="lbl">OBJECTIVES</div>${m.objectives.filter((o) => o.text).map((o) => `<div class="md-obj">◆ ${escapeHtml(o.text)}</div>`).join('')}</div>
             <div class="md-stats">${done ? `<span>Completed: ${['', 'Recruit', 'Regular', 'Hardened', 'Veteran'][done]}</span>` : '<span>Not completed</span>'}${camp.bestTimes[m.id] ? `<span>Best time ${formatTime(camp.bestTimes[m.id])}</span>` : ''}</div>
             <div class="lbl">DIFFICULTY</div>
             <div class="seg" id="diff">${Object.entries(DIFFICULTY).map(([k, d]) => `<button class="${k === diff ? 'on' : ''}" data-d="${k}">${d.label.toUpperCase()}</button>`).join('')}</div>
@@ -349,10 +350,12 @@ export class App {
       ${this._header(`MISSION ${index + 1}: ${m.title.toUpperCase()}`, `${m.location} · ${m.time}`, 'campaign')}
       <div class="brief">
         <div class="panel brief-main">
+          ${m.recap ? `<div class="md-story"><div class="lbl">THE STORY SO FAR</div><p>${escapeHtml(m.recap)}</p></div>` : ''}
+          ${m.goal ? `<div class="md-story goal"><div class="lbl">YOUR JOB</div><p>${escapeHtml(m.goal)}</p></div>` : ''}
           <div class="lbl">BRIEFING</div>
           <div class="brief-lines" id="blines"></div>
           <div class="lbl">OBJECTIVES</div>
-          ${m.objectives.map((o, i) => `<div class="md-obj">${i + 1}. ${escapeHtml(o.text)}</div>`).join('')}
+          ${m.objectives.filter((o) => o.text).map((o, i) => `<div class="md-obj">${i + 1}. ${escapeHtml(o.text)}</div>`).join('')}
         </div>
         <div class="panel brief-side">
           <div class="lbl">AREA OF OPERATIONS</div>
@@ -879,7 +882,8 @@ export class App {
           <div class="tile"><div class="tile-v">${DIFFICULTY[r.difficulty].label}</div><div class="tile-k">Difficulty</div></div>
           <div class="tile"><div class="tile-v">${st.shotsFired ? Math.round((st.shotsHit / st.shotsFired) * 100) : 0}%</div><div class="tile-k">Career accuracy</div></div>
         </div>
-        <div class="panel debrief"><div class="lbl">DEBRIEF</div>${(m.outro ?? []).map((l) => `<div class="bl"><b>${escapeHtml(SPEAKER[l.who] ?? l.who)}</b><span>${escapeHtml(l.text)}</span></div>`).join('')}</div>
+        <div class="panel debrief"><div class="lbl">DEBRIEF</div>${(m.outro ?? []).map((l) => `<div class="bl"><b>${escapeHtml(SPEAKER[l.who] ?? l.who)}</b><span>${escapeHtml(l.text)}</span></div>`).join('')}
+          ${next ? `<div class="res-next"><span class="lbl">NEXT · MISSION ${r.index + 2}: ${escapeHtml(next.title.toUpperCase())}</span><p>${escapeHtml(next.summary)}</p></div>` : ''}</div>
         ${m.finale ? `<div class="credits"><div class="lbl">FIELD OF HONOR: US ARMY SPECIAL FORCES</div><p>Thank you for playing. Task Force ORION will return.</p><p class="muted">${Object.values(CHARACTERS).map((c) => `${escapeHtml(c.name)} — ${escapeHtml(c.role)}`).join('<br>')}</p></div>` : ''}
         <div class="row-btns center">
           ${next ? '<button class="btn primary" id="r-next">NEXT MISSION ▸</button>' : ''}

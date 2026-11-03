@@ -18,6 +18,7 @@ import { Audio } from '../core/Audio.js';
 
 /** What kind of action an objective is, from its flags and wording. */
 export function actionKind(o) {
+  if (o.act) return o.act;
   const l = (o.label ?? '').toLowerCase();
   if (o.door || /pick the lock|lockpick|unlock/.test(l)) return 'lockpick';
   if (o.vasko || /detain|arrest|cuff|apprehend/.test(l)) return 'detain';

@@ -1,6 +1,14 @@
 // FIELD OF HONOR: US ARMY SPECIAL FORCES — campaign script.
-// Task Force ORION hunts the MERIDIAN network after it steals HALCYON, the ground
-// key to an orbital kinetic-strike constellation.
+//
+// The story in one breath: HALCYON is a ring of US satellites that can drop steel
+// rods from orbit onto any target on Earth. To fire it you need three things: the
+// HALCYON KEY (a suitcase-sized control unit), the LAUNCH CODES (known only to the
+// engineer who built it, Dr. Lena Hart) and an UPLINK DISH that can reach the
+// satellites. The private army MERIDIAN steals the key; Task Force ORION takes the
+// other two pieces away from them one by one, then gets the key back.
+//
+// Every mission has: summary (one line, menu), recap ("the story so far"), goal
+// ("your job"), briefing (radio lines), and an outro that leads into the next one.
 //
 // Units: [x, z] or [x, y, z] map positions; groups spawn at mission start unless
 // spawnOn is set to an objective id (spawned when that objective begins).
@@ -11,18 +19,18 @@ export const CHARACTERS = {
   HATCH: { name: 'Sgt. Dmitri "Hatch" Sorokin', role: 'Breacher, demolitions' },
   TEX: { name: 'Cpl. Jonah "Tex" Hale', role: 'Marksman, signals' },
   WATCHTOWER: { name: 'Col. Ade Okafor — "Watchtower"', role: 'Mission control' },
-  HART: { name: 'Dr. Lena Hart', role: 'HALCYON lead engineer' },
+  HART: { name: 'Dr. Lena Hart', role: 'Engineer who built HALCYON' },
   VASKO: { name: 'Anton Vasko', role: 'Founder of MERIDIAN' },
   KESSLER: { name: 'Kessler "The Butcher" Grau', role: 'MERIDIAN field commander' },
 };
 
 export const PROLOGUE = [
-  'Eleven days ago, a convoy left the Halden Orbital Research Facility under armed escort.',
-  'It carried HALCYON — the ground control key for a constellation of kinetic strike satellites.',
-  'The convoy never arrived. Forty-one soldiers and engineers were killed in under six minutes.',
-  'The attackers belong to MERIDIAN: a private army of ex-special forces, funded through shell companies on four continents.',
-  'Its founder, Anton Vasko, has never been photographed. He has promised the world "a new balance of power."',
-  'Task Force ORION has been activated. No flags. No press. No backup.',
+  'HALCYON is a ring of American satellites that can drop steel rods from orbit onto any target on Earth. No warning. No defence.',
+  'It only obeys one thing: the HALCYON KEY, a control unit the size of a suitcase. With the launch codes and a big enough dish, whoever holds it can strike any city.',
+  'Eleven days ago, the convoy carrying the key was ambushed. Forty-one soldiers and engineers died. The key vanished, and so did the engineer who built it, Dr. Lena Hart.',
+  'The attackers were MERIDIAN: a private army of former special forces, run by a man named Anton Vasko who wants to sell HALCYON\'s power to the highest bidder.',
+  'Task Force ORION has been activated: four US Army Special Forces operators who officially do not exist. Find the key. Stop MERIDIAN. Bring Vasko in.',
+  'You are Sergeant Elias "Wraith" Cole.',
   'FIELD OF HONOR: US ARMY SPECIAL FORCES.',
 ];
 
@@ -41,7 +49,9 @@ export const MISSIONS = [
   {
     id: 'm1', title: 'Black Water', map: 'harbor', lighting: 'night', weather: 'rain',
     location: 'PORT KAVAL — BLACK SEA COAST', time: 'DAY 1 — 02:14 LOCAL',
-    summary: 'Solo infiltration. Scale the warehouses, take the rooftops, steal the shipping manifest and tag the HALCYON container.',
+    summary: 'Find the stolen HALCYON key. Sneak into the harbor alone, steal the shipping records and put a tracker on the container carrying it.',
+    recap: 'MERIDIAN stole the HALCYON key eleven days ago. Tonight they are smuggling something heavy through the harbor at Port Kaval.',
+    goal: 'Go in alone and unseen. Find out which container holds the key, and tag it with a tracker so we can follow it.',
     loadout: { primary: 'wasp', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { wasp: { muzzle: 'suppressor', optic: 'reflex' }, p11: { muzzle: 'suppressor' } } },
     loadoutNote: 'Spy kit: rappel rope (T at a roof edge). A suppressed SR-7 is cached on the west warehouse roof.',
     start: { pos: [-64, 10], yaw: -0.6 },
@@ -60,7 +70,8 @@ export const MISSIONS = [
       }
     },
     briefing: [
-      { who: 'WATCHTOWER', text: 'Wraith, Watchtower. MERIDIAN is moving something heavy through Port Kaval tonight. We need to know what, and where it goes.' },
+      { who: 'WATCHTOWER', text: 'Wraith, Watchtower. MERIDIAN is moving something heavy through Port Kaval tonight. We think it is the HALCYON key.' },
+      { who: 'WATCHTOWER', text: 'The harbor office has the shipping records. They will tell us which container it is in. Then you tag that container so we can follow it.' },
       { who: 'WATCHTOWER', text: 'You go in alone. No squad, no air, no flag. If you are caught, ORION was never here.' },
       { who: 'REYES', text: 'I\'ll be on the boat with eyes on your feed. Stay off the ground. Rooftops are yours.' },
     ],
@@ -109,23 +120,25 @@ export const MISSIONS = [
       { type: 'extract', text: 'Reach the boat at the west quay', target: [-62, 38], radius: 6 },
     ],
     outro: [
-      { who: 'WATCHTOWER', text: 'The tracker went dark six hours later — somewhere over the Al-Rashid basin.' },
-      { who: 'REYES', text: 'They flew it inland. Which means they need someone who knows how to use it.' },
+      { who: 'WATCHTOWER', text: 'K-77 was flown inland to a MERIDIAN outpost in the Al-Rashid desert. Satellite photos show Dr. Lena Hart there, alive, under guard.' },
+      { who: 'REYES', text: 'The key is useless without her launch codes. If we get Hart back, they can never fire it. We go in at first light.' },
     ],
   },
   // ------------------------------------------------------------------ 2
   {
     id: 'm2', title: 'Dust Devil', map: 'desert', lighting: 'desert', weather: 'dust',
     location: 'AL-RASHID BASIN', time: 'DAY 3 — 14:40 LOCAL',
-    summary: 'Storm a fortified MERIDIAN outpost and rescue HALCYON\'s lead engineer, Dr. Lena Hart.',
+    summary: 'Rescue Dr. Lena Hart, the engineer who knows the launch codes, from a fortified MERIDIAN outpost in the desert.',
+    recap: 'The tracker led to a MERIDIAN outpost in the Al-Rashid desert. Dr. Lena Hart, who built HALCYON and knows its launch codes, is held there.',
+    goal: 'Fly in with the squad, storm the compound, cut Hart free and hold out until the helicopter can take her home.',
     loadout: { primary: 'vx4', secondary: 'p11', lethal: 'frag', tactical: 'smoke', attachments: { vx4: { optic: 'holo', underbarrel: 'vgrip' } } },
     start: { pos: [-60, -62], yaw: Math.PI },
     squad: SQUAD_FULL,
     insertion: { lz: [-60, -63], from: [-0.4, -1], hover: 13,
       lines: { approach: { who: 'PILOT', text: 'Thirty seconds! Compound is hot, expect fire from the towers!' }, ropes: { who: 'REYES', text: 'Ropes! Go, go, go!' } } },
     briefing: [
-      { who: 'WATCHTOWER', text: 'Satellite confirms Dr. Lena Hart — HALCYON\'s lead engineer — is held at a MERIDIAN outpost in the basin.' },
-      { who: 'WATCHTOWER', text: 'Without her, the key is useless to them. With her, they can fire it. Get her out.' },
+      { who: 'WATCHTOWER', text: 'Dr. Lena Hart built HALCYON. She is the only person alive who knows its launch codes, and MERIDIAN is holding her at this outpost.' },
+      { who: 'WATCHTOWER', text: 'Without her the stolen key is a box of wires. With her, they can fire it. Get her out.' },
       { who: 'TEX', text: 'Two towers on the south wall. I\'ll call them out, but you\'ll want to keep your head down on the approach.' },
     ],
     groups: {
@@ -149,7 +162,7 @@ export const MISSIONS = [
       ] },
       { type: 'interact', text: 'Rescue Dr. Hart inside the HQ', target: [-4, 0, 5], label: 'cut Dr. Hart free', duration: 3,
         say: [{ who: 'TEX', text: 'Thermal shows a body in the HQ, ground floor. More hostiles upstairs.' }],
-        doneSay: [{ who: 'HART', text: 'You\'re... American? Listen to me — Vasko doesn\'t need me anymore. He copied everything.' }, { who: 'REYES', text: 'Tell us on the helo, Doctor.' }] },
+        doneSay: [{ who: 'HART', text: 'You\'re American? Thank God. Listen: Vasko is selling a strike. One shot, to a buyer, as a demonstration.' }, { who: 'REYES', text: 'Tell us on the helo, Doctor. Now we hold.' }] },
       { type: 'cutscene', shots: [
         { from: [2, 12, 18], to: [0, 10, 26], look: [0, 1, 58], dur: 3.5, spawn: ['reinf1'],
           say: [{ who: 'WATCHTOWER', text: 'Technicals inbound from the north road. Your bird is four minutes out. Dig in.' }] },
@@ -160,15 +173,17 @@ export const MISSIONS = [
         say: [{ who: 'REYES', text: 'Bird\'s down on the west side! Go!' }] },
     ],
     outro: [
-      { who: 'HART', text: 'There\'s a buyer. A meeting in Vel Harat. Vasko is selling a demonstration — one strike, anywhere.' },
-      { who: 'REYES', text: 'Then we crash the meeting.' },
+      { who: 'HART', text: 'The buyer is meeting MERIDIAN in Vel Harat. Vasko will show him the key and take the money there.' },
+      { who: 'REYES', text: 'Then that is where we go. If we break up the sale, nobody gets their demonstration.' },
     ],
   },
   // ------------------------------------------------------------------ 3
   {
     id: 'm3', title: 'Concrete Jungle', map: 'downtown', lighting: 'overcast', weather: 'ash',
     location: 'VEL HARAT — FINANCIAL DISTRICT', time: 'DAY 4 — 07:05 LOCAL',
-    summary: 'Push through a war-torn city, destroy two AA batteries and hold the plaza for extraction.',
+    summary: 'MERIDIAN has taken the city of Vel Harat to protect the sale. Blow up their two anti-aircraft guns so our gunships can get in.',
+    recap: 'Hart told us MERIDIAN is selling a HALCYON strike to a buyer in the city of Vel Harat. MERIDIAN has taken the city to protect the deal.',
+    goal: 'Their anti-aircraft guns keep our helicopters out. Destroy both guns, then hold the central plaza until the gunships arrive.',
     loadout: { primary: 'rk74', secondary: 'raptor', lethal: 'semtex', tactical: 'flash', attachments: { rk74: { optic: 'reflex', muzzle: 'compensator' } } },
     start: { pos: [-58, 2], yaw: -Math.PI / 2 },
     squad: SQUAD_FULL,
@@ -176,8 +191,8 @@ export const MISSIONS = [
       lines: { approach: { who: 'PILOT', text: 'Coming in low over the avenue. AA is still up, so this is a quick drop!' }, ropes: { who: 'HATCH', text: 'Ropes out! Move it, Wraith!' } } },
     smoke: [[-30, -3], [20, -3.5], [-44, 3], [-3, 24]],
     briefing: [
-      { who: 'WATCHTOWER', text: 'The buyer never showed. Instead MERIDIAN turned Vel Harat into a fortress. Two AA batteries are keeping our air cover out.' },
-      { who: 'WATCHTOWER', text: 'Knock them out and we can bring in the gunships. Then hold the central plaza for pickup.' },
+      { who: 'WATCHTOWER', text: 'MERIDIAN has locked down Vel Harat for the sale. Two anti-aircraft guns cover the city, so our helicopters cannot get close.' },
+      { who: 'WATCHTOWER', text: 'Plant charges on both guns. Then the gunships can come in, and you hold the central plaza for pickup.' },
       { who: 'HATCH', text: 'Charges are prepped. Get me to the guns and I\'ll do the rest. Actually — you do the rest. I\'ll watch.' },
     ],
     groups: {
@@ -207,15 +222,17 @@ export const MISSIONS = [
       { type: 'extract', text: 'Reach the extraction point north', target: [0, 54], radius: 6 },
     ],
     outro: [
-      { who: 'TEX', text: 'Pulled a phone off one of their officers. Encrypted traffic to a relay in the Korvask mountains.' },
-      { who: 'WATCHTOWER', text: 'An old early-warning radar. Perfect for an uplink. That\'s where they\'ll talk to the satellites.' },
+      { who: 'TEX', text: 'The buyer got away, but I took a phone off one of their officers. It talks to Radar Station 9, up in the Korvask mountains.' },
+      { who: 'WATCHTOWER', text: 'The key needs a big dish to reach the satellites. That old radar is their dish. Take it away from them and the key cannot fire.' },
     ],
   },
   // ------------------------------------------------------------------ 4
   {
     id: 'm4', title: 'White Silence', map: 'snowfall', lighting: 'snow', weather: 'snow',
     location: 'KORVASK MOUNTAINS — RADAR STATION 9', time: 'DAY 6 — 05:50 LOCAL',
-    summary: 'Overwatch from the ridge, slip into a mountain radar station, splice its uplink from the rooftop and take down the enforcer "Rook".',
+    summary: 'Take MERIDIAN\'s satellite dish away from them. Snipe from the ridge, sneak into the mountain radar station, tap its dish and kill the enforcer Rook.',
+    recap: 'A captured phone showed that MERIDIAN will fire HALCYON through the big dish at Radar Station 9 in the Korvask mountains.',
+    goal: 'Sneak in, splice our own line into the dish on the roof so they lose it and we can trace who is using it, then deal with their enforcer, Rook.',
     loadout: { primary: 'longbow', secondary: 'wasp', lethal: 'c4', tactical: 'smoke', attachments: { longbow: { muzzle: 'suppressor' }, wasp: { muzzle: 'suppressor' } } },
     loadoutNote: 'Secondary: MP-9 Wasp (suppressed). Spy kit: rappel rope (T at a roof edge).',
     start: { pos: [-45, 6.7, -61.5], yaw: -0.95 },
@@ -231,7 +248,8 @@ export const MISSIONS = [
       b.rock(-41, -56, 1.2, 'rock', false); b.rock(-49.5, -64, 1.4, 'rock', false);
     },
     briefing: [
-      { who: 'WATCHTOWER', text: 'Radar Station 9 is pushing an uplink handshake every forty minutes. Somebody is talking to HALCYON\'s birds.' },
+      { who: 'WATCHTOWER', text: 'Every forty minutes, the dish at Radar Station 9 calls up to HALCYON\'s satellites. MERIDIAN is testing it for the launch.' },
+      { who: 'WATCHTOWER', text: 'Splice into it and the dish is ours. And whoever is on the other end of that line, we will see them.' },
       { who: 'TEX', text: 'I\'m on the far ridge with a spotter scope. You\'re the gun, Wraith. Whiteout\'s our friend: they can\'t see far, but neither can we.' },
       { who: 'WATCHTOWER', text: 'MERIDIAN enforcer "Rook" is on site. Heavy armor. Do not engage him on the ground.' },
     ],
@@ -261,7 +279,7 @@ export const MISSIONS = [
       { type: 'goto', text: 'Get onto the radar building roof', target: [20, 6.6, 21], radius: 5, minY: 5.8,
         say: [{ who: 'TEX', text: 'Stairs inside go up to the roof. Two inside. Take them quietly.' }] },
       { type: 'interact', text: 'Splice into the uplink antenna', target: [19.3, 6.6, 22.1], label: 'splice the uplink antenna', duration: 5,
-        doneSay: [{ who: 'WATCHTOWER', text: 'Uplink is ours. Wait — heavy signature leaving the hangar. That\'s Rook.' }],
+        doneSay: [{ who: 'WATCHTOWER', text: 'We have the dish. Tracing the line now... Wait. Heavy signature leaving the hangar. That is Rook.' }],
         onComplete: ['alarm'] },
       { type: 'cutscene', shots: [
         { from: [-12, 2.2, -6], to: [-14, 2.6, -4], look: [-22, 1.8, 12], dur: 3.5, spawn: ['rook'],
@@ -274,21 +292,23 @@ export const MISSIONS = [
         say: [{ who: 'TEX', text: 'Rook is down. Let\'s not be here when his friends arrive.' }] },
     ],
     outro: [
-      { who: 'TEX', text: 'Rook had a keycard. Blacksite access. Sub-level six.' },
-      { who: 'WATCHTOWER', text: 'That facility doesn\'t exist. Officially. Which is exactly where you\'d hide a weapon.' },
+      { who: 'WATCHTOWER', text: 'The line from the dish runs to Facility 6: a secret lab sixty metres underground. That is where MERIDIAN\'s engineers are working on the key.' },
+      { who: 'TEX', text: 'And Rook was carrying a keycard for it. Somebody on the inside has been helping them.' },
     ],
   },
   // ------------------------------------------------------------------ 5
   {
     id: 'm5', title: 'Deep Cover', map: 'blacksite', lighting: 'indoor', weather: 'none',
     location: 'FACILITY 6 — 60 METRES BELOW GROUND', time: 'DAY 7 — 23:30 LOCAL',
-    summary: 'Infiltrate an underground research facility, hack its servers and recover the HALCYON source drive.',
+    summary: 'Get into Facility 6, the secret lab working on the key. Hack its servers to find MERIDIAN\'s inside helper, and take their copy of the launch codes.',
+    recap: 'The dish led us to Facility 6, an underground lab where MERIDIAN works on the key. Rook\'s keycard opens it. Someone on the inside is helping them.',
+    goal: 'Hack the server room to find out who the inside helper is, pull the drive with MERIDIAN\'s copy of the launch codes, and get out by the lift.',
     loadout: { primary: 'viper', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { viper: { optic: 'holo', underbarrel: 'laser' } } },
     start: { pos: [-39.5, 0], yaw: -Math.PI / 2 },
     squad: SQUAD_RH,
     briefing: [
-      { who: 'WATCHTOWER', text: 'Rook\'s keycard opens Facility 6. Hart says the HALCYON source was copied there for MERIDIAN\'s engineers.' },
-      { who: 'HART', text: 'The server room logs every access. If someone helped Vasko from inside the program, it\'ll be in there.' },
+      { who: 'WATCHTOWER', text: 'Rook\'s keycard opens Facility 6. MERIDIAN has a copy of the launch codes down there, on a drive in the lab.' },
+      { who: 'HART', text: '(from the safe house) The server room records everyone who touched HALCYON. If someone inside helped Vasko, their name will be there.' },
       { who: 'REYES', text: 'Tight corridors. Flashbangs before every door. Let\'s go.' },
     ],
     groups: {
@@ -304,8 +324,8 @@ export const MISSIONS = [
       { type: 'goto', text: 'Breach the server room', target: [-27, 11], radius: 5 },
       { type: 'interact', text: 'Hack the server cluster', target: [-27, 0, 26], label: 'hack the server cluster', duration: 6,
         say: [{ who: 'REYES', text: 'Wraith, get on that terminal. We\'ve got your back.' }],
-        doneSay: [{ who: 'WATCHTOWER', text: 'Logs coming through... Access credentials for the HALCYON transfer belong to... Dr. Lena Hart.' }, { who: 'REYES', text: 'She played us. Secure that drive before she wipes it.' }] },
-      { type: 'interact', text: 'Secure the HALCYON source drive in the lab', target: [27, 0, 30], label: 'pull the source drive', duration: 3,
+        doneSay: [{ who: 'WATCHTOWER', text: 'Logs coming through... The person who handed MERIDIAN the key was... Dr. Lena Hart. Her kidnapping was staged.' }, { who: 'REYES', text: 'She has been working with Vasko all along. Grab that drive before she wipes it.' }] },
+      { type: 'interact', text: 'Pull the drive with the launch codes in the lab', target: [27, 0, 30], label: 'pull the launch-code drive', duration: 3,
         say: [{ who: 'HATCH', text: 'Lab\'s across the atrium. It\'s going to be loud.' }] },
       { type: 'interact', text: 'Override the lift lock in the control room', target: [27, 0, -28], label: 'override the lift lock', duration: 4 },
       { type: 'defend', text: 'Hold the control room while the lift arrives', target: [27, -26], radius: 11, time: 60, waves: [{ at: 25, spawn: 'wave2' }],
@@ -313,24 +333,26 @@ export const MISSIONS = [
       { type: 'extract', text: 'Reach the east service lift', target: [37, 0], radius: 4 },
     ],
     outro: [
-      { who: 'WATCHTOWER', text: 'Hart is gone. She walked out of our safehouse two hours ago with a MERIDIAN escort.' },
-      { who: 'REYES', text: 'Then she\'s going to fire it. And we just gave her a head start.' },
+      { who: 'WATCHTOWER', text: 'Hart is gone. A MERIDIAN team broke her out of our safe house an hour ago. Her convoy is racing south across the Al-Rashid desert.' },
+      { who: 'REYES', text: 'She still knows the codes, and she is going back to the key. We chase her tonight.' },
     ],
   },
   // ------------------------------------------------------------------ 6
   {
     id: 'm6', title: 'Broken Arrow', map: 'desert', lighting: 'night', weather: 'dust',
     location: 'AL-RASHID BASIN — CRASH SITE', time: 'DAY 8 — 03:12 LOCAL',
-    summary: 'Your helicopter is down. Reach Captain Reyes at the wreck and survive until dawn.',
+    summary: 'Shot down chasing Hart across the desert. Pull Captain Reyes out of the wreck and survive until the rescue helicopter comes at dawn.',
+    recap: 'Hart was the traitor all along, and she escaped. Chasing her convoy across the desert at night, our helicopter Raven 2-1 was hit by a missile.',
+    goal: 'Get Captain Reyes out of the wreck, then hold the crash site against MERIDIAN until the rescue helicopter arrives at dawn.',
     loadout: { primary: 'juggernaut', secondary: 'raptor', lethal: 'frag', tactical: 'stim', attachments: { juggernaut: { optic: 'holo' } } },
     start: { pos: [-34, -64], yaw: Math.PI * 0.8 },
     squad: [{ name: 'Hatch', weapon: 'breaker' }],
     crash: [-50, -46],
     smoke: [[-50, -46]],
     briefing: [
-      { who: 'WATCHTOWER', text: 'Raven Two-One is down. I say again, Raven Two-One is down. ORION, report.' },
+      { who: 'WATCHTOWER', text: 'Raven Two-One is down. A missile from Hart\'s convoy. I say again, Raven Two-One is down. ORION, report.' },
       { who: 'HATCH', text: 'Wraith... you alive? Reyes is still in the wreck. We have to get her out.' },
-      { who: 'WATCHTOWER', text: 'Every MERIDIAN unit in the basin saw that fireball. Dawn rescue in ten minutes. Hold on.' },
+      { who: 'WATCHTOWER', text: 'Every MERIDIAN unit in the desert saw that fireball. The rescue bird can only reach you at dawn. Hold on until then.' },
     ],
     groups: {
       scouts: { units: [{ pos: [-44, -40] }, { pos: [-52, -34], weapon: 'wasp' }, { pos: [-60, -42] }] },
@@ -355,8 +377,8 @@ export const MISSIONS = [
     ],
     lightingAfter: 'dawn',
     outro: [
-      { who: 'WATCHTOWER', text: 'MERIDIAN is moving the HALCYON core by sea. Same port. Same ship. Back where it started.' },
-      { who: 'REYES', text: 'Kessler will be guarding it. He\'s mine.' },
+      { who: 'WATCHTOWER', text: 'Hart\'s convoy made it to Port Kaval. They are loading the HALCYON key onto a cargo ship, the Meridian Star, to get it out of the country.' },
+      { who: 'REYES', text: 'Kessler, their field commander, will be guarding it. He\'s mine.' },
       { who: 'HATCH', text: 'Captain, you can barely walk.' },
       { who: 'REYES', text: 'Then he\'s Wraith\'s.' },
     ],
@@ -365,7 +387,9 @@ export const MISSIONS = [
   {
     id: 'm7', title: 'Iron Tide', map: 'harbor', lighting: 'dusk', weather: 'none',
     location: 'PORT KAVAL — BERTH TWO', time: 'DAY 9 — 19:20 LOCAL',
-    summary: 'Fight through the container terminal, kill MERIDIAN commander Kessler and seize the HALCYON core.',
+    summary: 'The key is being loaded onto a ship. Fight through the docks, kill MERIDIAN\'s commander Kessler and take the HALCYON key back.',
+    recap: 'Hart reached the harbor at Port Kaval. MERIDIAN is loading the HALCYON key onto the cargo ship Meridian Star, guarded by their commander, Kessler.',
+    goal: 'Fight through the container yard before the ship sails, kill Kessler on the quay and take the key back.',
     loadout: { primary: 'hx30', secondary: 'raptor', lethal: 'frag', tactical: 'flash', attachments: { hx30: { optic: 'acog', underbarrel: 'vgrip' } } },
     start: { pos: [-64, -12], yaw: -Math.PI / 2 },
     squad: [{ name: 'Hatch', weapon: 'juggernaut' }, { name: 'Tex', weapon: 'specter' }],
@@ -373,8 +397,8 @@ export const MISSIONS = [
       lines: { approach: { who: 'PILOT', text: 'Port Kaval in thirty. Last ride, gentlemen.' }, ropes: { who: 'HATCH', text: 'Ropes out! Let\'s finish this!' } } },
     smoke: [[-6, 30], [40, 30]],
     briefing: [
-      { who: 'WATCHTOWER', text: 'The cargo ship *Meridian Star* sails in forty minutes with the HALCYON core aboard.' },
-      { who: 'WATCHTOWER', text: 'Kessler Grau — "The Butcher" — commands the dock. Kill him, take the core, end this.' },
+      { who: 'WATCHTOWER', text: 'The cargo ship Meridian Star sails in forty minutes, and the HALCYON key is in a crate on the quay beside it.' },
+      { who: 'WATCHTOWER', text: 'Kessler Grau, "The Butcher", commands the dock. Kill him, take the key, end this.' },
       { who: 'TEX', text: 'I\'ll set up on the office roof. You two go through the yard.' },
     ],
     groups: {
@@ -399,26 +423,28 @@ export const MISSIONS = [
       ] },
       { type: 'boss', text: 'Kill Kessler Grau', group: 'quay', bossName: 'KESSLER "THE BUTCHER" GRAU', waves: [{ at: 20, spawn: 'wave2' }],
         say: [{ who: 'KESSLER', text: 'ORION! I buried better soldiers than you in that desert. Come and get your box.' }] },
-      { type: 'interact', text: 'Secure the HALCYON core', target: [24, 0, 38], label: 'secure the HALCYON core', duration: 4,
-        doneSay: [{ who: 'WATCHTOWER', text: '...Wraith, the core is a decoy. Lead-lined, no electronics. Hart already has the real one.' }, { who: 'REYES', text: 'Where?' }, { who: 'WATCHTOWER', text: 'Facility 6. She never left it. Vasko is there too. The uplink goes live in under ten minutes.' }] },
+      { type: 'interact', text: 'Take the HALCYON key from its crate', target: [24, 0, 38], label: 'take the HALCYON key', act: 'core', duration: 4,
+        doneSay: [{ who: 'WATCHTOWER', text: 'Wraith... that is a fake. Lead weights, no electronics. The ship was bait to pull us away.' }, { who: 'REYES', text: 'Then where is the real key?' }, { who: 'WATCHTOWER', text: 'Under Facility 6. A sealed launch vault, three floors below the labs you raided, with its own dish. Hart and Vasko are there. They fire in ten minutes.' }] },
       { type: 'extract', text: 'Get to the boat at the west pier', target: [-62, 36], radius: 6 },
     ],
     outro: [
-      { who: 'REYES', text: 'Everyone we have. Everything we have. We go back down tonight.' },
+      { who: 'REYES', text: 'Everyone we have. Everything we have. We go back down into Facility 6 tonight, all the way to the bottom.' },
     ],
   },
   // ------------------------------------------------------------------ 8
   {
     id: 'm8', title: 'Zero Hour', map: 'blacksite', lighting: 'indoor', weather: 'none',
-    location: 'FACILITY 6 — HALCYON UPLINK CORE', time: 'DAY 9 — 23:51 LOCAL',
-    summary: 'Final assault. Shut down three uplink terminals before HALCYON fires, defeat Vasko\'s guardian and capture Anton Vasko.',
+    location: 'FACILITY 6 — LAUNCH VAULT, SUB-LEVEL NINE', time: 'DAY 9 — 23:51 LOCAL',
+    summary: 'HALCYON fires in ten minutes. Shut down the three terminals that talk to the satellites, defeat Vasko\'s guardian and arrest Vasko himself.',
+    recap: 'The key on the ship was a fake. The real one is in a sealed launch vault under Facility 6, where Hart and Vasko are about to fire HALCYON.',
+    goal: 'Before the countdown hits zero, shut down the three terminals that send the launch order. Then defeat Goliath and arrest Anton Vasko.',
     loadout: { primary: 'vx4', secondary: 'raptor', lethal: 'semtex', tactical: 'flash', attachments: { vx4: { optic: 'acog', muzzle: 'compensator', underbarrel: 'vgrip', magazine: 'extended' } } },
     start: { pos: [-39.5, 0], yaw: -Math.PI / 2 },
     squad: SQUAD_FULL,
     timer: 600,
     timerText: 'HALCYON LAUNCH',
     briefing: [
-      { who: 'WATCHTOWER', text: 'HALCYON is spinning up. Three uplink terminals — servers, lab, control. Kill all three and the birds go deaf.' },
+      { who: 'WATCHTOWER', text: 'HALCYON is warming up. The launch order goes up through three terminals: in the servers, the lab and the control room. Shut down all three and the satellites never hear it.' },
       { who: 'VASKO', text: '(intercepted) You are late, Captain. In ten minutes the world will learn what balance really means.' },
       { who: 'REYES', text: 'Ten minutes is plenty. ORION — this is it. We go now.' },
     ],
@@ -438,7 +464,7 @@ export const MISSIONS = [
       { type: 'interact', text: 'Kill uplink terminal B (lab)', target: [27, 0, 30], label: 'shut down terminal B', duration: 4,
         doneSay: [{ who: 'HART', text: '(over PA) You don\'t understand what you\'re stopping! Nobody would ever start a war again!' }] },
       { type: 'interact', text: 'Kill uplink terminal C (control)', target: [27, 0, -28], label: 'shut down terminal C', duration: 4,
-        doneSay: [{ who: 'WATCHTOWER', text: 'HALCYON is deaf. It\'s over... wait. Massive heat signature in the containment wing.' }, { who: 'VASKO', text: 'Goliath. Show them.' }] },
+        doneSay: [{ who: 'WATCHTOWER', text: 'All three terminals are down. The satellites cannot hear them. Wait... massive heat signature in the containment wing.' }, { who: 'VASKO', text: 'Goliath. Show them.' }] },
       { type: 'cutscene', shots: [
         { from: [0, 2.6, 12], to: [0, 2.4, 15], look: [0, 1.8, 28], dur: 3.5, spawn: ['goliath'],
           say: [{ who: 'WATCHTOWER', text: 'Massive heat signature in the vault. Vasko kept his guardian on a leash. It just came off.' }] },
@@ -450,16 +476,18 @@ export const MISSIONS = [
         doneSay: [{ who: 'VASKO', text: 'You think this ends with me? Balance always returns, Sergeant.' }, { who: 'REYES', text: 'Not today. Watchtower — mission complete. Package secured.' }] },
     ],
     outro: [
-      { who: 'WATCHTOWER', text: 'HALCYON\'s constellation was de-orbited over the Pacific at 0400. Anton Vasko awaits trial at a location that does not exist.' },
-      { who: 'WATCHTOWER', text: 'Dr. Lena Hart was not on the base. She crossed into Vel Harat the same night, with what is left of MERIDIAN.' },
-      { who: 'REYES', text: 'Then we go and get her. Quietly.' },
+      { who: 'WATCHTOWER', text: 'The HALCYON satellites were steered safely into the Pacific at 0400. The key is in our hands. Anton Vasko is in custody.' },
+      { who: 'WATCHTOWER', text: 'But Dr. Lena Hart got out through a service tunnel, with a laptop holding the last copy of the launch codes. Three weeks later, we found her.' },
+      { who: 'REYES', text: 'She is hiding in Vel Harat, with what is left of MERIDIAN. Then we go and get her. Quietly.' },
     ],
   },
   // ------------------------------------------------------------------ 9
   {
     id: 'm9', title: 'Quiet Hours', map: 'downtown', lighting: 'night', weather: 'none',
     location: 'VEL HARAT — OLD QUARTER', time: 'DAY 31 — 03:40 LOCAL',
-    summary: 'Night raid on a MERIDIAN safehouse. Move quietly, stack on the door, pick the lock and clear it room by room. Free the hostages and bring Dr. Hart out — without waking the street.',
+    summary: 'Capture Dr. Hart, the last person who could ever rebuild HALCYON, in a quiet night raid on her hideout. Save the hostages she is hiding behind.',
+    recap: 'Vasko is in custody and the satellites are gone. Only Dr. Hart is left, with the last copy of the launch codes, hiding in a Vel Harat apartment block.',
+    goal: 'Raid her hideout without making a sound: stack on the door, pick the lock, clear it room by room, free the hostages and arrest Hart.',
     loadout: { primary: 'viper', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { viper: { muzzle: 'suppressor', optic: 'holo', underbarrel: 'laser' }, p11: { muzzle: 'suppressor' } } },
     loadoutNote: 'Quiet kit: suppressed K-45 Viper and P-11, lock picks, flashbangs for the rooms. The squad carries suppressed weapons too.',
     kitHint: 'Crouch to move quietly  ·  V from behind: silent takedown  ·  Y: squad radio  ·  hold E: pick the lock, cut ties, cuff',
@@ -508,7 +536,7 @@ export const MISSIONS = [
       b.patrol('safehouse', [[6, 11.2], [22, 11.2]]);
     },
     briefing: [
-      { who: 'WATCHTOWER', text: 'Dr. Lena Hart is in a MERIDIAN safehouse in Vel Harat\'s old quarter. Ground floor of the brick block on the north-east corner.' },
+      { who: 'WATCHTOWER', text: 'Dr. Lena Hart is hiding on the ground floor of the brick block on the north-east corner. Her laptop has the last copy of the launch codes.' },
       { who: 'WATCHTOWER', text: 'They are holding the building\'s tenants as a shield. If they hear you coming, the hostages die.' },
       { who: 'REYES', text: 'Suppressed weapons, lock picks, hand signals. We clear it room by room and nobody on that street wakes up.' },
     ],
@@ -546,7 +574,7 @@ export const MISSIONS = [
         say: [{ who: 'WATCHTOWER', text: 'Street is still asleep. Clean work, ORION. Bring them home.' }] },
     ],
     outro: [
-      { who: 'WATCHTOWER', text: 'Dr. Lena Hart is in custody. The last copy of the HALCYON source was on her laptop. It no longer exists.' },
+      { who: 'WATCHTOWER', text: 'Dr. Lena Hart is in custody. The last copy of the launch codes was on her laptop. It no longer exists. HALCYON is finished.' },
       { who: 'WATCHTOWER', text: 'Eleven tenants walked out of that building at dawn. None of them will ever know who you were.' },
       { who: 'REYES', text: 'Task Force ORION was never activated. None of this happened. Good work, Wraith.' },
     ],
