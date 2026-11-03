@@ -445,3 +445,7 @@ body.nvg #nvg-overlay { display: block; }
   .main, .camp, .brief, .mp, .armory, .smith, .pause { grid-template-columns: 1fr; }
   .vitals { left: 22px; bottom: 232px; }
 }
+
+/* Weapon laser tag in the weapon panel */
+.laser-tag { opacity: 0.75; }
+.laser-tag.on { color: #ff5a4a; opacity: 1; text-shadow: 0 0 8px rgba(255, 60, 40, 0.6); }

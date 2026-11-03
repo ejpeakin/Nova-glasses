@@ -30,6 +30,7 @@ const DEFAULTS = {
   campaign: { unlocked: 1, completed: {}, bestTimes: {}, seenIntro: false },
   loadout: { primary: 'vx4', secondary: 'p11', lethal: 'frag', tactical: 'flash' },
   attachments: {}, // weaponId -> { optic, muzzle, barrel, underbarrel, magazine, stock }
+  laser: {}, // weaponId -> laser module on at the start of a match
 };
 
 function clone(o) { return JSON.parse(JSON.stringify(o)); }

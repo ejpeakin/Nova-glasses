@@ -57,7 +57,7 @@ export class HUD {
       <div class="weapon-panel">
         <div class="wp-name" id="h-wname"></div>
         <div class="wp-ammo"><span id="h-mag">30</span><small id="h-res">/ 180</small></div>
-        <div class="wp-meta"><span id="h-mode-fire"></span><span class="eq" id="h-lethal"></span><span class="eq" id="h-tactical"></span></div>
+        <div class="wp-meta"><span id="h-mode-fire"></span><span class="eq" id="h-lethal"></span><span class="eq" id="h-tactical"></span><span class="eq laser-tag" id="h-laser" hidden></span></div>
         <div class="wp-reload" id="h-reload"></div>
       </div>
       <div class="death-card" id="h-death" hidden><div class="dc-title"></div><div class="dc-sub"></div><div class="dc-timer"></div></div>
@@ -321,6 +321,15 @@ export class HUD {
     const L = w.lethal, T = w.tactical;
     this.el.lethal.textContent = `[G] ${EQUIPMENT[L.id].short} ×${L.count}`;
     this.el.tactical.textContent = `[Q] ${EQUIPMENT[T.id].short} ×${T.count}`;
+    // Laser module (SMGs and rifles): always shown so the option is easy to find.
+    const lz = (this._laserEl ??= this.root.querySelector('#h-laser'));
+    const capable = w.laserCapable?.();
+    lz.hidden = !capable;
+    if (capable) {
+      const on = w.laserOn;
+      const txt = `[L] LASER ${on ? 'ON' : 'OFF'}`;
+      if (lz._t !== txt) { lz.textContent = txt; lz._t = txt; lz.classList.toggle('on', on); }
+    }
     let rl = '';
     if (w.isReloading()) rl = 'RELOADING';
     else if (wi.ammo === 0 && wi.reserve === 0) rl = 'NO AMMO';

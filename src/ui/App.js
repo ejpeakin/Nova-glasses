@@ -524,6 +524,10 @@ export class App {
               return `<div class="slot"><div class="lbl">${SLOT_NAMES[slot].toUpperCase()}</div><div class="chips">${allowed.map((a) => `<button class="chip ${res[slot] === a ? 'on' : ''}" data-slot="${slot}" data-a="${a}" title="${escapeHtml(ATTACHMENTS[slot][a].desc)}">${ATTACHMENTS[slot][a].name}</button>`).join('')}</div>
               <div class="chip-desc">${escapeHtml(ATTACHMENTS[slot][res[slot]].desc || '—')}</div></div>`;
             }).join('')}
+            ${['ar', 'smg', 'marksman', 'sniper', 'lmg'].includes(w.class) ? `<div class="slot"><div class="lbl">LASER MODULE</div><div class="chips">
+              <button class="chip ${Store.data.laser?.[id] ? '' : 'on'}" data-laser="0">Off at start</button>
+              <button class="chip ${Store.data.laser?.[id] ? 'on' : ''}" data-laser="1">On at start</button></div>
+              <div class="chip-desc">Built into every SMG and rifle. Press L in a match to switch it on or off: a red beam from the muzzle and a dot where your shots land, with much tighter hip fire.</div></div>` : ''}
           </div>
           <div class="arm-right"><div class="preview-space"></div>
           <div class="panel smith-stats">
@@ -544,7 +548,12 @@ export class App {
       this._bindBack();
       this.ui.querySelector('[data-back]').addEventListener('click', () => this.show('armory', { focus: id, back: arg.back }), { once: true });
       this.menu?.showWeapon(id, att, this.ui.querySelector('.preview-space'));
-      for (const c of this.ui.querySelectorAll('.chip')) c.addEventListener('click', () => {
+      for (const c of this.ui.querySelectorAll('.chip[data-laser]')) c.addEventListener('click', () => {
+        (Store.data.laser ??= {})[id] = c.dataset.laser === '1';
+        Store.save();
+        render();
+      });
+      for (const c of this.ui.querySelectorAll('.chip[data-slot]')) c.addEventListener('click', () => {
         att[c.dataset.slot] = c.dataset.a;
         Store.save();
         render();

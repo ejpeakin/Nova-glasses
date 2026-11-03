@@ -38,7 +38,7 @@ Use a desktop browser (Chrome, Edge or Firefox) with a keyboard and mouse. Headp
 | Q | Tactical equipment |
 | V | Melee. From behind, or on an unaware enemy, a silent takedown |
 | B | Toggle fire mode |
-| L | Weapon laser on SMGs and rifles: a beam from the muzzle and a dot where your shots land. Hip fire is much tighter while it's on |
+| L | Weapon laser on SMGs and rifles: a beam from the muzzle and a dot where your shots land. Hip fire is much tighter while it's on. The weapon panel shows [L] LASER ON/OFF, and the Gunsmith's Laser module row sets whether it starts on |
 | F | Flashlight. With night vision down it becomes an IR illuminator that enemies can't see |
 | N | Night vision goggles (flip down / up) |
 | Tab | Scoreboard |

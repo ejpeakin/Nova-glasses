@@ -139,7 +139,7 @@ export class WeaponSystem {
     const att = resolveAttachments(id, chosenAtt ?? Store.getAttachments(id));
     const stats = computeStats(id, att);
     const model = buildWeaponModel(WEAPONS[id], att);
-    return { id, att, stats, model, ammo: stats.mag, reserve: stats.reserve, modeIndex: 0, mode: stats.modes[0] };
+    return { id, att, stats, model, ammo: stats.mag, reserve: stats.reserve, modeIndex: 0, mode: stats.modes[0], laser: !!Store.data.laser?.[id] };
   }
 
   /** Swap the active slot's weapon (e.g. picking up an enemy gun). */

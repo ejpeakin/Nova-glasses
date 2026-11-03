@@ -110,7 +110,12 @@ export class Game {
       this.laserDot.visible = false;
       this.scene.add(this.laserBeam, this.laserDot);
     }
-    if (this.night || this.mapId === 'blacksite') this.hud?.hint('F: flashlight   N: night vision', 6);
+    {
+      const tips = [];
+      if (this.night || this.mapId === 'blacksite') tips.push('F: flashlight   N: night vision');
+      if (this.weapons.slots.some((sl) => ['ar', 'smg', 'marksman', 'sniper', 'lmg'].includes(sl.stats.class))) tips.push('L: weapon laser');
+      if (tips.length) this.hud?.hint(tips.join('   ·   '), 6);
+    }
     Audio.setAmbience(mode.ambience ?? this.mapInfo.ambience);
     Audio.setAcoustics(this.world.indoor ? 'indoor' : this.mapId);
     this.smokeColumns = mode.smokeColumns ?? [];
