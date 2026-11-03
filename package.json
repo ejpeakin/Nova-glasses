@@ -1,0 +1,14 @@
+{
+  "name": "field-of-honor",
+  "version": "0.1.0",
+  "description": "Field of Honor: US Army Special Forces - a browser-based modern military first-person shooter built with three.js.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
