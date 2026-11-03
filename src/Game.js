@@ -17,6 +17,7 @@ import { buildLowGun } from './ai/Humanoid.js';
 import { Audio } from './core/Audio.js';
 import { Store } from './core/Storage.js';
 import { clamp, lerp, rand } from './core/Utils.js';
+import { Comms } from './player/Comms.js';
 
 export class Game {
   constructor(app, config) {
@@ -38,6 +39,7 @@ export class Game {
     this.nvg = false;
     this.lastMouse = { x: 0, y: 0 };
     this.killfeed = [];
+    this.comms = new Comms(this);
     this.calloutCD = 0;
     this.respawnT = 0;
     this.slowmo = 1;
@@ -661,6 +663,7 @@ export class Game {
       p.look(md.x, md.y, sens);
     }
     if (controllable) {
+      this.comms.update(dt, input);
       p.update(dt, input, this.weapons);
       this.weapons.update(dt, input, p);
       if (input.pressed('KeyF')) { this.flashlightOn = !this.flashlightOn; Audio.ui('click'); }
@@ -670,6 +673,7 @@ export class Game {
     } else {
       p.update(dt, { isDown: () => false, pressed: () => false, anyDown: () => false, anyPressed: () => false, mouseDown: [], mousePressed: [] }, this.weapons);
       this.hud?.prompt(null);
+      this.comms.closeMenu();
     }
     if (input.pressed('KeyN') && p.alive && !this.over) this.setNvg(!this.nvg);
     this.nvgFx.update(dt);
@@ -764,6 +768,7 @@ export class Game {
   }
 
   dispose() {
+    this.comms?.dispose();
     this.disposed = true;
     this.mode.dispose?.();
     for (const a of this.actors) a.dispose();

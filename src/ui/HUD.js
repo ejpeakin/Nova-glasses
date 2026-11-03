@@ -46,6 +46,9 @@ export class HUD {
       <div class="prompt" id="h-prompt" hidden><div class="prompt-text"></div><div class="prompt-bar"><div></div></div></div>
       <div class="subtitles" id="h-subs"></div>
       <div class="callouts" id="h-callouts"></div>
+      <div class="comms" id="h-comms" hidden></div>
+      <div class="ptt" id="h-ptt" hidden><div class="ptt-mic"><i></i><i></i><i></i></div><div class="ptt-text"></div></div>
+      <div class="squad-status" id="h-squad" hidden></div>
       <div class="hint" id="h-hint"></div>
       <div class="grenade-warn" id="h-gren" hidden>✹</div>
       <div class="cook" id="h-cook" hidden></div>
@@ -168,6 +171,39 @@ export class HUD {
 
   grenadeWarning(g) {
     this.grenade = g;
+  }
+
+  /** Radio menu (Y): numbered squad orders. */
+  commsMenu(open, orders = [], holdFire = false, squadCount = 0) {
+    const el = this.root.querySelector('#h-comms');
+    el.hidden = !open;
+    if (!open) return;
+    const rows = orders.map((o, i) => {
+      const label = o.id === 'fire' ? (holdFire ? 'Weapons free' : 'Hold fire') : o.label;
+      const hint = o.id === 'fire' ? (holdFire ? 'squad fires at will' : 'squad fires only when you fire') : o.hint;
+      return `<div class="cm-row"><kbd>${i + 1}</kbd><span class="cm-l">${escapeHtml(label)}</span><span class="cm-h">${escapeHtml(hint)}</span></div>`;
+    }).join('');
+    el.innerHTML = `<div class="cm-head">RADIO · SQUAD <span>${squadCount ? `${squadCount} ON NET` : 'NO SQUAD'}</span></div>${rows}<div class="cm-foot"><kbd>H</kbd> On me! &nbsp; <kbd>K</kbd> hold to talk &nbsp; <kbd>Y</kbd> close</div>`;
+  }
+
+  /** Push-to-talk state: 'listen' | 'heard' | 'miss' | 'error' | 'unsupported' | null. */
+  ptt(state, text = '') {
+    const el = this.root.querySelector('#h-ptt');
+    clearTimeout(this._pttHide);
+    if (!state) { el.hidden = true; return; }
+    el.hidden = false;
+    el.className = `ptt s-${state}`;
+    const t = el.querySelector('.ptt-text');
+    t.textContent = state === 'listen' ? (text ? `"${text}"` : 'LISTENING… say an order') : state === 'heard' ? `"${text}"` : state === 'miss' ? `Didn't catch an order: "${text}"` : text;
+    if (state !== 'listen') this._pttHide = setTimeout(() => { el.hidden = true; }, state === 'heard' ? 1400 : 3200);
+  }
+
+  squadStatus(text) {
+    if (this._squadTxt === text) return;
+    this._squadTxt = text;
+    const el = this.root.querySelector('#h-squad');
+    el.hidden = !text;
+    el.textContent = text;
   }
 
   callout(name, text, friendly) {
@@ -469,9 +505,11 @@ export class HUD {
 
   _markers(game, cam, W, H, heading) {
     const list = [...(game.mode.markers ?? [])];
-    if (game.mode.type === 'campaign') {
-      for (const a of game.actors) if (a.alive && a.marked && !list.some((m) => m.actor === a)) list.push({ pos: a.pos.clone().setY(a.pos.y + 2.05), label: '', kind: 'mark', actor: a });
+    for (const a of game.actors) {
+      if (!a.alive || !a.marked || (a.markedUntil && game.time > a.markedUntil) || list.some((m) => m.actor === a)) continue;
+      list.push({ pos: a.pos.clone().setY(a.pos.y + 2.05), label: '', kind: 'mark', actor: a });
     }
+    for (const pg of game.comms?.pings ?? []) list.push({ pos: pg.pos, label: pg.label, kind: 'ping' });
     // Friendly name tags.
     const tags = [];
     for (const a of game.actors) {
@@ -517,12 +555,12 @@ export class HUD {
       if (edge) cls += ' edge';
       e.className = cls;
       const label = m.kind === 'flag' ? m.label : m.label;
-      const html = `<div class="mk-icon">${m.kind === 'flag' ? escapeHtml(m.label) : m.kind === 'enemy' || m.kind === 'mark' ? '▼' : '◆'}</div>${label && m.kind !== 'flag' ? `<div class="mk-label">${escapeHtml(label)}</div>` : ''}<div class="mk-dist">${dist}m</div>`;
+      const html = `<div class="mk-icon">${m.kind === 'flag' ? escapeHtml(m.label) : m.kind === 'enemy' || m.kind === 'mark' ? '▼' : m.kind === 'ping' ? '◎' : '◆'}</div>${label && m.kind !== 'flag' ? `<div class="mk-label">${escapeHtml(label)}</div>` : ''}<div class="mk-dist">${dist}m</div>`;
       if (e._h !== html) { e.innerHTML = html; e._h = html; }
       e.style.transform = `translate(${x}px, ${y}px)`;
       e.style.opacity = '';
       // First objective marker on the compass.
-      if (!compassSet && m.kind !== 'enemy' && m.kind !== 'mark') {
+      if (!compassSet && m.kind !== 'enemy' && m.kind !== 'mark' && m.kind !== 'ping') {
         compassSet = true;
         const ang = Math.atan2(m.pos.x - game.player.pos.x, -(m.pos.z - game.player.pos.z)) * 180 / Math.PI;
         const a = (ang + 360) % 360;

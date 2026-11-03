@@ -409,6 +409,8 @@ blockquote cite { display: block; font-size: 15px; color: var(--muted); margin-t
 .mk.m-enemy .mk-icon { color: var(--danger); }
 .mk.m-mark .mk-icon { color: var(--danger); font-size: 13px; opacity: 0.85; }
 .mk.m-mark .mk-dist { font-size: 9px; opacity: 0.7; }
+.mk.m-ping .mk-icon { color: #ffd34a; font-size: 18px; text-shadow: 0 0 8px rgba(255, 200, 60, 0.6); }
+.mk.m-ping .mk-label { color: #ffd34a; }
 .grap { position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; color: #cfe8d0; background: rgba(0,0,0,0.38); padding: 2px 8px; border: 1px solid rgba(160,220,160,0.35); white-space: nowrap; pointer-events: none; }
 .grap b { color: var(--accent, #8fd18a); }
 .mk.m-defend .mk-icon, .mk.m-defend .mk-label { color: var(--friendly); }
@@ -449,3 +451,23 @@ body.nvg #nvg-overlay { display: block; }
 /* Weapon laser tag in the weapon panel */
 .laser-tag { opacity: 0.75; }
 .laser-tag.on { color: #ff5a4a; opacity: 1; text-shadow: 0 0 8px rgba(255, 60, 40, 0.6); }
+
+/* squad comms */
+.comms { position: absolute; right: 24px; top: 46%; transform: translateY(-50%); z-index: 5; width: min(330px, 46vw); background: rgba(8, 12, 9, 0.88); border: 1px solid rgba(160, 220, 160, 0.3); border-left: 3px solid var(--accent, #8fd18a); padding: 10px 12px; font-family: var(--mono); font-size: 13px; color: #e4efe2; pointer-events: none; }
+.cm-head { font-size: 11px; letter-spacing: 0.22em; color: var(--accent, #8fd18a); margin-bottom: 8px; display: flex; justify-content: space-between; gap: 16px; }
+.cm-head span { color: rgba(228, 239, 226, 0.55); }
+.cm-row { display: grid; grid-template-columns: 24px auto 1fr; column-gap: 8px; padding: 2px 0; align-items: baseline; }
+.cm-row kbd, .cm-foot kbd { display: inline-block; min-width: 18px; text-align: center; border: 1px solid rgba(228, 239, 226, 0.4); padding: 0 4px; font-size: 11px; }
+.cm-l { font-weight: 700; letter-spacing: 0.04em; }
+.cm-h { font-size: 10px; color: rgba(228, 239, 226, 0.5); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cm-foot { margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(160, 220, 160, 0.2); font-size: 10.5px; color: rgba(228, 239, 226, 0.65); }
+.ptt { position: absolute; left: 50%; bottom: 30vh; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; background: rgba(8, 12, 9, 0.72); border: 1px solid rgba(160, 220, 160, 0.35); padding: 6px 12px; font-family: var(--mono); font-size: 12.5px; color: #e4efe2; max-width: min(560px, 90vw); pointer-events: none; }
+.ptt-mic { display: flex; gap: 2px; align-items: flex-end; height: 14px; }
+.ptt-mic i { width: 3px; background: var(--accent, #8fd18a); height: 40%; }
+.ptt.s-listen .ptt-mic i { animation: pttbar 0.7s ease-in-out infinite alternate; }
+.ptt.s-listen .ptt-mic i:nth-child(2) { animation-delay: 0.2s; }
+.ptt.s-listen .ptt-mic i:nth-child(3) { animation-delay: 0.4s; }
+.ptt.s-miss, .ptt.s-error, .ptt.s-unsupported { border-color: rgba(255, 170, 80, 0.5); }
+.ptt.s-miss .ptt-mic i, .ptt.s-error .ptt-mic i, .ptt.s-unsupported .ptt-mic i { background: #ffaa50; }
+@keyframes pttbar { from { height: 25%; } to { height: 100%; } }
+.squad-status { position: absolute; left: 50%; top: 112px; transform: translateX(-50%); font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; color: var(--friendly, #8fd1ff); background: rgba(0, 0, 0, 0.3); padding: 2px 10px; pointer-events: none; white-space: nowrap; }

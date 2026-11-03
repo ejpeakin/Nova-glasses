@@ -628,6 +628,19 @@ class AudioEngine {
     }
   }
 
+  /** Radio squelch: keying up to talk (key) or an incoming transmission. */
+  radio(key = false) {
+    if (!this.ready) return;
+    const out = this._out(null, { gain: 0.3 });
+    const t = this.now;
+    if (key) {
+      this._noise(out, t, 0.035, { type: 'bandpass', freq: 3200, q: 1.5, gain: 0.5, attack: 0.002 });
+    } else {
+      this._noise(out, t, 0.16, { type: 'bandpass', freq: 2200, q: 0.9, gain: 0.55, attack: 0.004 });
+      this._noise(out, t + 0.16, 0.05, { type: 'highpass', freq: 3500, gain: 0.25 });
+    }
+  }
+
   // ---------- ambience ----------
 
   /** kind: wind | rain | hum | waves | city */

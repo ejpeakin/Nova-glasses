@@ -36,9 +36,9 @@ export function rankOf(xp) {
 
 const CONTROLS = [
   ['W A S D', 'Move'], ['Mouse', 'Look / aim'], ['Left click', 'Fire'], ['Right click / Left Alt', 'Aim down sights / scope'],
-  ['R', 'Reload'], ['Shift', 'Sprint · hold breath (scoped)'], ['Space', 'Jump · vault / climb ledges · stand up'], ['T', 'Grapple launcher (campaign)'], ['L', 'Weapon laser (SMGs & rifles)'], ['C', 'Crouch · slide while sprinting'],
+  ['R', 'Reload'], ['Shift', 'Sprint · hold breath (scoped)'], ['Space', 'Jump · vault / climb ledges · stand up'], ['T', 'Rappel down from a roof edge (campaign)'], ['L', 'Weapon laser (SMGs & rifles)'], ['C', 'Crouch · slide while sprinting'],
   ['Ctrl / Z', 'Prone'], ['E', 'Interact · pick up'], ['1 / 2 · wheel', 'Switch weapon'], ['G', 'Lethal (hold to cook)'],
-  ['Q', 'Tactical'], ['V', 'Melee · silent takedown from behind'], ['B', 'Fire mode'], ['F', 'Flashlight'], ['N', 'Night vision'], ['Tab', 'Scoreboard'], ['Esc', 'Pause'],
+  ['Q', 'Tactical'], ['V', 'Melee · silent takedown from behind'], ['B', 'Fire mode'], ['Y then 1-6', 'Squad radio: orders to your team'], ['H', 'Squad: "On me!"'], ['K (hold)', 'Talk to your squad (microphone)'], ['F', 'Flashlight'], ['N', 'Night vision'], ['Tab', 'Scoreboard'], ['Esc', 'Pause'],
 ];
 
 const TIPS = [
@@ -589,6 +589,7 @@ export class App {
           ${toggle('fullscreen', 'Fullscreen on deploy (recommended: stops Ctrl+W closing the tab)')}
           <div class="lbl">NIGHT VISION</div>
           ${toggle('nvgAuto', 'Goggles down at the start of night missions')}
+          ${toggle('squadVoice', 'Squad voices (spoken radio replies)')}
           <div class="field"><label>Phosphor</label><div class="seg" id="phosphor">${['green', 'white'].map((q) => `<button class="${q === s.nvgPhosphor ? 'on' : ''}" data-ph="${q}">${q === 'green' ? 'GREEN (P43)' : 'WHITE (P45)'}</button>`).join('')}</div>
           <small class="muted">Press N in game to flip the goggles down or up.</small></div>
         </div>

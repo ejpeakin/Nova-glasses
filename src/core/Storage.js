@@ -20,6 +20,7 @@ const DEFAULTS = {
     subtitles: true,
     nvgPhosphor: 'green', // green | white
     nvgAuto: true, // goggles down at the start of night missions
+    squadVoice: true, // squadmates' radio replies are spoken (speech synthesis)
     difficulty: 'regular', // recruit | regular | hardened | veteran
   },
   stats: {

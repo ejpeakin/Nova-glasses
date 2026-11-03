@@ -84,6 +84,8 @@ export class Soldier {
     this.squad = o.squad ?? null;
     if (this.squad) this.squad.members.push(this);
     this.followIndex = o.followIndex ?? 0;
+    this.order = null; // squad order from the player: { kind, pos, yaw, until, target }
+    this.followCrouch = 0;
 
     this.state = this.friendly ? 'follow' : this.hunter ? 'hunt' : this.patrol ? 'patrol' : 'idle';
     this.target = null;
@@ -304,7 +306,7 @@ export class Soldier {
       // the player has opened fire, or the alarm is up. No blowing the player's cover.
       const g = this.game;
       const loud = g.time - (g.player.lastShotTime ?? -99) < 10 || g.mode?.alarmed;
-      if (!loud) candidates = candidates.filter((e) => e.state === 'combat' || e.state === 'hunt' || e.state === 'flee' || (e.awareness ?? 0) > 0.95);
+      if (!loud) candidates = candidates.filter((e) => e.state === 'combat' || e.state === 'hunt' || e.state === 'flee' || (e.awareness ?? 0) > 0.95 || now - (e.pingedT ?? -99) < 20);
     }
     // Unaware guards who come across a fallen comrade go to investigate and raise the alarm.
     if (!this.mpBot && !this.friendly && (this.state === 'idle' || this.state === 'patrol' || this.state === 'alert')) {
@@ -570,9 +572,12 @@ export class Soldier {
     return sigma;
   }
 
-  _shootAt(target, dt, suppressive = false) {
+  _shootAt(target, dt, suppressive = false, at = null) {
     const now = this.game.time;
     if (this.reloadT > 0) return false;
+    // Weapons tight: the squad only fires on the player's shot, or when hit.
+    const g = this.game;
+    if (g.comms?.holdFire && this.team === g.player.team && (this.friendly || this.mpBot) && now - (g.player.lastShotTime ?? -99) > 3 && now - this.lastHit > 3) return false;
     if (now < this.acquiredT && !suppressive) return false;
     if (this.burstPause > 0) { this.burstPause -= dt; return false; }
     this.fireT -= dt;
@@ -581,7 +586,8 @@ export class Soldier {
     if (this.ammo <= 0) { this._startReload(false); return false; }
     const muzzle = this.model.muzzle.getWorldPosition(new THREE.Vector3());
     let aimAt;
-    if (suppressive) aimAt = this.lastKnown.clone().setY(this.lastKnown.y + 1.1);
+    if (at) aimAt = at.clone();
+    else if (suppressive) aimAt = this.lastKnown.clone().setY(this.lastKnown.y + 1.1);
     else {
       const a = this._aimPoint(target);
       aimAt = a.p;
@@ -786,9 +792,12 @@ export class Soldier {
         case 'follow': {
           const res = this._follow(dt, think);
           faceYaw = res ?? faceYaw;
+          wantCrouch = this.followCrouch;
           break;
         }
         case 'hunt': {
+          const ordered = this._obeyOrder(dt, think);
+          if (ordered !== null) { faceYaw = this._watchYaw() ?? ordered; wantCrouch = this.followCrouch; break; }
           if (think && (!this.path || this.repathT > 6)) {
             const goal = this.game.mode?.botGoal?.(this) ?? this.game.player.pos;
             if (goal) this._pathTo(goal, true);
@@ -811,6 +820,13 @@ export class Soldier {
       }
     }
 
+    // Covering fire on the player's call (when not busy with a visible enemy).
+    let coverPitch = null;
+    if (this.order?.kind === 'cover' && this.stunT <= 0 && !(this.state === 'combat' && this.targetVisible)) {
+      const c = this._coverFire(dt);
+      if (c) { faceYaw = c.face; firing = c.firing || firing; aiming = true; coverPitch = c.pitch; wantCrouch = 0; }
+    }
+
     // Turn toward desired facing (snappier when tracking a visible target).
     this.lookYaw = dampAngle(this.lookYaw, faceYaw, this.state === 'combat' ? (this.targetVisible ? 12 : 8) : 4, dt);
     this.yaw = this.lookYaw;
@@ -824,6 +840,7 @@ export class Soldier {
       const e = this.eyePos;
       pitch = Math.atan2(tp.y - (e.y - 0.1), Math.hypot(tp.x - e.x, tp.z - e.z));
     }
+    if (coverPitch !== null) pitch = coverPitch;
     this.pitch = pitch;
     this.model.root.position.copy(this.pos);
     this.model.root.rotation.y = this.yaw;
@@ -837,6 +854,115 @@ export class Soldier {
     }
   }
 
+  // ---------- orders from the player (squad comms) ----------
+  /** kind: 'regroup' | 'hold' | 'move' | 'cover'. pos: where; yaw: facing to hold. */
+  command(kind, pos, yaw, target = null) {
+    const now = this.game.time;
+    if (kind === 'cover') {
+      this.order = { kind, pos, yaw, target, until: now + 8, prev: this.order?.kind === 'cover' ? this.order.prev : this.order };
+      return;
+    }
+    if (this.cover) { this.cover.owner = null; this.cover = null; }
+    this.path = null;
+    this.order = { kind, pos, yaw, until: kind === 'regroup' ? now + 14 : this.mpBot ? now + 50 : Infinity };
+    if (kind === 'regroup' && this.state === 'combat' && !this.targetVisible) this.state = this.friendly ? 'follow' : this.hunter ? 'hunt' : 'alert';
+  }
+
+  /** Pick up a target the player pointed out. */
+  engage(e) {
+    const now = this.game.time;
+    if (!e || !e.alive) return;
+    this.target = e;
+    this.lastKnown = e.pos.clone();
+    this.lastSeenT = now;
+    this.acquiredT = Math.min(this.acquiredT, now + this.diff.reaction * 0.5);
+    if (this.state !== 'combat') { this.state = 'combat'; this.combatT = 0; }
+  }
+
+  /** Turn to watch a point the player called out. */
+  watch(p) { this.watchPos = p; this.watchUntil = this.game.time + 6; }
+
+  _orderSlot() {
+    return [[0, 0], [-1.6, 0.6], [1.6, 0.6], [0, 1.8], [-2.4, 2], [2.4, 2]][this.followIndex % 6];
+  }
+
+  /** Carry out a movement order. Returns the facing to use, or null when there is none. */
+  _obeyOrder(dt, think) {
+    const o = this.order;
+    if (!o || o.kind === 'cover') return null;
+    const g = this.game, now = g.time, p = g.player;
+    if (now > o.until) { this.order = null; return null; }
+    let goal;
+    if (o.kind === 'regroup') {
+      const slot = [[-1.6, 1.8], [1.6, 2], [0, 3], [-2.6, 3.2], [2.6, 3.2]][this.followIndex % 5];
+      const sin = Math.sin(p.yaw), cos = Math.cos(p.yaw);
+      goal = new THREE.Vector3(p.pos.x + slot[0] * cos + slot[1] * sin, 0, p.pos.z - slot[0] * sin + slot[1] * cos);
+    } else {
+      const [sx, sz] = o.kind === 'move' ? this._orderSlot() : [0, 0];
+      const sin = Math.sin(o.yaw), cos = Math.cos(o.yaw);
+      goal = new THREE.Vector3(o.pos.x + sx * cos + sz * sin, 0, o.pos.z - sx * sin + sz * cos);
+    }
+    const d = Math.hypot(goal.x - this.pos.x, goal.z - this.pos.z);
+    let arrived = d <= (o.kind === 'hold' ? 1.2 : 1.6);
+    if (!arrived) {
+      const stale = !this.path || (think && this.pathGoal && this.pathGoal.distanceTo(goal) > 2);
+      if (stale && now >= (this._orderPathT ?? 0)) {
+        this._orderPathT = now + 0.4;
+        if (!this._pathTo(goal, o.kind !== 'hold' && d > 3)) {
+          // Nowhere to go: hold here instead.
+          this.order = { ...o, kind: 'hold', pos: this.pos.clone(), until: o.kind === 'regroup' ? now : o.until };
+          arrived = true;
+        }
+      }
+      if (!arrived) {
+        if (!this.path) { this.vel.multiplyScalar(0.8); return o.yaw; }
+        if (!this._followPath(dt)) { this.followCrouch = 0; return this._velYaw() ?? o.yaw; }
+        arrived = true; // end of the route (close enough)
+      }
+    }
+    this.vel.multiplyScalar(0.8);
+    this.path = null;
+    if (o.kind === 'regroup') {
+      this.order = null;
+      this.followCrouch = p.stance !== 'stand' ? 1 : 0;
+      return p.yaw;
+    }
+    // In position: take a knee and watch the sector.
+    this.followCrouch = 1;
+    return o.yaw + (this.followIndex % 3 - 1) * 0.5;
+  }
+
+  /** Where this soldier should stay close to in a fight, and how far it may stray. */
+  _leash() {
+    const o = this.order;
+    if (o && (o.kind === 'hold' || o.kind === 'move')) return { at: o.pos, r: 9 };
+    if (o && o.kind === 'regroup') return { at: this.game.player.pos, r: 5 };
+    if (this.friendly) return { at: this.game.player.pos, r: 22 };
+    return null;
+  }
+
+  /** Covering fire on the point the player called. */
+  _coverFire(dt) {
+    const o = this.order;
+    if (!o || o.kind !== 'cover') return null;
+    const now = this.game.time;
+    if (now > o.until) { this.order = o.prev ?? null; return null; }
+    if (o.target && o.target.alive) o.pos = o.target.chest;
+    const e = this.eyePos;
+    if (now >= (this._coverLosT ?? 0)) {
+      this._coverLosT = now + 0.3;
+      this._coverLos = e.distanceTo(o.pos) < 140 && this.game.world.los(e, o.pos);
+    }
+    if (!this._coverLos) return null;
+    const face = Math.atan2(-(o.pos.x - this.pos.x), -(o.pos.z - this.pos.z));
+    let firing = false;
+    if (Math.abs(wrapAngle(face - this.lookYaw)) < 0.25) {
+      const tgt = o.target && o.target.alive ? o.target : { pos: o.pos, vel: null, isPlayer: false };
+      firing = this._shootAt(tgt, dt, true, o.pos);
+    }
+    return { face, firing, pitch: Math.atan2(o.pos.y - (e.y - 0.1), Math.hypot(o.pos.x - e.x, o.pos.z - e.z)) };
+  }
+
   _velYaw() {
     if (Math.hypot(this.vel.x, this.vel.z) < 0.3) return null;
     return Math.atan2(-this.vel.x, -this.vel.z);
@@ -848,6 +974,8 @@ export class Soldier {
       this.state = 'combat';
       return null;
     }
+    const ordered = this._obeyOrder(dt, think);
+    if (ordered !== null) return this._watchYaw() ?? ordered;
     // Formation slot behind/beside the player.
     const slot = [[-2.5, 3], [2.5, 3.5], [0, 5], [-4, 6], [4, 6]][this.followIndex % 5];
     const sin = Math.sin(p.yaw), cos = Math.cos(p.yaw);
@@ -867,8 +995,13 @@ export class Soldier {
       this.vel.multiplyScalar(0.8);
       this.path = null;
     }
-    this.crouch = p.stance !== 'stand' ? 1 : 0;
-    return this._velYaw() ?? p.yaw;
+    this.followCrouch = p.stance !== 'stand' ? 1 : 0;
+    return this._velYaw() ?? this._watchYaw() ?? p.yaw;
+  }
+
+  _watchYaw() {
+    if (!this.watchPos || this.game.time > this.watchUntil) return null;
+    return Math.atan2(-(this.watchPos.x - this.pos.x), -(this.watchPos.z - this.pos.z));
   }
 
   _combat(dt, think, now) {
@@ -898,10 +1031,11 @@ export class Soldier {
       return res;
     }
 
-    // Friendlies stay near the player.
-    if (this.friendly && this.pos.distanceTo(this.game.player.pos) > 22 && think) {
+    // Friendlies stay near the player (or the spot they were ordered to hold).
+    const leash = think ? this._leash() : null;
+    if (leash && this.pos.distanceTo(leash.at) > leash.r) {
       if (this.cover) { this.cover.owner = null; this.cover = null; }
-      this._pathTo(this.game.player.pos, true);
+      this._pathTo(leash.at, true);
     }
 
     // Top up the magazine during a lull in the fight.
