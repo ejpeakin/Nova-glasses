@@ -35,5 +35,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Field of Honor running at http://localhost:${PORT}`);
+  console.log(`Field of Honor: US Army Special Forces running at http://localhost:${PORT}`);
 });

@@ -4,7 +4,7 @@
 const GAME_KEYS = new Set([
   'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight',
   'KeyC', 'KeyZ', 'KeyE', 'KeyR', 'KeyG', 'KeyQ', 'KeyF', 'KeyV', 'KeyN', 'KeyB', 'Tab', 'Digit1', 'Digit2',
-  'Digit3', 'Digit4', 'KeyX', 'KeyT',
+  'Digit3', 'Digit4', 'KeyX', 'KeyT', 'AltLeft', 'KeyL',
 ]);
 
 export class Input {
@@ -35,6 +35,7 @@ export class Input {
       this.down.add(e.code);
     });
     window.addEventListener('keyup', (e) => {
+      if (this.enabled && e.code === 'AltLeft') e.preventDefault();
       this.down.delete(e.code);
       this.releases.add(e.code);
       if (this.enabled && GAME_KEYS.has(e.code)) e.preventDefault();

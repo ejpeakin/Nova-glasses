@@ -8,6 +8,7 @@
 //
 // Weapon space: barrel points down -Z, +Y up, origin at the top of the firing grip.
 import * as THREE from '../lib/three.js';
+import { handsReady, makeHand } from './Hands.js';
 
 // ---------------------------------------------------------------------------
 // Surface textures (generated once).
@@ -907,8 +908,13 @@ function makeReticleSprite(kind) {
   return m;
 }
 
-/** First-person arms: tapered sleeves with cuffs, gloved hands with curled fingers. */
+/**
+ * First-person arms. With the rigged hand models loaded: camo sleeves with rolled
+ * cuffs running from a fixed elbow to realistic tactical-gloved hands that wrap the
+ * weapon. Otherwise: simple tapered sleeves and primitive gloved hands.
+ */
 export function buildArms(sleeveColor = 0x4d5340) {
+  if (handsReady()) return buildRealArms(sleeveColor);
   const t = textures();
   const sleeve = new THREE.MeshStandardMaterial({ color: sleeveColor, map: t.cloth, roughness: 0.95, metalness: 0 });
   const cuffM = new THREE.MeshStandardMaterial({ color: 0x2c2e27, roughness: 0.9, metalness: 0 });
@@ -962,5 +968,71 @@ export function buildArms(sleeveColor = 0x4d5340) {
       arm.rotateY(Math.PI); // lookAt points +Z; arm geometry extends along -Z
       arm.scale.set(1, 1, len / 0.47);
     },
+  };
+}
+
+const _q = new THREE.Quaternion(), _m = new THREE.Matrix4(), _v = new THREE.Vector3(), _w = new THREE.Vector3();
+// Hand orientation relative to the gun: firing hand on the pistol grip (knuckles down
+// the grip, palm against it, thumb over the top), support hand under the handguard.
+const Q_RIGHT = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 - 0.32, 0.06, 0.05));
+const Q_LEFT = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.12, 0.25, Math.PI / 2 - 0.55));
+// Free hand (no gun to hold): fist, palm down, knuckles leading along the forearm.
+const Q_FREE = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(
+  new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, 1), new THREE.Vector3(-1, 0, 0)));
+
+function buildRealArms(sleeveColor) {
+  const t = textures();
+  const sleeveM = new THREE.MeshStandardMaterial({ color: sleeveColor, map: t.cloth, roughness: 0.95, metalness: 0 });
+  const cuffM = new THREE.MeshStandardMaterial({ color: new THREE.Color(sleeveColor).multiplyScalar(0.72), map: t.cloth, roughness: 0.95, metalness: 0 });
+  const make = (side) => {
+    const group = new THREE.Group();
+    // Sleeve: a tapered tube from the elbow (z=0) to z=-1, stretched to reach the wrist.
+    const geo = new THREE.CylinderGeometry(0.039, 0.05, 1, 16, 1, true);
+    geo.rotateX(Math.PI / 2);
+    geo.translate(0, 0, -0.5);
+    const sleeve = new THREE.Mesh(geo, sleeveM);
+    // Rolled cuff and a seam, kept at a fixed size near the wrist.
+    const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.043, 0.06, 16), cuffM);
+    cuff.rotation.x = Math.PI / 2;
+    const fore = new THREE.Group();
+    fore.add(sleeve, cuff);
+    group.add(fore);
+    const hand = makeHand(side);
+    group.add(hand.root);
+    return { group, fore, sleeve, cuff, hand };
+  };
+  const L = make('left'), R = make('right');
+  const orient = (a, elbow, wrist) => {
+    _v.subVectors(wrist, elbow);
+    const len = _v.length();
+    a.fore.position.copy(elbow);
+    a.fore.lookAt(_w.copy(wrist));
+    a.fore.rotateY(Math.PI);
+    a.sleeve.scale.set(1, 1, Math.max(0.05, len - 0.03));
+    a.cuff.position.set(0, 0, -(len - 0.055));
+  };
+  return {
+    real: true,
+    left: L.group, right: R.group,
+    hands: { left: L.hand, right: R.hand },
+    /**
+     * side 'left' | 'right'; gunQuat: weapon orientation (null = free hand);
+     * target: where the grip point goes; elbow: fixed shoulder-side anchor; pose: grip name.
+     */
+    attach(side, gunQuat, target, elbow, pose, handQuat = null) {
+      const a = side === 'right' ? R : L;
+      a.hand.pose(pose);
+      if (handQuat) _q.copy(handQuat);
+      else if (gunQuat) _q.copy(gunQuat).multiply(side === 'right' ? Q_RIGHT : Q_LEFT);
+      else {
+        // Point the fist along the forearm.
+        _v.subVectors(target, elbow).normalize();
+        _m.lookAt(_w.set(0, 0, 0), _v, new THREE.Vector3(0, 1, 0));
+        _q.setFromRotationMatrix(_m).multiply(Q_FREE);
+      }
+      a.hand.place(_q, target);
+      orient(a, elbow, a.hand.wrist());
+    },
+    place() {},
   };
 }

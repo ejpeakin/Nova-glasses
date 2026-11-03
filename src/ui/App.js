@@ -35,10 +35,10 @@ export function rankOf(xp) {
 }
 
 const CONTROLS = [
-  ['W A S D', 'Move'], ['Mouse', 'Look / aim'], ['Left click', 'Fire'], ['Right click', 'Aim down sights'],
-  ['R', 'Reload'], ['Shift', 'Sprint · hold breath (scoped)'], ['Space', 'Jump · vault / climb · stand up'], ['C', 'Crouch · slide while sprinting'],
+  ['W A S D', 'Move'], ['Mouse', 'Look / aim'], ['Left click', 'Fire'], ['Right click / Left Alt', 'Aim down sights / scope'],
+  ['R', 'Reload'], ['Shift', 'Sprint · hold breath (scoped)'], ['Space', 'Jump · vault / climb ledges · stand up'], ['T', 'Grapple launcher (campaign)'], ['L', 'Weapon laser (SMGs & rifles)'], ['C', 'Crouch · slide while sprinting'],
   ['Ctrl / Z', 'Prone'], ['E', 'Interact · pick up'], ['1 / 2 · wheel', 'Switch weapon'], ['G', 'Lethal (hold to cook)'],
-  ['Q', 'Tactical'], ['V', 'Melee'], ['B', 'Fire mode'], ['F', 'Flashlight'], ['N', 'Night vision'], ['Tab', 'Scoreboard'], ['Esc', 'Pause'],
+  ['Q', 'Tactical'], ['V', 'Melee · silent takedown from behind'], ['B', 'Fire mode'], ['F', 'Flashlight'], ['N', 'Night vision'], ['Tab', 'Scoreboard'], ['Esc', 'Pause'],
 ];
 
 const TIPS = [
@@ -144,7 +144,7 @@ export class App {
     s.innerHTML = `
       <div class="boot-inner">
         <div class="boot-studio">CLASSIFIED // EYES ONLY</div>
-        <h1 class="logo"><span class="logo-op">TASK FORCE ORION</span><span class="logo-main">FIELD OF HONOR</span></h1>
+        <h1 class="logo"><span class="logo-op">TASK FORCE ORION</span><span class="logo-main">FIELD OF HONOR</span><span class="logo-sub">US ARMY SPECIAL FORCES</span></h1>
         <div class="boot-press">PRESS ANY KEY OR CLICK TO BEGIN</div>
         <div class="boot-note">Keyboard and mouse required · Best in Chrome, Edge or Firefox · Headphones recommended</div>
       </div>`;
@@ -214,7 +214,7 @@ export class App {
     this.ui.innerHTML = `
       <div class="main">
         <div class="main-left">
-          <h1 class="logo small"><span class="logo-op">TASK FORCE ORION</span><span class="logo-main">FIELD OF HONOR</span></h1>
+          <h1 class="logo small"><span class="logo-op">TASK FORCE ORION</span><span class="logo-main">FIELD OF HONOR</span><span class="logo-sub">US ARMY SPECIAL FORCES</span></h1>
           <nav class="main-nav">
             <button class="nav-btn" data-go="campaign"><span>CAMPAIGN</span><small>8 missions · the HALCYON affair</small></button>
             <button class="nav-btn" data-go="multiplayer"><span>MULTIPLAYER</span><small>TDM · FFA · Domination · vs bots</small></button>
@@ -244,7 +244,7 @@ export class App {
           </div>
         </aside>
       </div>
-      <footer class="main-foot">v0.1 · Browser build · All characters, weapons, factions and places are fictional</footer>`;
+      <footer class="main-foot">v0.1 · Browser build · A work of fiction: all characters, weapons, factions and places are fictional · Not affiliated with or endorsed by the U.S. Army</footer>`;
     for (const b of this.ui.querySelectorAll('[data-go]')) {
       b.addEventListener('click', () => {
         const g = b.dataset.go;
@@ -268,7 +268,7 @@ export class App {
       const m = MISSIONS[selected];
       const done = camp.completed[m.id];
       this.ui.innerHTML = `
-        ${this._header('CAMPAIGN', 'FIELD OF HONOR')}
+        ${this._header('CAMPAIGN', 'FIELD OF HONOR: US ARMY SPECIAL FORCES')}
         <div class="camp">
           <div class="mission-list">
             ${MISSIONS.map((mm, i) => {
@@ -878,7 +878,7 @@ export class App {
           <div class="tile"><div class="tile-v">${st.shotsFired ? Math.round((st.shotsHit / st.shotsFired) * 100) : 0}%</div><div class="tile-k">Career accuracy</div></div>
         </div>
         <div class="panel debrief"><div class="lbl">DEBRIEF</div>${(m.outro ?? []).map((l) => `<div class="bl"><b>${escapeHtml(SPEAKER[l.who] ?? l.who)}</b><span>${escapeHtml(l.text)}</span></div>`).join('')}</div>
-        ${m.finale ? `<div class="credits"><div class="lbl">FIELD OF HONOR</div><p>Thank you for playing. Task Force ORION will return.</p><p class="muted">${Object.values(CHARACTERS).map((c) => `${escapeHtml(c.name)} — ${escapeHtml(c.role)}`).join('<br>')}</p></div>` : ''}
+        ${m.finale ? `<div class="credits"><div class="lbl">FIELD OF HONOR: US ARMY SPECIAL FORCES</div><p>Thank you for playing. Task Force ORION will return.</p><p class="muted">${Object.values(CHARACTERS).map((c) => `${escapeHtml(c.name)} — ${escapeHtml(c.role)}`).join('<br>')}</p></div>` : ''}
         <div class="row-btns center">
           ${next ? '<button class="btn primary" id="r-next">NEXT MISSION ▸</button>' : ''}
           <button class="btn" id="r-replay">REPLAY</button>

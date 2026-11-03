@@ -1,6 +1,8 @@
-# FIELD OF HONOR
+# FIELD OF HONOR: US ARMY SPECIAL FORCES
 
-A modern military first-person shooter that runs in the browser. It is built with three.js and plain JavaScript, with no build step and no asset files. Every model, texture, sound and piece of music is generated in code.
+A modern military first-person shooter that runs in the browser. It is built with three.js and plain JavaScript, with no build step. Almost everything is generated in code: models, textures, sounds and music. The one exception is the first-person hands. They're the rigged WebXR "generic hand" meshes that three.js uses for hand tracking (MIT, embedded as data in `src/assets/hands.js`). They're posed into weapon grips in code and dressed as tactical gloves.
+
+*A work of fiction. Field of Honor: US Army Special Forces is not affiliated with, or endorsed by, the U.S. Army or the U.S. Department of Defense. All characters, units, weapons and places are fictional.*
 
 > Task Force ORION hunts MERIDIAN, a private army that has stolen **HALCYON**, the ground key to an orbital kinetic-strike constellation.
 
@@ -23,7 +25,7 @@ Use a desktop browser (Chrome, Edge or Firefox) with a keyboard and mouse. Headp
 | W A S D | Move |
 | Mouse | Look / aim |
 | Left click | Fire |
-| Right click | Aim down sights |
+| Right click or Left Alt | Aim down sights / scope (hold). Left click still fires while aiming |
 | R | Reload |
 | Shift | Sprint. While scoped with a sniper, hold breath |
 | Space | Jump, vault, or climb ledges, walls, fences and containers up to 2.7 m. In mid-air, grab a ledge. Also stands you up |
@@ -36,6 +38,7 @@ Use a desktop browser (Chrome, Edge or Firefox) with a keyboard and mouse. Headp
 | Q | Tactical equipment |
 | V | Melee. From behind, or on an unaware enemy, a silent takedown |
 | B | Toggle fire mode |
+| L | Weapon laser on SMGs and rifles: a beam from the muzzle and a dot where your shots land. Hip fire is much tighter while it's on |
 | F | Flashlight. With night vision down it becomes an IR illuminator that enemies can't see |
 | N | Night vision goggles (flip down / up) |
 | Tab | Scoreboard |

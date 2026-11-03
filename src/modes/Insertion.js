@@ -278,8 +278,15 @@ export class Insertion {
     const top = toView(camera.position.y + 0.02);
     const low = toView(camera.position.y - 0.22);
     if (top.z > -0.12 || low.z > -0.12) { this.arms.left.visible = this.arms.right.visible = false; return; } // looking away
-    this.arms.place(this.arms.left, new THREE.Vector3(-0.3, -0.62, 0.08), top);
-    this.arms.place(this.arms.right, new THREE.Vector3(0.3, -0.68, 0.08), low);
+    if (this.arms.real) {
+      // Both gloved fists closed around the vertical rope, knuckles stacked down it.
+      const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+      this.arms.attach('left', null, top, new THREE.Vector3(-0.42, -0.8, 0.12), 'fist', q);
+      this.arms.attach('right', null, low, new THREE.Vector3(0.4, -0.85, 0.1), 'fist', q);
+    } else {
+      this.arms.place(this.arms.left, new THREE.Vector3(-0.3, -0.62, 0.08), top);
+      this.arms.place(this.arms.right, new THREE.Vector3(0.3, -0.68, 0.08), low);
+    }
     this.viewCam.aspect = window.innerWidth / window.innerHeight;
     this.viewCam.updateProjectionMatrix();
   }

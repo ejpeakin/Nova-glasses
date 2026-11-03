@@ -95,6 +95,18 @@ export class Game {
     this.hook = new THREE.Mesh(new THREE.OctahedronGeometry(0.07, 0), new THREE.MeshStandardMaterial({ color: 0x55585c, roughness: 0.4, metalness: 0.8 }));
     this.hook.visible = false;
     this.scene.add(this.rope, this.hook);
+    // Visible weapon laser: a faint red beam from the muzzle and a bright dot on whatever it hits.
+    {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(6), 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute([1.6, 0.08, 0.06, 0.25, 0.01, 0.01], 3));
+      this.laserBeam = new THREE.Line(g, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, fog: false }));
+      this.laserBeam.frustumCulled = false;
+      this.laserBeam.visible = false;
+      this.laserDot = new THREE.Sprite(new THREE.SpriteMaterial({ map: getSpriteTexture('flash'), color: 0xff2a1a, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, transparent: true, toneMapped: false, fog: false }));
+      this.laserDot.visible = false;
+      this.scene.add(this.laserBeam, this.laserDot);
+    }
     if (this.night || this.mapId === 'blacksite') this.hud?.hint('F: flashlight   N: night vision', 6);
     Audio.setAmbience(mode.ambience ?? this.mapInfo.ambience);
     Audio.setAcoustics(this.world.indoor ? 'indoor' : this.mapId);
@@ -132,6 +144,29 @@ export class Game {
         this.grapplePlan = null;
       } else Audio.ui('back');
     }
+  }
+
+  _updateWeaponLaser() {
+    const w = this.weapons, p = this.player;
+    const on = w.laserOn && p.alive && !this.cinematic && w.muzzleView;
+    this.laserBeam.visible = this.laserDot.visible = !!on;
+    if (!on) return;
+    const cam = this.camera;
+    // Muzzle: the viewmodel muzzle carried into world space by the camera.
+    const from = w.muzzleView.clone().applyMatrix4(cam.matrixWorld);
+    // The dot lands where shots go: along the line of sight, on the first wall or body.
+    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+    const o = cam.position;
+    const hit = this.world.raycast(o.x, o.y, o.z, fwd.x, fwd.y, fwd.z, 300);
+    let t = hit ? hit.t : 300;
+    for (const a of this.actors) { if (a.alive) { const h = a.rayHit(o, fwd, t); if (h) t = h.t; } }
+    const to = o.clone().addScaledVector(fwd, t);
+    const pa = this.laserBeam.geometry.attributes.position;
+    pa.setXYZ(0, from.x, from.y, from.z);
+    pa.setXYZ(1, to.x, to.y, to.z);
+    pa.needsUpdate = true;
+    this.laserDot.position.copy(to).addScaledVector(fwd, -0.03);
+    this.laserDot.scale.setScalar(0.035 + t * 0.0045);
   }
 
   _updateRope() {
@@ -679,6 +714,7 @@ export class Game {
     if (p.suppressed) p.suppressed = Math.max(0, p.suppressed - dt * 1.5);
     this._updateLasers();
     this._updateRope();
+    this._updateWeaponLaser();
     this.hud?.update(this, dt);
     this.render();
   }

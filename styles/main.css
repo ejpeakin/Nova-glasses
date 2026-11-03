@@ -1,4 +1,4 @@
-/* FIELD OF HONOR — interface styles. Dark military palette, green accents. */
+/* FIELD OF HONOR: US ARMY SPECIAL FORCES — interface styles. Dark military palette, green accents. */
 :root {
   --bg: #070a08;
   --panel: rgba(10, 16, 12, 0.84);
@@ -41,6 +41,8 @@ button { font-family: inherit; }
 .logo-op { display: block; font-family: var(--mono); font-weight: 400; letter-spacing: 0.5em; font-size: clamp(14px, 1.6vw, 22px); color: var(--accent); margin-bottom: 10px; padding-left: 0.4em; }
 .logo-main { display: block; font-family: var(--stencil); font-size: clamp(44px, 8vw, 118px); letter-spacing: 0.02em; color: #f0f4ea; text-shadow: 0 0 40px rgba(143, 209, 106, 0.25), 0 4px 0 rgba(0,0,0,0.5); }
 .logo.small .logo-main { font-size: clamp(38px, 5vw, 76px); }
+.logo-sub { display: block; font-family: var(--mono); font-weight: 700; letter-spacing: 0.42em; font-size: clamp(13px, 1.5vw, 21px); color: #d9dccf; margin-top: 12px; padding-left: 0.3em; }
+.logo.small .logo-sub { font-size: clamp(11px, 1vw, 15px); margin-top: 8px; }
 .logo.small .logo-op { font-size: clamp(12px, 1.1vw, 16px); }
 
 /* ---------------- menu shell ---------------- */

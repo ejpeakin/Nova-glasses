@@ -1,4 +1,4 @@
-// FIELD OF HONOR — campaign script.
+// FIELD OF HONOR: US ARMY SPECIAL FORCES — campaign script.
 // Task Force ORION hunts the MERIDIAN network after it steals HALCYON, the ground
 // key to an orbital kinetic-strike constellation.
 //
@@ -23,7 +23,7 @@ export const PROLOGUE = [
   'The attackers belong to MERIDIAN: a private army of ex-special forces, funded through shell companies on four continents.',
   'Its founder, Anton Vasko, has never been photographed. He has promised the world "a new balance of power."',
   'Task Force ORION has been activated. No flags. No press. No backup.',
-  'FIELD OF HONOR.',
+  'FIELD OF HONOR: US ARMY SPECIAL FORCES.',
 ];
 
 const SQUAD_RH = [

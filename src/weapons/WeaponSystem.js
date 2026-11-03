@@ -195,7 +195,18 @@ export class WeaponSystem {
     if (p.stance === 'crouch') sp *= 0.8;
     if (p.stance === 'prone') sp *= 0.6;
     sp += this.bloom * (1 - this.ads * 0.8);
+    // Laser on: hip shots go where the dot is (much tighter cone and bloom).
+    if (this.laserOn) sp *= lerp(0.45, 1, smoothstep(this.ads));
     return sp;
+  }
+
+  /** SMGs and rifles carry a laser module (L to toggle). */
+  laserCapable() {
+    return ['ar', 'smg', 'marksman', 'sniper', 'lmg'].includes(this.stats.class);
+  }
+
+  get laserOn() {
+    return !!this.weapon?.laser && this.laserCapable();
   }
 
   onJump() { this.kickRot += 0.05; }
@@ -226,11 +237,19 @@ export class WeaponSystem {
 
     // ADS.
     const adsBlocked = player.sprinting || player.climbing || this.state === 'switchOut' || this.state === 'raise' || this.state === 'melee' || this.state === 'throw' || (this.state === 'reload' && !s.perShell);
-    const wantAds = canAct && input.mouseDown[2] && !adsBlocked;
+    // Aim down sights / scope: hold right mouse, or hold Left Alt on the keyboard.
+    const wantAds = canAct && (input.mouseDown[2] || input.isDown('AltLeft')) && !adsBlocked;
     const adsRate = 1 / Math.max(0.08, s.ads);
     this.ads = clamp(this.ads + (wantAds ? adsRate : -adsRate * 1.4) * dt, 0, 1);
 
     // Fire mode toggle.
+    if (canAct && input.pressed('KeyL')) {
+      if (this.laserCapable()) {
+        w.laser = !w.laser;
+        Audio.ui('click');
+        this.game.hud?.toast(w.laser ? 'LASER ON' : 'LASER OFF');
+      } else this.game.hud?.toast('NO LASER ON THIS WEAPON');
+    }
     if (canAct && input.pressed('KeyB') && s.modes.length > 1) {
       w.modeIndex = (w.modeIndex + 1) % s.modes.length;
       w.mode = s.modes[w.modeIndex];
@@ -527,7 +546,8 @@ export class WeaponSystem {
 
     const a = smoothstep(this.ads);
     const long = s.class === 'sniper' || s.class === 'lmg' || s.class === 'marksman';
-    const hip = isPistol ? new THREE.Vector3(0.16, -0.17, -0.38) : long ? new THREE.Vector3(0.19, -0.215, -0.52) : new THREE.Vector3(0.17, -0.19, -0.45);
+    // Hip carry: framed so both gloved hands sit in the lower part of the view.
+    const hip = isPistol ? new THREE.Vector3(0.13, -0.15, -0.36) : long ? new THREE.Vector3(0.17, -0.165, -0.49) : new THREE.Vector3(0.15, -0.145, -0.42);
     const adsPos = new THREE.Vector3(0, -w.model.sightY, isPistol ? -0.34 : -0.3 + (s.sight === 'iron' ? 0.02 : 0));
     const pos = hip.clone().lerp(adsPos, a);
     const rot = new THREE.Euler(0, 0, 0);
@@ -702,8 +722,18 @@ export class WeaponSystem {
       const pump = new THREE.Vector3(-0.2 + swing * 0.02, -0.33 + swing * 0.08, -0.36 - swing * 0.1);
       lh.lerp(pump, sb);
     }
-    this.arms.place(this.arms.right, new THREE.Vector3(0.28, -0.42, 0.05), grip);
-    this.arms.place(this.arms.left, new THREE.Vector3(-0.22, -0.45, -0.05), lh);
+    const elbowR = new THREE.Vector3(0.28, -0.42, 0.05), elbowL = new THREE.Vector3(-0.22, -0.45, -0.05);
+    if (this.arms.real) {
+      // Gloved hands wrap the weapon: trigger hand on the grip, support hand on the
+      // handguard; a free hand (sprinting, cooking, throwing) balls into a fist.
+      const gq = this.rig.getWorldQuaternion(new THREE.Quaternion());
+      const leftFree = this.cooking || this.state === 'throw' || (sb > 0.5 && !leftOverride);
+      this.arms.attach('right', gq, grip, elbowR, 'trigger');
+      this.arms.attach('left', leftFree ? null : gq, lh, elbowL, leftFree || leftOverride ? 'fist' : 'foregrip');
+    } else {
+      this.arms.place(this.arms.right, elbowR, grip);
+      this.arms.place(this.arms.left, elbowL, lh);
+    }
     if (this._shellHand && !scope.active) {
       this.shell.visible = true;
       this.shell.position.copy(this._shellHand).add(new THREE.Vector3(0.012, 0.02, -0.01)).applyMatrix4(this.rig.matrixWorld);
@@ -718,10 +748,11 @@ export class WeaponSystem {
       if (this.flashTime <= 0) { this.flashSprite.visible = false; this.viewFlashLight.intensity = 0; }
     }
     const mw = w.model.muzzle.getWorldPosition(new THREE.Vector3());
+    this.muzzleView = mw; // muzzle in view space (for the world-space laser beam)
     this.viewFlashLight.position.copy(mw);
 
     // Viewmodel FOV narrows slightly with ADS so optics look right.
-    const vf = lerp(54, s.scope ? 30 : 44, a);
+    const vf = lerp(60, s.scope ? 30 : 44, a);
     if (Math.abs(this.viewCam.fov - vf) > 0.01) { this.viewCam.fov = vf; this.viewCam.updateProjectionMatrix(); }
   }
 
