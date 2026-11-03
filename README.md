@@ -106,7 +106,7 @@ Equipment: frag (cookable), sticky semtex, remote C4, flashbang, smoke (blocks A
 - Maps are dressed with building facades (window frames, glass, door frames, rooftop units), vegetation, road markings, street furniture, power lines, wire, debris, puddles, tyre tracks and distant backdrops.
 
 **Sound**
-- Realistic gunfire, synthesized in layers: a hard muzzle-blast slap, a mid-range bang, a chest-thumping low punch, a rumbling boom, and the action cycling when you're close to the gun. Gunfire runs through its own channel with soft saturation and fast compression, like a close-range field recording.
+- Realistic gunfire made only from shaped noise, with no musical tones: an instant crack, a loud bang, a low pressure thump and a short rumble. Close to the gun you also hear the action clack. Gunfire runs through its own channel with soft saturation and fast compression, like a close-range field recording.
 - Sound travels at the speed of sound. Distant shots and explosions arrive after the flash, sounding duller and mostly echo. Supersonic rounds fired at you crack past before you hear the report, and close passes rip the air. Bullets ricochet off metal and concrete.
 - Every map has its own echo, generated for that environment. City streets slap back fast and flutter between buildings. The snowy mountains send back long rolling echoes. Open desert is dry, with late returns off the ridges. Harbor containers ring bright and metallic. Indoor concrete is dense, short and boomy.
 - A final limiter keeps stacked gunfire and explosions from distorting.

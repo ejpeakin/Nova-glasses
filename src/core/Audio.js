@@ -342,15 +342,15 @@ class AudioEngine {
       const out = this._out(pos, { gain: own ? 0.6 : 0.55, ref: 2.5, rolloff: 1.5, maxDist: 70, verb: 0.25, ownVerb: 0.3, bus: this.guns });
       if (!out) return;
       const t = now + (own ? 0 : out._dist / SPEED_OF_SOUND);
-      // A suppressed rifle is still a sharp "thwap", plus the action slamming.
-      this._noise(out, t, 0.06, { type: 'bandpass', freq: 1500 * pitch, q: 0.9, gain: 1.1, decay: 0.05, attack: 0.0006 });
-      this._noise(out, t, 0.12, { type: 'lowpass', freq: 600 * pitch, gain: 0.8, decay: 0.1, brown: true });
-      this._tone(out, t, 0.07, { freq: 200 * pitch, freqEnd: 60, gain: 0.6, attack: 0.0008 });
+      // A suppressed rifle is still a sharp crack and a muffled thwap, plus the action slamming.
+      this._noise(out, t, 0.006, { type: 'highpass', freq: 2000, q: 0.5, gain: 0.7, attack: 0.0002, decay: 0.005 });
+      this._noise(out, t, 0.07, { type: 'lowpass', freq: 2600 * pitch, freqEnd: 500, q: 0.5, gain: 1.3, decay: 0.06, attack: 0.0005 });
+      this._noise(out, t, 0.1, { type: 'lowpass', freq: 260, q: 0.5, gain: 1.0, decay: 0.08, attack: 0.001, brown: true });
       if (own || out._dist < 12) this._action(out, t, own ? 0.38 : 0.18);
       return;
     }
     const out = this._out(pos, {
-      gain: (own ? 1.0 : 1.5) * (p.gain ?? 1), ref: 7, rolloff: 1.0, maxDist: 650,
+      gain: (own ? 1.15 : 1.6) * (p.gain ?? 1), ref: 7, rolloff: 1.0, maxDist: 650,
       verb: (p.tail ?? 0.6) * 1.2, ownVerb: 0.75, verbMax: 2.2, bus: this.guns,
     });
     if (!out) return;
@@ -360,22 +360,23 @@ class AudioEngine {
     const t = now + (own ? 0 : Math.min(2, d / SPEED_OF_SOUND));
     const near = clamp(1 - d / 70, 0, 1);
     const crack = p.crack ?? 0.8;
-    // 1. Muzzle blast: a hard, broadband slap with an instant attack.
-    if (d < 110) this._noise(out, t, 0.02, { type: 'highpass', freq: 1100 * pitch, gain: (1.3 + crack) * (0.3 + 0.7 * near), decay: 0.018, attack: 0.0004 });
-    // 2. Bark: the mid-range bang.
-    this._noise(out, t, 0.15, { type: 'bandpass', freq: (p.body ?? 2200) * 0.55 * pitch, freqEnd: 320, q: 0.7, gain: 2.0, decay: 0.12, attack: 0.0006 });
-    // 3. Pressure punch: a fast pitch-dropping low thump you feel in your chest.
-    this._tone(out, t, own ? 0.24 : 0.17, { freq: (p.thump ?? 140) * 1.55 * pitch, freqEnd: 36, gain: own ? 2.0 : 1.4, attack: 0.0008 });
-    // 4. Boom: low, rumbling body that carries furthest.
-    this._noise(out, t, own ? 0.4 : 0.34, { type: 'lowpass', freq: 520 * pitch, q: 0.8, gain: own ? 1.6 : 1.3, decay: own ? 0.34 : 0.3, attack: 0.001, brown: true });
+    // Everything below is filtered noise: a real gunshot is an explosion, not a note.
+    // 1. CRACK: the instant blast front, only milliseconds long.
+    if (d < 140) this._noise(out, t, 0.012, { type: 'highpass', freq: 1300 * pitch, q: 0.5, gain: (2.3 + crack) * (0.35 + 0.65 * near), attack: 0.0002, decay: 0.01 });
+    // 2. BANG: broadband blast whose brightness collapses within a tenth of a second.
+    this._noise(out, t, 0.12, { type: 'lowpass', freq: (p.body ?? 2200) * 2.6 * pitch * (0.45 + 0.55 * near), freqEnd: 450, q: 0.5, gain: 2.9, attack: 0.0004, decay: 0.1 });
+    // 3. THUMP: the low pressure hit (low-passed brown noise, no pitch).
+    this._noise(out, t, own ? 0.16 : 0.12, { type: 'lowpass', freq: (p.thump ?? 140) * 1.2, q: 0.5, gain: own ? 2.6 : 1.8, attack: 0.0008, decay: own ? 0.14 : 0.1, brown: true });
+    // 4. BOOM: the rumble that carries furthest.
+    this._noise(out, t + 0.004, own ? 0.32 : 0.3, { type: 'lowpass', freq: 420 * pitch, freqEnd: 140, q: 0.5, gain: own ? 1.1 : 0.95, attack: 0.004, decay: own ? 0.28 : 0.26, brown: true });
     // 5. The action cycling, close to the gun.
     if (own || d < 12) this._action(out, t, own ? 0.3 : 0.14);
   }
 
   /** Bolt carrier slamming home and its spring. */
   _action(out, t, g) {
-    this._noise(out, t + 0.026, 0.028, { type: 'bandpass', freq: 3300 * rand(0.92, 1.08), q: 5, gain: g, attack: 0.0005 });
-    this._tone(out, t + 0.03, 0.045, { type: 'triangle', freq: 1900 * rand(0.94, 1.06), freqEnd: 1250, gain: g * 0.35 });
+    this._noise(out, t + 0.024, 0.008, { type: 'bandpass', freq: 2600 * rand(0.9, 1.1), q: 1.1, gain: g, attack: 0.0003, decay: 0.007 });
+    this._noise(out, t + 0.045, 0.01, { type: 'bandpass', freq: 1700 * rand(0.9, 1.1), q: 1.1, gain: g * 0.7, attack: 0.0003, decay: 0.009 });
   }
 
   /**
@@ -389,12 +390,11 @@ class AudioEngine {
     const t = this.now;
     if (supersonic) {
       const g = clamp(1.7 / (0.7 + miss), 0.25, 2.2) * heavy;
-      this._noise(out, t, 0.008, { type: 'highpass', freq: 1700, gain: g, attack: 0.0002, decay: 0.007 });
-      this._noise(out, t + 0.001, 0.035, { type: 'bandpass', freq: 3000, q: 1.4, gain: g * 0.45, decay: 0.03 });
-      this._tone(out, t, 0.014, { type: 'square', freq: 950, freqEnd: 480, gain: g * 0.12, attack: 0.0003 });
+      this._noise(out, t, 0.006, { type: 'highpass', freq: 1600, q: 0.5, gain: g, attack: 0.0002, decay: 0.005 });
+      this._noise(out, t + 0.0015, 0.03, { type: 'bandpass', freq: 2800, q: 0.8, gain: g * 0.35, decay: 0.025 });
     }
     if (miss < 1.6) {
-      this._noise(out, t, 0.13, { type: 'bandpass', freq: supersonic ? 5200 : 3600, freqEnd: 1400, q: 3, gain: 0.75 * (1.6 - miss), attack: 0.02 });
+      this._noise(out, t, 0.12, { type: 'bandpass', freq: supersonic ? 5000 : 3400, freqEnd: 1500, q: 1.2, gain: 0.7 * (1.6 - miss), attack: 0.02 });
     }
   }
 
@@ -404,9 +404,8 @@ class AudioEngine {
     const out = this._out(pos, { gain: 0.45, ref: 3, rolloff: 1.4, maxDist: 45, verb: 0.35, bus: this.guns });
     if (!out) return;
     const t = this.now;
-    const f0 = rand(2600, 4300);
-    this._tone(out, t + 0.01, rand(0.28, 0.55), { type: 'sine', freq: f0, freqEnd: f0 * rand(0.3, 0.5), gain: 0.32, attack: 0.006 });
-    this._noise(out, t, 0.03, { type: 'highpass', freq: 2500, gain: 0.55 });
+    this._noise(out, t, 0.02, { type: 'highpass', freq: 2500, q: 0.5, gain: 0.6, decay: 0.015 });
+    this._noise(out, t + 0.01, rand(0.18, 0.3), { type: 'bandpass', freq: rand(3500, 4500), freqEnd: 1300, q: 1.3, gain: 0.3, attack: 0.01 });
   }
 
   dryFire() {
@@ -429,35 +428,33 @@ class AudioEngine {
       case 'magIn':
         this._noise(out, t, 0.04, { type: 'bandpass', freq: 1800, q: 2, gain: 0.8 });
         this._noise(out, t + 0.05, 0.05, { type: 'bandpass', freq: 3200, q: 4, gain: 1.0 });
-        this._tone(out, t + 0.05, 0.05, { type: 'square', freq: 600, freqEnd: 300, gain: 0.08 });
+        this._noise(out, t + 0.05, 0.04, { type: 'lowpass', freq: 700, q: 0.5, gain: 0.4, brown: true });
         break;
       case 'bolt':
-        this._noise(out, t, 0.06, { type: 'bandpass', freq: 2200, q: 3, gain: 0.9 });
-        this._noise(out, t + 0.12, 0.06, { type: 'bandpass', freq: 3000, q: 3, gain: 1.0 });
+        this._noise(out, t, 0.05, { type: 'bandpass', freq: 2200, q: 1.3, gain: 0.9 });
+        this._noise(out, t + 0.12, 0.05, { type: 'bandpass', freq: 3000, q: 1.3, gain: 1.0 });
         break;
       case 'pump':
-        this._noise(out, t, 0.08, { type: 'bandpass', freq: 1200, q: 2, gain: 1.0, freqEnd: 2400 });
-        this._noise(out, t + 0.14, 0.07, { type: 'bandpass', freq: 2400, q: 2, gain: 1.0, freqEnd: 1000 });
+        this._noise(out, t, 0.08, { type: 'bandpass', freq: 1200, q: 1.2, gain: 1.0, freqEnd: 2400 });
+        this._noise(out, t + 0.14, 0.07, { type: 'bandpass', freq: 2400, q: 1.2, gain: 1.0, freqEnd: 1000 });
         break;
       case 'shell':
-        this._noise(out, t, 0.04, { type: 'bandpass', freq: 1600, q: 3, gain: 0.7 });
-        this._tone(out, t, 0.04, { freq: 900, gain: 0.05 });
+        this._noise(out, t, 0.04, { type: 'bandpass', freq: 1600, q: 1.5, gain: 0.7 });
         break;
       case 'slide':
-        this._noise(out, t, 0.05, { type: 'bandpass', freq: 3500, q: 3, gain: 0.8 });
-        this._noise(out, t + 0.08, 0.04, { type: 'bandpass', freq: 2500, q: 3, gain: 0.8 });
+        this._noise(out, t, 0.05, { type: 'bandpass', freq: 3500, q: 1.3, gain: 0.8 });
+        this._noise(out, t + 0.08, 0.04, { type: 'bandpass', freq: 2500, q: 1.3, gain: 0.8 });
         break;
       case 'raise':
         this._noise(out, t, 0.12, { type: 'bandpass', freq: 700, q: 1, gain: 0.25, attack: 0.03 });
         this._noise(out, t + 0.1, 0.03, { type: 'bandpass', freq: 3000, q: 4, gain: 0.35 });
         break;
       case 'pin':
-        this._tone(out, t, 0.12, { type: 'triangle', freq: 2400, freqEnd: 1800, gain: 0.15 });
         this._noise(out, t, 0.04, { type: 'highpass', freq: 5000, gain: 0.4 });
+        this._noise(out, t + 0.03, 0.05, { type: 'bandpass', freq: 3000, q: 1.5, gain: 0.25 });
         break;
       case 'bounce':
-        this._noise(out, t, 0.05, { type: 'bandpass', freq: 1500, q: 4, gain: 0.6 });
-        this._tone(out, t, 0.05, { freq: 700, gain: 0.08 });
+        this._noise(out, t, 0.05, { type: 'bandpass', freq: 1500, q: 1.5, gain: 0.6 });
         break;
       default:
         this._noise(out, t, 0.05, { type: 'bandpass', freq: 2000, q: 2, gain: 0.6 });
@@ -469,8 +466,8 @@ class AudioEngine {
     const out = this._out(pos, { gain: 0.15, ref: 1, rolloff: 2, maxDist: 15 });
     if (!out) return;
     const t = this.now + rand(0.25, 0.45);
-    this._tone(out, t, 0.08, { type: 'triangle', freq: rand(3200, 4200), gain: 0.3 });
-    this._tone(out, t + 0.09, 0.05, { type: 'triangle', freq: rand(3000, 4000), gain: 0.15 });
+    this._noise(out, t, 0.012, { type: 'highpass', freq: 3500, q: 0.6, gain: 0.5, decay: 0.01 });
+    this._noise(out, t + 0.09, 0.01, { type: 'highpass', freq: 3800, q: 0.6, gain: 0.25, decay: 0.008 });
   }
 
   explosion(pos, size = 1) {
@@ -481,7 +478,7 @@ class AudioEngine {
     if (out._dist < 120) this._noise(out, t, 0.03, { type: 'highpass', freq: 900, gain: 1.6, attack: 0.0005, decay: 0.028 });
     this._noise(out, t, 1.8, { type: 'lowpass', freq: 1800, freqEnd: 120, gain: 1.6, decay: 1.6, brown: false });
     this._noise(out, t, 2.4, { type: 'lowpass', freq: 400, freqEnd: 60, gain: 2.0, brown: true });
-    this._tone(out, t, 0.8, { freq: 75, freqEnd: 28, gain: 1.6 });
+    this._noise(out, t, 0.9, { type: 'lowpass', freq: 110, freqEnd: 40, q: 0.5, gain: 2.4, attack: 0.002, decay: 0.85, brown: true });
     // Debris crackle.
     for (let i = 0; i < 6; i++) {
       this._noise(out, t + 0.2 + Math.random() * 0.9, 0.04, { type: 'highpass', freq: 2500, gain: 0.25 });
@@ -494,7 +491,7 @@ class AudioEngine {
     const out = this._out(pos, { gain: 1.6, ref: 8, rolloff: 0.8, verb: 0.8 });
     if (!out) return;
     this._noise(out, t, 0.6, { type: 'highpass', freq: 800, gain: 1.8, decay: 0.5 });
-    this._tone(out, t, 0.2, { freq: 120, freqEnd: 40, gain: 1.2 });
+    this._noise(out, t, 0.25, { type: 'lowpass', freq: 200, q: 0.5, gain: 1.6, decay: 0.22, brown: true });
   }
 
   tinnitus(seconds) {
@@ -509,8 +506,8 @@ class AudioEngine {
     if (!out) return;
     const t = this.now;
     if (material === 'metal') {
-      this._tone(out, t, 0.18, { type: 'triangle', freq: rand(1800, 2600), freqEnd: 1200, gain: 0.25 });
       this._noise(out, t, 0.04, { type: 'highpass', freq: 3000, gain: 0.6 });
+      this._noise(out, t, 0.09, { type: 'bandpass', freq: rand(1800, 2600), q: 1.8, gain: 0.45 });
     } else if (material === 'flesh') {
       this._noise(out, t, 0.08, { type: 'lowpass', freq: 700, gain: 0.9 });
     } else if (material === 'wood') {
