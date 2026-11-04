@@ -1,16 +1,20 @@
 // The campaign's opening film: an in-engine cinematic that tells the story so far,
 // played every time a new campaign starts (Mission 1), and on demand from the menu.
 //
-// Shots (about 100 seconds):
+// Shots (about two and a half minutes):
 //   1  Orbit       Earth at sunrise, the HALCYON constellation gliding past
 //   2  Release     a satellite drops a rod; it burns through re-entry
 //   3  Impact      the rod hits a desert test range: flash, fireball, shockwave
 //   4  The key     the HALCYON key open in a secure lab
-//   5  Convoy      three armoured trucks on a mountain road at night
+//   5  Convoy      armoured escorts and trucks on a mountain road at night
 //   6  Ambush      a roadside bomb, muzzle flashes on the hill, Hart taken
-//   7  Vasko       MERIDIAN's founder at his window, the targets on his screens
-//   8  ORION       the team at dawn, one by one, then into the helicopter
-//   9  Title       the constellation over the Earth, the game's title
+//   7  Aftermath   burning wrecks, the key's case lying open and empty, a drone overhead
+//   8  Vasko       MERIDIAN's founder at his window, the targets on his screens
+//   9  Drone feed  Port Kaval from a drone: MERIDIAN loading crates onto a freighter
+//  10  Briefing    ORION round a map table in a tent at a forward base
+//  11  ORION       the team at dawn, one by one, then into the helicopter
+//  12  Flight      two helicopters low over the Black Sea toward the coast
+//  13  Title       the constellation over the Earth, the game's title
 //
 // Everything is generated in code (textures included). Subtitles narrate each shot,
 // and the narration is spoken when Squad voices is on. Hold Space or click SKIP.
@@ -21,7 +25,7 @@ import { WEAPONS } from '../weapons/WeaponData.js';
 import { Audio } from '../core/Audio.js';
 import { Store } from '../core/Storage.js';
 import { escapeHtml } from '../core/Utils.js';
-import { buildCargoTruck, buildMRAP, dressRoad, rangeTargets, rangeMountains, dressAirfield, dressOffice, dressLab } from './FilmProps.js';
+import { buildCargoTruck, buildMRAP, dressRoad, rangeTargets, rangeMountains, dressAirfield, dressOffice, dressLab, buildKeyCase, buildDrone, buildPort, buildBriefing, buildSea } from './FilmProps.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -324,6 +328,10 @@ const LINES = {
   key: [[0.5, 'Firing it takes the HALCYON key, a control unit the size of a suitcase,'], [5.2, 'the launch codes, and a dish big enough to reach the satellites.']],
   convoy: [[0.6, 'Eleven days ago, the key left the Halden research facility under armed escort.']],
   ambush: [[0.4, 'The convoy was ambushed. Forty-one soldiers and engineers died in under six minutes.'], [6.6, 'The key vanished. So did the engineer who built it: Dr. Lena Hart.']],
+  aftermath: [[0.6, 'By the time a drone reached the road, only the fires were moving.'], [6.4, 'The key\'s case lay open in the dirt. Empty.']],
+  drone: [[0.6, 'Eleven days later, a drone over the harbour at Port Kaval watched MERIDIAN load crates onto a freighter.'], [6.8, 'One of them, the size of a suitcase, never left a man\'s hands.']],
+  briefing: [[0.6, 'At a forward base on the Black Sea coast, the footage lands on one table.'], [6.4, 'Find which container the key is in, before that ship sails.']],
+  flight: [[0.6, 'That night, ORION flies in low over the water, no lights.'], [6.0, 'Wraith goes into the harbour alone.']],
   vasko: [[0.6, 'The attackers were MERIDIAN, a private army of former special forces.'], [6.2, 'Their founder, Anton Vasko, means to sell HALCYON\'s power to the highest bidder.']],
   orion: [[0.6, 'Task Force ORION: four US Army Special Forces operators who officially do not exist.'], [13.5, 'Their orders: find the key. Stop MERIDIAN. Bring Vasko in.']],
   title: [[0.8, 'You are Sergeant Elias "Wraith" Cole.']],
@@ -348,15 +356,22 @@ export class StoryFilm {
     this._buildRoad();
     this._buildOffice();
     this._buildAirfield();
+    this._buildPortScene();
+    this._buildTent();
+    this._buildSeaScene();
     this.shots = [
       { id: 'orbit', dur: 12, scene: this.space },
       { id: 'release', dur: 8, scene: this.space },
       { id: 'impact', dur: 10, scene: this.range },
       { id: 'key', dur: 10, scene: this.lab },
-      { id: 'convoy', dur: 9, scene: this.road },
+      { id: 'convoy', dur: 11, scene: this.road },
       { id: 'ambush', dur: 13, scene: this.road },
+      { id: 'aftermath', dur: 12, scene: this.road },
       { id: 'vasko', dur: 12, scene: this.office },
+      { id: 'drone', dur: 13, scene: this.port },
+      { id: 'briefing', dur: 12, scene: this.tent },
       { id: 'orion', dur: 19, scene: this.airfield },
+      { id: 'flight', dur: 12, scene: this.seaScene },
       { id: 'title', dur: 9, scene: this.space },
     ];
     this.total = this.shots.reduce((a, s) => a + s.dur, 0);
@@ -372,6 +387,7 @@ export class StoryFilm {
       <div class="film-fade"></div><div class="film-flash"></div>
       <div class="film-card"></div><div class="film-title"></div>
       <div class="film-sub"></div>
+      <div class="film-hud"><div class="fh-tl">MQ-9 // FEED 2<br>EO/IR WHT-HOT</div><div class="fh-tr">PORT KAVAL<br><span class="fh-time"></span></div><div class="fh-bl">ALT 18,400 FT<br>SLANT 6.1 KM</div><div class="fh-br">TGT 03<br>TRACK</div><div class="fh-x"></div><div class="fh-box"></div></div>
       <button class="film-skip" type="button">SKIP ▸ <small>hold SPACE</small><i></i></button>`;
     this.app.ui.appendChild(el);
     this.el = el;
@@ -619,6 +635,9 @@ export class StoryFilm {
     this.hart.root.visible = false;
     s.add(this.hart.root);
     this.hartGuards = [0, 1].map((i) => { const h = new Humanoid('meridian', 'wasp', { seed: 50 + i }); h.root.visible = false; s.add(h.root); return h; });
+    // For the aftermath: the key's case, thrown open, and a drone on its way.
+    this.emptyCase = buildKeyCase(); this.emptyCase.visible = false; s.add(this.emptyCase);
+    this.drone = buildDrone(); this.drone.visible = false; s.add(this.drone);
     this.road = s;
   }
 
@@ -786,6 +805,85 @@ export class StoryFilm {
     this.airfield = s;
   }
 
+  /** Port Kaval at night, seen from a drone: quay, freighter, cranes, men loading crates. */
+  _buildPortScene() {
+    const s = new THREE.Scene();
+    s.background = new THREE.Color(0x05080c);
+    s.fog = new THREE.FogExp2(0x0a0f14, 0.0032);
+    s.add(new THREE.HemisphereLight(0x52606e, 0x101012, 1.2));
+    const moon = new THREE.DirectionalLight(0xa6b8d8, 1.1);
+    moon.position.set(-80, 140, 60);
+    s.add(moon);
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), new THREE.MeshStandardMaterial({ color: 0x0a161c, roughness: 0.3, metalness: 0.4 }));
+    water.rotation.x = -Math.PI / 2; water.position.y = -1.4;
+    s.add(water);
+    buildPort(s);
+    const truck = buildCargoTruck({ color: 0x3a3c3e, seed: 31, code: 'MRD' });
+    truck.position.set(14, 0, 7); s.add(truck);
+    // Gangway from the quay up to the deck.
+    const gang = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.12, 6.2), new THREE.MeshStandardMaterial({ color: 0x4a4e52, roughness: 0.6, metalness: 0.5 }));
+    gang.position.set(0, 1.6, -1.6); gang.rotation.x = 0.55; s.add(gang);
+    const crateM = new THREE.MeshStandardMaterial({ color: 0x4c5038, roughness: 0.85 });
+    const caseM = new THREE.MeshStandardMaterial({ color: 0x131416, roughness: 0.5, metalness: 0.3 });
+    this.porters = [0, 1, 2, 3].map((i) => {
+      const h = new Humanoid('meridian', 'rk74', { seed: 60 + i });
+      h.setCaptive('carry');
+      const key = i === 2;
+      const box = new THREE.Mesh(key ? new THREE.BoxGeometry(0.5, 0.2, 0.36) : new THREE.BoxGeometry(0.5, 0.4, 0.4), key ? caseM : crateM);
+      box.position.set(0, 0.2, -0.36).add(h.shift);
+      h.torso.add(box);
+      s.add(h.root);
+      return { h, phase: i / 4, key };
+    });
+    this.portGuards = [[10, 3, 2.4], [-6, 3, -0.4], [2, 3.3, -9]].map(([x, y, yaw], i) => {
+      const h = new Humanoid('meridian', 'rk74', { seed: 80 + i });
+      h.root.position.set(x, y === 3 ? 0 : y, i === 2 ? -9 : 3 + i);
+      h.root.rotation.y = yaw;
+      s.add(h.root);
+      return h;
+    });
+    this.port = s;
+  }
+
+  /** The briefing tent at the forward base. */
+  _buildTent() {
+    const s = new THREE.Scene();
+    s.background = new THREE.Color(0x040404);
+    s.add(new THREE.AmbientLight(0x1c2024, 0.7));
+    this.tentSet = buildBriefing(s);
+    // ORION round the table; Reyes at the head, working the map.
+    const spots = [[-1.75, 0, -Math.PI / 2], [-0.5, 1.15, 0.05], [0.7, 1.12, -0.1], [1.75, 0.15, Math.PI / 2 + 0.1]];
+    this.briefTeam = spots.map(([x, z, yaw], i) => {
+      const h = new Humanoid('orion', 'vx4', { seed: 11 + i * 7 });
+      h.root.position.set(x, 0, z);
+      h.root.rotation.y = yaw;
+      h.setCaptive('side');
+      h.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+      s.add(h.root);
+      return h;
+    });
+    this.tent = s;
+  }
+
+  /** The Black Sea at first light: two helicopters low over the water. */
+  _buildSeaScene() {
+    const s = new THREE.Scene();
+    const sunDir = V(0.25, 0.05, -1).normalize();
+    s.add(skyDome(0x0c1830, 0xd88a58, sunDir, 0xffa070));
+    s.fog = new THREE.Fog(0x6a6476, 300, 2800);
+    const sun = new THREE.DirectionalLight(0xffb888, 1.8);
+    sun.position.copy(sunDir).multiplyScalar(300);
+    s.add(sun, new THREE.HemisphereLight(0x6a7a9a, 0x101820, 1.0));
+    this.sea = buildSea(s);
+    this.flightHelis = [0, 1].map((i) => {
+      const h = new Helicopter(s);
+      h.group.position.set(i ? 34 : 0, i ? 30 : 24, i ? 26 : 0);
+      h.group.rotation.x = -0.12;
+      return h;
+    });
+    this.seaScene = s;
+  }
+
   // ---------- timeline ----------
   _next() {
     this.shot++;
@@ -796,6 +894,8 @@ export class StoryFilm {
     this.card(null);
     this.title(null);
     this.flash(0);
+    this.r.domElement.style.filter = '';
+    this.$('.film-hud').classList.remove('on');
     this[`_enter_${sh.id}`]?.();
   }
 
@@ -1119,7 +1219,126 @@ export class StoryFilm {
     if (t > this.shots[this.shot].dur - 0.1) Audio.stopLoop('film');
   }
 
-  // Shot 7: Vasko at his window, the strike candidates on his screens.
+  // Shot 7: the aftermath: fires, the open case, a drone crossing the sky.
+  _enter_aftermath() {
+    this.camera.fov = 40; this.camera.updateProjectionMatrix();
+    for (const h of this.raiders) h.root.visible = false;
+    this.hart.root.visible = false;
+    for (const g of this.hartGuards) g.root.visible = false;
+    for (const tr of this.tracers) tr.l.visible = false;
+    for (const mz of this.muzzles) mz.s.visible = false;
+    const t2 = this.trucks[1].position;
+    this.emptyCase.position.set(t2.x - 4, this._hillY(t2.x - 4, -7) + 0.02, -7);
+    this.emptyCase.rotation.y = 0.6;
+    this.emptyCase.visible = true;
+    this.drone.visible = true;
+    Audio.startLoop('film', 'rotor');
+  }
+  _shot_aftermath(t, dt) {
+    Audio.setLoop('film', 0.08, 0.5);
+    // The wrecks still burn.
+    for (const tk of [this.trucks[0], this.trucks[2]]) {
+      if (Math.random() < dt * 20) this.roadFire.emit(tk.position.clone().add(V((Math.random() - 0.5) * 3, 1.4 + Math.random(), (Math.random() - 0.5) * 1.6)), V(0, 1.6 + Math.random() * 2, 0), { color: Math.random() > 0.5 ? 0xff7020 : 0xffa040, life: 0.8, size: 1.3, grow: 1.3, alpha: 0.9, drag: 1 });
+      if (Math.random() < dt * 7) this.roadSmoke.emit(tk.position.clone().add(V(0, 2.6, 0)), V((Math.random() - 0.5) * 0.6, 2.2, (Math.random() - 0.5) * 0.6), { color: 0x141312, life: 7, size: 2.4, grow: 3.4, alpha: 0.65, drag: 0.4, rise: 0.6 });
+    }
+    this.roadFire.update(dt);
+    this.roadSmoke.update(dt);
+    this.ieds.position.copy(this.trucks[0].position).add(V(1, 2, 0));
+    this.ieds.intensity = 520 + Math.sin(t * 23) * 120 + Math.random() * 120;
+    // The drone crosses high over the road.
+    const L = this.trucks[1].position;
+    this.drone.position.set(L.x - 150 + t * 22, 34, -14);
+    this.drone.userData.prop.rotation.x += dt * 70;
+    const blink = (t * 1.3) % 1 < 0.12;
+    this.drone.userData.red.visible = this.drone.userData.green.visible = blink;
+    if (t < 6) {
+      // Down by the case, rising slowly.
+      const c = this.emptyCase.position, k = smooth(t / 6);
+      this.camera.position.set(c.x + 1.5 - k * 1.1, c.y + 0.55 + k * 1.3, c.z + 1.5 + k * 2.2);
+      this.camera.lookAt(c.x, c.y + 0.1 + k * 0.7, c.z);
+    } else {
+      // Low on the road among the wrecks, tilting up to follow the drone.
+      const k = smooth((t - 6) / 6);
+      this.camera.position.set(L.x - 9, 1.8, 9);
+      const look = V(L.x + 4, 2, -3).lerp(this.drone.position, 0.12 + k * 0.28);
+      this.camera.lookAt(look);
+    }
+    this._listen();
+    if (t > this.shots[this.shot].dur - 0.1) Audio.stopLoop('film');
+  }
+
+  // Shot 9: the drone feed over Port Kaval.
+  _enter_drone() {
+    this.camera.fov = 24; this.camera.updateProjectionMatrix();
+    this.r.domElement.style.filter = 'grayscale(1) contrast(1.15) brightness(1.5)';
+    this.$('.film-hud').classList.add('on');
+  }
+  _shot_drone(t, dt) {
+    // Porters shuttle crates from the truck up the gangway; guards stand watch.
+    const A = V(12, 0, 6.2), B = V(0, 0, 1.5), C = V(0, 3.3, -4.6);
+    for (const p of this.porters) {
+      const u = (p.phase + t * 0.07) % 1;
+      const pos = u < 0.6 ? A.clone().lerp(B, u / 0.6) : B.clone().lerp(C, (u - 0.6) / 0.4);
+      const dir = u < 0.6 ? B.clone().sub(A) : C.clone().sub(B);
+      p.h.root.position.copy(pos);
+      p.h.root.rotation.y = Math.atan2(-dir.x, -dir.z);
+      p.h.update(dt, 1.3, 0, 0, false, 0);
+    }
+    for (const g of this.portGuards) g.update(dt, 0, 0, 0, false, 0);
+    // A high, slow orbit, zooming in.
+    const a = 0.75 + t * 0.025, r = 170 - t * 3, hgt = 120 - t * 2.4;
+    this.camera.position.set(4 + Math.sin(a) * r, hgt, 2 + Math.cos(a) * r);
+    this.camera.lookAt(4, 1, 1);
+    this.camera.fov = 24 - smooth(t / 12) * 9;
+    this.camera.updateProjectionMatrix();
+    // HUD: time code and a box tracking the man with the case.
+    const key = this.porters.find((p) => p.key).h.root.position.clone().setY(1.4);
+    key.project(this.camera);
+    const box = this.$('.fh-box');
+    box.style.left = `${(key.x * 0.5 + 0.5) * 100}%`;
+    box.style.top = `${(-key.y * 0.5 + 0.5) * 100}%`;
+    this.$('.fh-time').textContent = `02:${String(14 + Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t + 31) % 60).padStart(2, '0')}Z`;
+  }
+
+  // Shot 10: the briefing tent.
+  _enter_briefing() {
+    this.camera.fov = 40; this.camera.updateProjectionMatrix();
+    this.briefTeam[0].playMove('Interact', { loop: true, hideGun: false });
+  }
+  _shot_briefing(t, dt) {
+    for (const h of this.briefTeam) h.update(dt, 0, 0, 0, false, 0);
+    const sway = Math.sin(t * 0.8) * 0.03;
+    this.tentSet.lamp.position.x = sway; this.tentSet.shade.position.x = sway; this.tentSet.bulb.position.x = sway;
+    const k = smooth(t / 12);
+    this.camera.position.set(lerp(3.4, 1.0, k), lerp(2.4, 1.75, k), lerp(2.9, 1.3, k));
+    this.camera.lookAt(lerp(0, -0.35, k), lerp(1.1, 0.9, k), lerp(0, 0.1, k));
+  }
+
+  // Shot 12: the flight in, low over the sea.
+  _enter_flight() {
+    this.camera.fov = 44; this.camera.updateProjectionMatrix();
+    Audio.startLoop('film', 'rotor');
+  }
+  _shot_flight(t, dt) {
+    Audio.setLoop('film', 0.65, 1);
+    for (const h of this.flightHelis) { h.update(dt); h.group.position.y += Math.sin(this.t * 1.3 + h.group.position.x) * 0.02; }
+    this.sea.normal.offset.y += dt * 0.55;
+    const H = this.flightHelis[0].group.position;
+    if (t < 6.5) {
+      const k = smooth(t / 6.5);
+      this.camera.position.set(H.x - 16 + k * 4, H.y + 2 - k * 1, H.z - 10 + k * 18);
+      this.camera.lookAt(H.x, H.y, H.z - 2);
+    } else {
+      // Behind and below the pair, the coast and the harbour lights ahead.
+      const k = smooth((t - 6.5) / 5.5);
+      this.camera.position.set(H.x + 10, H.y - 12 + k * 4, H.z + 40);
+      this.camera.lookAt(H.x + 10, H.y - 4, H.z - 200);
+    }
+    this._listen();
+    if (t > this.shots[this.shot].dur - 0.1) Audio.stopLoop('film');
+  }
+
+  // Shot 8: Vasko at his window, the strike candidates on his screens.
   _enter_vasko() { this.camera.fov = 36; this.camera.updateProjectionMatrix(); }
   _shot_vasko(t, dt) {
     // Behind Vasko at the window, then round to the screens: targets and bids.
@@ -1197,6 +1416,7 @@ export class StoryFilm {
   finish() {
     if (this.done) return;
     this.done = true;
+    this.r.domElement.style.filter = '';
     try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
     Audio.stopLoop('film');
     this.el.classList.add('out');
@@ -1206,7 +1426,7 @@ export class StoryFilm {
 
   dispose() {
     this.el?.remove();
-    for (const s of [this.space, this.range, this.lab, this.road, this.office, this.airfield]) {
+    for (const s of [this.space, this.range, this.lab, this.road, this.office, this.airfield, this.port, this.tent, this.seaScene]) {
       s?.traverse((o) => {
         if (o.geometry) o.geometry.dispose();
         const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];

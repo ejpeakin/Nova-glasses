@@ -565,3 +565,12 @@ body.nvg #nvg-overlay { display: block; }
 .film-skip small { font-weight: 400; letter-spacing: 0.08em; opacity: 0.7; margin-left: 6px; }
 .film-skip i { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; background: var(--accent); }
 .film-skip:hover { color: #fff; border-color: var(--accent); }
+/* Drone feed overlay in the story film. */
+.film-hud { position: absolute; left: 0; right: 0; top: 9vh; bottom: 9vh; opacity: 0; transition: opacity 0.4s; font-family: var(--mono); font-size: clamp(11px, 1.3vw, 15px); letter-spacing: 0.12em; color: #e6f2e6; text-shadow: 0 0 3px #000; }
+.film-hud.on { opacity: 1; }
+.film-hud > div { position: absolute; }
+.fh-tl { left: 4vw; top: 3vh; } .fh-tr { right: 4vw; top: calc(3vh + 46px); text-align: right; } .fh-bl { left: 4vw; bottom: 3vh; } .fh-br { right: 4vw; bottom: 3vh; text-align: right; }
+.fh-x { left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border: 1px solid rgba(230,242,230,0.7); border-radius: 50%; }
+.fh-x::before, .fh-x::after { content: ''; position: absolute; background: rgba(230,242,230,0.8); }
+.fh-x::before { left: 50%; top: -14px; bottom: -14px; width: 1px; } .fh-x::after { top: 50%; left: -14px; right: -14px; height: 1px; }
+.fh-box { width: 54px; height: 70px; margin: -35px 0 0 -27px; border: 2px solid #e6f2e6; box-shadow: 0 0 0 1px rgba(0,0,0,0.5); }

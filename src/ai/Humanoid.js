@@ -830,6 +830,10 @@ export class Humanoid {
       // Unarmed, arms relaxed at the sides.
       rh.set(0.23, -0.18, -0.02).add(this.shift);
       lh.set(-0.23, -0.18, -0.02).add(this.shift);
+    } else if (this.captive === 'carry') {
+      // Carrying a box in front, hands under its sides.
+      rh.set(0.17, 0.12, -0.32).add(this.shift);
+      lh.set(-0.17, 0.12, -0.32).add(this.shift);
     }
     this._solveArm(this.arms[0], rh);
     this._solveArm(this.arms[1], lh);

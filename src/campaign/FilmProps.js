@@ -811,3 +811,193 @@ export function dressLab(scene) {
   for (let i = 0; i < 10; i++) k.box(i % 2 ? yellow : black, 0.6, 0.005, 0.12, -2.7 + i * 0.6, 0.004, 1.9);
   k.build(scene);
 }
+
+// ---------------------------------------------------------------- aftermath, port, briefing, flight
+
+/** The HALCYON key's transport case, lid thrown open, empty (foam cut-out showing). */
+export function buildKeyCase() {
+  const g = new THREE.Group();
+  const k = new Kit();
+  const shell = new THREE.MeshStandardMaterial({ color: 0x15161a, roughness: 0.5, metalness: 0.3 });
+  const foam = new THREE.MeshStandardMaterial({ color: 0x2a2a2c, roughness: 1 });
+  const steel = new THREE.MeshStandardMaterial({ color: 0x9a9da0, roughness: 0.35, metalness: 0.85 });
+  k.bbox(shell, 0.95, 0.18, 0.62, 0.03, 0, 0.09, 0);
+  k.box(foam, 0.86, 0.02, 0.54, 0, 0.175, 0);
+  k.box(new THREE.MeshStandardMaterial({ color: 0x0c0c0d, roughness: 1 }), 0.62, 0.021, 0.36, 0, 0.18, 0); // the empty cut-out
+  for (const x of [-0.3, 0.3]) k.box(steel, 0.08, 0.04, 0.03, x, 0.12, 0.315);
+  k.build(g);
+  const lid = new THREE.Group(); lid.position.set(0, 0.18, -0.31); lid.rotation.x = -2.1; g.add(lid);
+  const lk = new Kit();
+  lk.bbox(shell, 0.95, 0.06, 0.62, 0.025, 0, 0.0, 0.31);
+  lk.box(foam, 0.86, 0.02, 0.54, 0, -0.035, 0.31);
+  lk.build(lid);
+  return g;
+}
+
+/** A Reaper-style drone: slim fuselage, long straight wings, V-tail, pusher prop, nav lights. */
+export function buildDrone() {
+  const g = new THREE.Group();
+  const k = new Kit();
+  const grey = new THREE.MeshStandardMaterial({ color: 0x6c7076, roughness: 0.6, metalness: 0.3 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.5, metalness: 0.4 });
+  k.add(grey, new THREE.CapsuleGeometry(0.45, 7.5, 6, 14), [0, 0, 0], [0, 0, PI / 2]);
+  k.add(grey, new THREE.SphereGeometry(0.62, 14, 10), [3.6, 0.15, 0], [0, 0, 0], [1.3, 0.9, 0.9]); // sensor bulge / nose
+  k.add(dark, new THREE.SphereGeometry(0.28, 12, 8), [3.2, -0.55, 0]); // sensor ball
+  k.box(grey, 1.3, 0.12, 20, 0.6, 0.25, 0);
+  for (const s of [-1, 1]) k.box(grey, 1.0, 0.08, 2.6, -3.6, 0.6, s * 1.0, [s * 0.75, 0, 0]);
+  k.cyl(dark, 0.08, 0.08, 0.3, 8, -4.2, 0, 0, [0, 0, PI / 2]);
+  k.build(g);
+  const prop = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.4, 0.18), dark);
+  prop.position.set(-4.35, 0, 0);
+  g.add(prop);
+  const red = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2a20, toneMapped: false }));
+  red.position.set(0.6, 0.3, -10);
+  const green = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: 0x30ff60, toneMapped: false }));
+  green.position.set(0.6, 0.3, 10);
+  g.add(red, green);
+  g.userData = { prop, red, green };
+  return g;
+}
+
+/** Port Kaval at night: quay, container stacks, a freighter at the berth, gantry cranes, lamps. */
+export function buildPort(scene) {
+  const k = new Kit();
+  const conc = new THREE.MeshStandardMaterial({ map: paintTex(0x77746c, 70), roughness: 0.95 });
+  const steel = new THREE.MeshStandardMaterial({ color: 0x5a5e62, roughness: 0.6, metalness: 0.6 });
+  const yellow = new THREE.MeshStandardMaterial({ map: paintTex(0xb08a28, 71), roughness: 0.7, metalness: 0.4 });
+  const hullM = new THREE.MeshStandardMaterial({ map: paintTex(0x3a2826, 72), roughness: 0.8, metalness: 0.3 });
+  const deckM = new THREE.MeshStandardMaterial({ map: paintTex(0x4a5a3a, 73), roughness: 0.9 });
+  const white = new THREE.MeshStandardMaterial({ map: paintTex(0xc8c6be, 74), roughness: 0.8 });
+  const lampM = new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xffc070, emissiveIntensity: 3 });
+  const winM = new THREE.MeshStandardMaterial({ color: 0x302010, emissive: 0xffc070, emissiveIntensity: 1.6 });
+  // Quay along x, its edge at z = 0, water beyond (z < 0).
+  k.box(conc, 300, 2.4, 70, 0, -1.2, 35);
+  for (let x = -140; x <= 140; x += 12) k.cyl(steel, 0.3, 0.35, 0.6, 10, x, 0.3, 1.2); // bollards
+  k.box(new THREE.MeshStandardMaterial({ color: 0xd8c040, roughness: 0.8 }), 300, 0.01, 0.25, 0, 0.01, 3.5); // edge line
+  // Container stacks.
+  const R = rng(17);
+  const cols = [0x8a3a22, 0x2f4f6a, 0x4d5a36, 0x9a7a3a, 0x6a2a2a, 0x3a3a46];
+  const cmats = cols.map((c, i) => new THREE.MeshStandardMaterial({ map: corrugatedTex(c, 80 + i), roughness: 0.7, metalness: 0.4 }));
+  for (let row = 0; row < 4; row++) {
+    for (let i = 0; i < 9; i++) {
+      const h = 1 + Math.floor(R() * 3);
+      for (let j = 0; j < h; j++) k.box(cmats[Math.floor(R() * cmats.length)], 12.2, 2.6, 2.44, -70 + i * 13.5 + (row % 2) * 4, 1.3 + j * 2.6, 22 + row * 3);
+    }
+  }
+  // The freighter at the berth: hull with a raked bow, deck, bridge block, cargo hatches, masts.
+  const hs = new THREE.Shape();
+  hs.moveTo(-48, -6); hs.lineTo(40, -6); hs.lineTo(52, 2); hs.lineTo(54, 5); hs.lineTo(-50, 5); hs.lineTo(-50, -2); hs.closePath();
+  const hull = new THREE.ExtrudeGeometry(hs, { depth: 16, bevelEnabled: false });
+  hull.translate(0, 0, -8);
+  k.add(hullM, hull, [10, -2, -11], [0, 0, 0], [1, 1, 1], { uvScale: 0.25 });
+  k.box(deckM, 98, 0.3, 15.6, 12, 3.15, -11);
+  for (let i = 0; i < 5; i++) k.box(steel, 9, 1.2, 10, 30 - i * 13, 3.9, -11);
+  k.box(white, 10, 9, 14, -32, 7.5, -11);
+  k.box(white, 8, 3, 15, -32, 13, -11);
+  for (let i = 0; i < 6; i++) k.box(winM, 0.8, 0.9, 0.1, -35 + i * 1.3, 13.2, -3.4);
+  k.cyl(steel, 0.25, 0.25, 9, 8, -32, 19, -11);
+  for (const x of [18, -6]) { k.cyl(steel, 0.35, 0.35, 12, 8, x, 9, -11); k.rod(steel, V(x, 13, -11), V(x + 9, 6, -11), 0.2); }
+  // Gantry cranes on the quay, booms out over the ship.
+  for (const x of [-20, 30]) {
+    for (const z of [2, 14]) for (const dx of [-5, 5]) k.box(yellow, 1, 26, 1, x + dx, 13, z);
+    k.box(yellow, 12, 2, 14, x, 26, 8);
+    k.box(yellow, 3, 2, 52, x, 28, -6);
+    k.box(steel, 3, 2.5, 3, x, 25.5, -10);
+    k.rod(steel, V(x, 25, -10), V(x, 12, -10), 0.06);
+  }
+  // Lamp posts (bright heads) along the quay.
+  for (let x = -100; x <= 100; x += 25) {
+    k.cyl(steel, 0.15, 0.2, 14, 8, x, 7, 8);
+    k.box(steel, 2.4, 0.2, 0.4, x, 14, 8);
+    k.box(lampM, 0.8, 0.25, 0.5, x - 0.9, 13.8, 8); k.box(lampM, 0.8, 0.25, 0.5, x + 0.9, 13.8, 8);
+  }
+  k.build(scene);
+  // A few real lights (the rest is emissive).
+  for (const x of [-25, 0, 25]) { const L = new THREE.PointLight(0xffc070, 110, 40, 1.6); L.position.set(x, 13, 8); scene.add(L); }
+}
+
+/** The briefing tent: canvas walls, a map table with photos, a hanging lamp, crates and radios. */
+export function buildBriefing(scene) {
+  const k = new Kit();
+  const canvasM = new THREE.MeshStandardMaterial({ map: tarpTex(0x5a5a3c, 90), roughness: 1, side: THREE.DoubleSide });
+  const ply = new THREE.MeshStandardMaterial({ map: paintTex(0x7a6448, 91), roughness: 0.85 });
+  const crate = new THREE.MeshStandardMaterial({ map: paintTex(0x4f5236, 92), roughness: 0.85 });
+  const black = new THREE.MeshStandardMaterial({ color: 0x141516, roughness: 0.6, metalness: 0.3 });
+  // Tent: half-cylinder vault, end walls, plywood floor.
+  k.add(canvasM, new THREE.CylinderGeometry(4.2, 4.2, 10, 24, 1, true, -PI / 2, PI), [0, 0, 0], [-PI / 2, 0, PI / 2], undefined, { uvScale: 0.5 });
+  // (The vault runs along X.)
+  k.box(ply, 10, 0.05, 8.4, 0, 0.0, 0, undefined, { uvScale: 0.6 });
+  for (const x of [-5, 5]) k.add(canvasM, new THREE.CircleGeometry(4.2, 24, 0, PI), [x, 0, 0], [0, x > 0 ? -PI / 2 : PI / 2, 0]);
+  for (let i = 0; i < 4; i++) k.add(black, new THREE.TorusGeometry(4.15, 0.03, 4, 24, PI), [-3.75 + i * 2.5, 0, 0], [0, PI / 2, 0]);
+  // Map table (plywood on trestles).
+  k.box(ply, 2.6, 0.06, 1.5, 0, 0.88, 0);
+  for (const x of [-1.1, 1.1]) for (const z of [-0.6, 0.6]) k.box(black, 0.06, 0.88, 0.06, x, 0.44, z);
+  // Crates, a radio set, a whiteboard on an easel.
+  for (const [x, z, s] of [[-3.0, -3.6, 1], [-2.2, -3.8, 0.8], [3.0, 3.4, 1]]) k.bbox(crate, 1.1 * s, 0.7 * s, 0.7 * s, 0.03, x, 0.35 * s, z);
+  k.bbox(black, 0.5, 0.3, 0.35, 0.02, -3.0, 0.85, -3.6);
+  k.cyl(black, 0.006, 0.004, 1.2, 4, -2.85, 1.6, -3.6);
+  k.build(scene);
+  // Map with the port, routes and pinned photos (canvas).
+  const c = cv(1024, 600), g = c.getContext('2d');
+  g.fillStyle = '#d8d0b4'; g.fillRect(0, 0, 1024, 600);
+  g.fillStyle = '#9fb8c0'; g.beginPath(); g.moveTo(0, 0); g.lineTo(1024, 0); g.lineTo(1024, 230); g.bezierCurveTo(800, 260, 600, 200, 420, 260); g.bezierCurveTo(260, 300, 120, 240, 0, 290); g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(80,70,50,0.35)'; g.lineWidth = 1;
+  for (let x = 0; x < 1024; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 600); g.stroke(); }
+  for (let y = 0; y < 600; y += 64) { g.beginPath(); g.moveTo(0, y); g.lineTo(1024, y); g.stroke(); }
+  g.fillStyle = '#8a8270'; for (let i = 0; i < 40; i++) g.fillRect(380 + (i % 8) * 34, 300 + Math.floor(i / 8) * 26, 26, 16);
+  g.strokeStyle = '#b01e1e'; g.lineWidth = 6; g.beginPath(); g.arc(520, 255, 46, 0, PI * 2); g.stroke();
+  g.setLineDash([16, 10]); g.beginPath(); g.moveTo(980, 560); g.bezierCurveTo(800, 520, 650, 380, 540, 300); g.stroke(); g.setLineDash([]);
+  g.fillStyle = '#b01e1e'; g.font = 'bold 30px monospace'; g.fillText('PORT KAVAL', 420, 380); g.fillText('OBJ BLACK WATER', 560, 180);
+  const photo = (x, y, rot, label, dark) => {
+    g.save(); g.translate(x, y); g.rotate(rot);
+    g.fillStyle = '#f2f0ea'; g.fillRect(-70, -85, 140, 170);
+    g.fillStyle = dark; g.fillRect(-60, -75, 120, 120);
+    g.fillStyle = '#c8a890'; g.beginPath(); g.ellipse(0, -20, 26, 34, 0, 0, PI * 2); g.fill();
+    g.fillStyle = '#222'; g.font = 'bold 18px monospace'; g.textAlign = 'center'; g.fillText(label, 0, 72);
+    g.restore();
+  };
+  photo(130, 430, -0.12, 'VASKO', '#3a3d44'); photo(300, 470, 0.08, 'HART', '#6a7078'); photo(880, 120, 0.1, 'FREIGHTER', '#2a3a48');
+  const mapTex = ctex(c, true, false);
+  const map = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.4), new THREE.MeshStandardMaterial({ map: mapTex, roughness: 0.85 }));
+  map.rotation.x = -PI / 2; map.position.set(0, 0.915, 0);
+  scene.add(map);
+  // Hanging lamp over the table.
+  const shade = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.2, 16, 1, true), new THREE.MeshStandardMaterial({ color: 0x2a2c2a, roughness: 0.6, metalness: 0.4, side: THREE.DoubleSide }));
+  shade.position.set(0, 2.55, 0); scene.add(shade);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffe2b0, toneMapped: false }));
+  bulb.position.set(0, 2.47, 0); scene.add(bulb);
+  const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 1.5, 4), black); cord.position.set(0, 3.4, 0); scene.add(cord);
+  const lamp = new THREE.PointLight(0xffc888, 26, 9, 1.6); lamp.position.set(0, 2.4, 0); lamp.castShadow = true; lamp.shadow.mapSize.set(1024, 1024);
+  scene.add(lamp);
+  return { lamp, shade, bulb };
+}
+
+/** Open sea at first light with a coastline and the port's lights ahead (-Z). */
+export function buildSea(scene) {
+  const n = cv(256, 256), g = n.getContext('2d'), R = rng(5);
+  g.fillStyle = 'rgb(128,128,255)'; g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 900; i++) { const x = R() * 256, y = R() * 256, w = 6 + R() * 26; g.fillStyle = `rgba(${100 + R() * 56},${100 + R() * 56},255,0.35)`; g.beginPath(); g.ellipse(x, y, w, w * 0.35, 0, 0, PI * 2); g.fill(); }
+  const normal = ctex(n, false);
+  normal.repeat.set(60, 60);
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), new THREE.MeshStandardMaterial({ color: 0x14303c, roughness: 0.18, metalness: 0.55, normalMap: normal, normalScale: new THREE.Vector2(0.9, 0.9) }));
+  water.rotation.x = -PI / 2;
+  scene.add(water);
+  // Coast: a dark ridge line, with the port's lights along the shore.
+  // A jagged ridge, dark against the dawn.
+  const cg = new THREE.CylinderGeometry(2600, 2600, 120, 160, 1, true, PI * 0.8, PI * 0.4);
+  const CP = cg.attributes.position;
+  for (let i = 0; i < CP.count; i++) if (CP.getY(i) > 0) CP.setY(i, CP.getY(i) + (Math.sin(i * 0.37) * 0.5 + Math.sin(i * 0.11 + 1.3) * 0.8 + R() * 0.5) * 70);
+  const coast = new THREE.Mesh(cg, new THREE.MeshBasicMaterial({ color: 0x07080b, side: THREE.DoubleSide, fog: false }));
+  coast.position.set(0, 40, 0);
+  scene.add(coast);
+  const lights = new THREE.Group();
+  const dot = new THREE.MeshBasicMaterial({ color: 0xffc070, toneMapped: false });
+  for (let i = 0; i < 140; i++) {
+    const a = PI * 0.9 + R() * PI * 0.2, r = 2560;
+    const m = new THREE.Mesh(new THREE.SphereGeometry(6 + R() * 8, 6, 4), dot);
+    m.position.set(Math.cos(a + PI / 2) * r * 0.0 + (R() - 0.5) * 1400, 4 + R() * 30, -2400 - R() * 120);
+    lights.add(m);
+  }
+  scene.add(lights);
+  return { water, normal };
+}
