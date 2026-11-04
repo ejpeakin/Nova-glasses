@@ -7,6 +7,7 @@ import { getTexture, getSpriteTexture } from '../world/Textures.js';
 import { WEAPONS, resolveAttachments } from '../weapons/WeaponData.js';
 import { buildWeaponModel } from '../weapons/WeaponModel.js';
 import { damp, clamp, makeRng } from '../core/Utils.js';
+import { SoldierRig, soldierSkinReady, soldierDims, PAINT } from './SoldierSkin.js';
 
 const SKIN = [0xc99d7e, 0xb48364, 0x8f6146, 0x6b4430, 0xd9b496, 0xa87a5a];
 
@@ -399,7 +400,13 @@ export function buildLowGun(weaponId) {
 // ---------------------------------------------------------------------------
 
 const DOWN = new THREE.Vector3(0, -1, 0);
-const ARM_A = 0.32, ARM_B = 0.31; // shoulder->elbow, elbow->palm
+// Joint layout of the procedural body (metres). Soldiers wearing the detailed
+// skinned model run the same rig with that model's proportions instead.
+const PROC_DIM = {
+  hipH: 0.95, torso: new THREE.Vector3(0, 0.08, 0), shoulder: new THREE.Vector3(0.205, 0.5, 0), neck: new THREE.Vector3(0, 0.63, 0),
+  armA: 0.32, armB: 0.31, legX: 0.1, thigh: 0.46, shin: 0.465, shinA: 0.34, ankleH: 0.125,
+};
+const NO_SHIFT = new THREE.Vector3();
 const smooth = (t) => t * t * (3 - 2 * t);
 const lerp = (a, b, t) => a + (b - a) * t;
 const tmpM2 = new THREE.Matrix4();
@@ -412,6 +419,18 @@ const tmpS1 = new THREE.Vector3();
 const tmpEu = new THREE.Euler();
 const POUCH = new THREE.Vector3(-0.07, 0.31, -0.25); // torso-local: front mag pouch
 const BELT = new THREE.Vector3(-0.17, 0.12, -0.12); // torso-local: shell caddy
+const sstep = (a, b, x) => smooth(clamp((x - a) / (b - a), 0, 1));
+
+/** Paint for a skinned soldier, or null when this one stays procedural. */
+function skinPaint(faction, f, opts) {
+  if (opts.procedural || f.civilian || f.heavy || !soldierSkinReady()) return null;
+  if (opts.colorIndex !== undefined) {
+    const c = new THREE.Color(FFA_COLORS[opts.colorIndex % FFA_COLORS.length]);
+    return { key: `ffa${opts.colorIndex % FFA_COLORS.length}`, plate: c.clone().lerp(new THREE.Color(0x9a9a92), 0.35).getHex(), suit: c.clone().multiplyScalar(0.7).getHex(), stripe: 0x1c1c1c };
+  }
+  const p = PAINT[faction];
+  return p ? { key: faction, ...p } : null;
+}
 
 export class Humanoid {
   constructor(faction = 'meridian', weaponId = 'vx4', opts = {}) {
@@ -434,10 +453,20 @@ export class Humanoid {
       legPouch: rng() < 0.4,
     };
     this.faction = f;
+    const paint = skinPaint(faction, f, opts);
+    const D = paint ? soldierDims() : null;
+    const dim = this.dim = D ? { ...PROC_DIM, ...D } : PROC_DIM;
+    // Torso-local poses (gun carry, reload, captive hands) were laid out for the
+    // procedural shoulders; move them with the skinned model's shoulders.
+    this.shift = D ? new THREE.Vector3(D.shoulder.x - 0.205, D.shoulder.y - 0.5, Math.min(D.shoulder.z, 0.03)) : NO_SHIFT;
+    this.pouch = POUCH.clone().add(this.shift);
+    this.belt = BELT.clone().add(this.shift);
     const mats = materials();
+    const procMeshes = [];
     const mk = (geo) => {
       const m = new THREE.Mesh(geo, mats);
       m.castShadow = true;
+      procMeshes.push(m);
       return m;
     };
 
@@ -447,17 +476,17 @@ export class Humanoid {
     this.root.add(this.body);
 
     this.hips = new THREE.Group();
-    this.hips.position.y = 0.95;
+    this.hips.position.y = dim.hipH;
     this.body.add(this.hips);
     this.hips.add(mk(cached(`${key}:pelvis`, () => pelvisGeo(f))));
 
     this.torso = new THREE.Group();
-    this.torso.position.y = 0.08;
+    this.torso.position.copy(dim.torso);
     this.hips.add(this.torso);
     this.torso.add(mk(cached(`${key}:torso:${v.pack}:${v.radio}:${v.skin}`, () => torsoGeo(f, v))));
 
     this.head = new THREE.Group();
-    this.head.position.y = 0.63;
+    this.head.position.copy(dim.neck);
     this.torso.add(this.head);
     this.head.add(mk(cached(`${key}:head:${v.headgear}:${v.skin}:${v.glasses}`, () => headGeo(f, v))));
     if (f.heavy) {
@@ -474,7 +503,7 @@ export class Humanoid {
       const upper = mk(cached(`${key}:upper`, () => upperArmGeo(f)));
       const fore = mk(cached(`${key}:fore:${side}`, () => foreArmGeo(f, side < 0)));
       this.torso.add(upper, fore);
-      const arm = { side, upper, fore, shoulder: new THREE.Vector3(0.205 * side, 0.5, 0) };
+      const arm = { side, upper, fore, shoulder: new THREE.Vector3(dim.shoulder.x * side, dim.shoulder.y, dim.shoulder.z), target: new THREE.Vector3() };
       if (side < 0) {
         const b = band.clone();
         b.position.y = -0.09;
@@ -488,7 +517,7 @@ export class Humanoid {
     const baked = bakedGun(weaponId);
     this.pistol = def.class === 'pistol';
     this.gunPivot = new THREE.Group();
-    this.gunPivot.position.set(this.pistol ? 0.03 : 0.1, this.pistol ? 0.4 : 0.42, this.pistol ? -0.4 : -0.3);
+    this.gunPivot.position.set(this.pistol ? 0.03 : 0.1, this.pistol ? 0.4 : 0.42, this.pistol ? -0.4 : -0.3).add(this.shift);
     this.torso.add(this.gunPivot);
     this.gun = new THREE.Mesh(baked.geo, gunMaterial());
     this.gun.castShadow = true;
@@ -513,7 +542,7 @@ export class Humanoid {
     // Hip / ready carry (torso-local) and the shouldered aiming position (body frame at
     // shoulder height): the butt sits in the right shoulder pocket, torso bladed.
     this.hipPos = this.gunPivot.position.clone();
-    this.aimOff = this.pistol ? new THREE.Vector3(0.0, 0.52, -0.46) : new THREE.Vector3(0.11, 0.555, -Math.max(0.22, baked.stockZ) + 0.01);
+    this.aimOff = (this.pistol ? new THREE.Vector3(0.0, 0.52, -0.46) : new THREE.Vector3(0.11, 0.555, -Math.max(0.22, baked.stockZ) + 0.01)).add(this.shift);
     this.blade = this.pistol ? 0.1 : 0.5;
     this.kickPow = def.class === 'sniper' ? 1.9 : def.class === 'shotgun' ? 1.7 : def.class === 'lmg' ? 1.2 : def.class === 'pistol' ? 1.3 : 1;
     this.aimBlend = 0;
@@ -541,11 +570,11 @@ export class Humanoid {
     this.legs = [];
     for (const side of [-1, 1]) {
       const thigh = new THREE.Group();
-      thigh.position.set(side * 0.1, 0, 0);
+      thigh.position.set(side * dim.legX, 0, 0);
       this.hips.add(thigh);
       thigh.add(mk(cached(`${key}:thigh:${side}:${v.holster}:${v.legPouch}`, () => thighGeo(f, side > 0, v))));
       const shin = new THREE.Group();
-      shin.position.y = -0.46;
+      shin.position.y = -dim.thigh;
       thigh.add(shin);
       shin.add(mk(cached(`${key}:shin`, () => shinGeo(f))));
       this.legs.push({ thigh, shin, side });
@@ -564,6 +593,14 @@ export class Humanoid {
     this._b = new THREE.Vector3();
     this._c = new THREE.Vector3();
     this._d = new THREE.Vector3();
+
+    // Detailed skinned body driven by the rig above (the procedural meshes hide).
+    this.rig = null;
+    if (paint) {
+      this.rig = new SoldierRig(paint.key, paint);
+      this.body.add(this.rig.root);
+      for (const m of procMeshes) m.visible = false;
+    }
   }
 
   setThermal(on) {
@@ -637,7 +674,9 @@ export class Humanoid {
 
   /** Two-bone IK: shoulder -> elbow -> hand, with the elbow pushed down and out. */
   _solveArm(arm, hand) {
-    const a = ARM_A, b = ARM_B;
+    arm.target.copy(hand);
+    if (this.rig) return; // the skinned model solves its own arms
+    const a = this.dim.armA, b = this.dim.armB;
     const S = arm.shoulder;
     const d = this._a.subVectors(hand, S);
     let len = d.length();
@@ -666,7 +705,7 @@ export class Humanoid {
     const lh = this._g2t(this.gripL, new THREE.Vector3());
     // Support hand: if the handguard is out of reach, slide back along the gun toward the magwell.
     const S = this.arms[1].shoulder;
-    const reach = ARM_A + ARM_B - 0.015;
+    const reach = this.dim.armA + this.dim.armB - 0.015;
     if (lh.distanceTo(S) > reach && !this.pistol) {
       const back = this._g2t(tmpV1.set(this.gripL.x, this.gripL.y, Math.max(this.gripL.z, this.magHome.z - 0.04)), new THREE.Vector3());
       const axis = back.clone().sub(lh);
@@ -707,16 +746,16 @@ export class Humanoid {
     }
     if (this.captive === 'back') {
       // Wrists together behind the back (bound hostage, cuffed prisoner).
-      rh.set(0.05, 0.07, 0.17);
-      lh.set(-0.05, 0.07, 0.17);
+      rh.set(0.05, 0.07, 0.17).add(this.shift);
+      lh.set(-0.05, 0.07, 0.17).add(this.shift);
     } else if (this.captive === 'head') {
       // Hands on the head: surrendering.
-      rh.set(0.09, 0.74, -0.02);
-      lh.set(-0.09, 0.74, -0.02);
+      rh.set(0.09, 0.74, -0.02).add(this.shift);
+      lh.set(-0.09, 0.74, -0.02).add(this.shift);
     } else if (this.captive === 'side') {
       // Unarmed, arms relaxed at the sides.
-      rh.set(0.23, -0.18, -0.02);
-      lh.set(-0.23, -0.18, -0.02);
+      rh.set(0.23, -0.18, -0.02).add(this.shift);
+      lh.set(-0.23, -0.18, -0.02).add(this.shift);
     }
     this._solveArm(this.arms[0], rh);
     this._solveArm(this.arms[1], lh);
@@ -739,7 +778,7 @@ export class Humanoid {
       if (t > 0.08 && t < 0.86) {
         const k = ((t - 0.08) / 0.78) * 4;
         const w = 0.5 - 0.5 * Math.cos(k * Math.PI * 2);
-        lh.copy(port).lerp(BELT, w);
+        lh.copy(port).lerp(this.belt, w);
       } else if (t <= 0.08) lh.copy(G).lerp(port, smooth(t / 0.08));
       else lh.copy(port).lerp(G, smooth((t - 0.86) / 0.14));
       return;
@@ -747,7 +786,7 @@ export class Humanoid {
     const W = this._g2t(this.magGrip, new THREE.Vector3());
     const Ch = this._g2t(tmpV1.set(-0.035, 0.045, this.pistol ? 0.05 : 0.1), new THREE.Vector3());
     const tap = W.clone().add(tmpV2.set(0, 0.025, 0));
-    const keys = [[0, G], [0.12, W], [0.22, W], [0.42, POUCH], [0.5, POUCH], [0.62, W], [0.68, tap], [0.76, W], [0.86, r.empty ? Ch : W], [1, G]];
+    const keys = [[0, G], [0.12, W], [0.22, W], [0.42, this.pouch], [0.5, this.pouch], [0.62, W], [0.68, tap], [0.76, W], [0.86, r.empty ? Ch : W], [1, G]];
     let i = 0;
     while (i < keys.length - 2 && t > keys[i + 1][0]) i++;
     const [t0, A] = keys[i], [t1, B] = keys[i + 1];
@@ -777,6 +816,7 @@ export class Humanoid {
     this.deathT += dt;
     const st = this.deathStyle;
     const T = st === 'crumple' ? 0.95 : 0.75;
+    const H = this.dim.hipH, hk = H / 0.95;
     const t = clamp(this.deathT / T, 0, 1);
     const e = t * t;
     if (st === 'crumple') {
@@ -784,7 +824,7 @@ export class Humanoid {
       const k = smooth(clamp(this.deathT / 0.3, 0, 1));
       const f = smooth(clamp((this.deathT - 0.25) / 0.65, 0, 1));
       const buckle = k * (1 - f);
-      this.hips.position.y = damp(this.hips.position.y, lerp(0.95, 0.66, buckle) - f * 0.06, 12, dt);
+      this.hips.position.y = damp(this.hips.position.y, lerp(H, 0.66 * hk, buckle) - f * 0.06, 12, dt);
       for (const l of this.legs) {
         l.thigh.rotation.x = damp(l.thigh.rotation.x, lerp(0.75 * buckle + 0.1 * l.side, 0.12 + 0.08 * l.side, f), 10, dt);
         l.shin.rotation.x = damp(l.shin.rotation.x, lerp(-1.5 * buckle, -0.25, f), 10, dt);
@@ -799,7 +839,7 @@ export class Humanoid {
       this.body.rotation.y = this.twist * e * 0.9;
       this.body.rotation.z = this.twist * e * (Math.PI / 2 - 0.1);
       this.body.rotation.x = this.deathDir * e * 0.25;
-      this.hips.position.y = damp(this.hips.position.y, 0.78, 5, dt);
+      this.hips.position.y = damp(this.hips.position.y, 0.78 * hk, 5, dt);
       for (const l of this.legs) {
         l.thigh.rotation.x = damp(l.thigh.rotation.x, 0.3 + 0.35 * l.side * this.twist, 5, dt);
         l.shin.rotation.x = damp(l.shin.rotation.x, -0.7 - 0.3 * l.side, 5, dt);
@@ -811,7 +851,7 @@ export class Humanoid {
       this.body.rotation.x = this.deathDir * e * (Math.PI / 2 - 0.08);
       this.body.rotation.z = this.deathSide * e;
       this.body.position.y = -e * 0.05;
-      this.hips.position.y = damp(this.hips.position.y, 0.72, 5, dt);
+      this.hips.position.y = damp(this.hips.position.y, 0.72 * hk, 5, dt);
       for (const l of this.legs) {
         l.thigh.rotation.x = damp(l.thigh.rotation.x, (this.deathDir < 0 ? 0.9 : 0.35) + 0.2 * l.side, 5, dt);
         l.shin.rotation.x = damp(l.shin.rotation.x, this.deathDir < 0 ? -1.3 : -0.5, 5, dt);
@@ -822,9 +862,10 @@ export class Humanoid {
     // The weapon slips out of the firing grip.
     this.gunPivot.rotation.x = damp(this.gunPivot.rotation.x, -this.deathDir * 1.2, 5, dt);
     this.gunPivot.rotation.z = damp(this.gunPivot.rotation.z, 0.6, 4, dt);
-    this.gunPivot.position.y = damp(this.gunPivot.position.y, 0.2, 4, dt);
-    this.gunPivot.position.z = damp(this.gunPivot.position.z, -0.25, 4, dt);
+    this.gunPivot.position.y = damp(this.gunPivot.position.y, 0.2 + this.shift.y, 4, dt);
+    this.gunPivot.position.z = damp(this.gunPivot.position.z, -0.25 + this.shift.z, 4, dt);
     this._poseArms(dt);
+    if (this.rig) { for (const l of this.legs) l.ankle = damp(l.ankle ?? 0, 0, 4, dt); this.rig.pose(this); }
   }
 
   /** speed: horizontal m/s, crouch: 0..1, pitch: aim pitch (rad), firing: bool, aim: 0..1 shouldered. */
@@ -851,7 +892,8 @@ export class Humanoid {
       const sw = Math.sin(this.phase + ph) * amp;
       const bend = Math.max(0, Math.sin(this.phase + ph + Math.PI / 2)) * amp * (1.2 + run * 0.6);
       const squatT = sw + c * 1.15, squatS = -bend - c * 1.95 - (moving ? 0.08 : 0);
-      const kneelT = l.side > 0 ? -0.08 : 1.3, kneelS = l.side > 0 ? -1.42 : -1.3;
+      // (The skinned model's shins are longer: its front knee rides higher.)
+      const kneelT = l.side > 0 ? -0.08 : this.rig ? 1.6 : 1.3, kneelS = l.side > 0 ? -1.42 : this.rig ? -1.08 : -1.3;
       l.thigh.rotation.x = damp(l.thigh.rotation.x, lerp(squatT, kneelT, kn), 14, dt);
       l.shin.rotation.x = damp(l.shin.rotation.x, lerp(squatS, kneelS, kn), 14, dt);
       l.thigh.rotation.z = damp(l.thigh.rotation.z, -l.side * (0.03 + kn * 0.08), 8, dt);
@@ -859,7 +901,8 @@ export class Humanoid {
     const s = Math.sin(this.phase);
     const bob = moving ? Math.abs(s) * (0.03 + run * 0.03) : 0;
     this.breath += dt;
-    this.hips.position.y = 0.95 - c * 0.42 + bob + kn * 0.03;
+    this.hips.position.y = this.dim.hipH - c * 0.42 + bob + kn * 0.03;
+    if (this.rig) this._plantFeet();
     this.hipSway = moving ? Math.sin(this.phase) * 0.08 * amp : 0;
     this.hips.rotation.y = this.hipTurn + this.hipSway;
     this.flinch = Math.max(0, this.flinch - dt * 5);
@@ -915,14 +958,14 @@ export class Humanoid {
     this.sprintBlend = damp(this.sprintBlend ?? 0, run > 0.55 && ab < 0.3 && !this.rl ? 1 : 0, 6, dt);
     const sp = this.sprintBlend;
     if (sp > 0.001) {
-      const ps = tmpV1.set(this.pistol ? 0.12 : 0.15, this.pistol ? 0.52 : 0.5, this.pistol ? -0.24 : -0.17);
+      const ps = tmpV1.set(this.pistol ? 0.12 : 0.15, this.pistol ? 0.52 : 0.5, this.pistol ? -0.24 : -0.17).add(this.shift);
       const qs = tmpQ2.setFromEuler(tmpEu.set((this.pistol ? 1.0 : 1.15) - tr.x + Math.sin(this.phase) * 0.06, 0.12, -0.28));
       gp.lerp(ps, sp);
       gq.slerp(qs, sp);
     }
     // Pose C: reload — gun brought in, muzzle up and canted toward the support hand.
     if (rw > 0.001) {
-      const pc = tmpV1.set(this.pistol ? 0.03 : 0.06, this.pistol ? 0.43 : 0.44, this.pistol ? -0.32 : -0.28);
+      const pc = tmpV1.set(this.pistol ? 0.03 : 0.06, this.pistol ? 0.43 : 0.44, this.pistol ? -0.32 : -0.28).add(this.shift);
       const qc = tmpQ2.setFromEuler(tmpEu.set(0.3 - tr.x, -0.2, this.pistol ? 0.2 : 0.6));
       gp.lerp(pc, rw);
       gq.slerp(qc, rw);
@@ -936,6 +979,27 @@ export class Humanoid {
     this.gunPivot.position.copy(gp);
     this.gunPivot.quaternion.copy(gq);
     this._poseArms(dt);
+    if (this.rig) this.rig.pose(this);
+  }
+
+  /**
+   * Skinned model: set the pelvis height from the leg angles so the lowest boot
+   * (or a knee on the ground) touches down, and level the boots while planted.
+   */
+  _plantFeet() {
+    const d = this.dim;
+    let low = Infinity;
+    for (const l of this.legs) {
+      const t = l.thigh.rotation.x, phi = t + l.shin.rotation.x;
+      // The ankle flexes to keep the sole flat while the shin is near upright; a
+      // shin lying back (kneeling) keeps the foot in line, toes on the ground.
+      const comp = -phi * 0.9 * (phi < -0.85 ? sstep(-1.3, -0.85, phi) : 1);
+      l.ankle = comp;
+      const knee = -d.thigh * Math.cos(t);
+      const sole = knee - d.shinA * Math.cos(phi) - d.ankleH * Math.cos(phi + comp);
+      low = Math.min(low, sole, knee - 0.075);
+    }
+    this.hips.position.y = -low;
   }
 
   dispose() {

@@ -1,6 +1,10 @@
 # FIELD OF HONOR: US ARMY SPECIAL FORCES
 
-A modern military first-person shooter that runs in the browser. It is built with three.js and plain JavaScript, with no build step. Almost everything is generated in code: models, textures, sounds and music. The one exception is the first-person hands. They're the rigged WebXR "generic hand" meshes that three.js uses for hand tracking (MIT, embedded as data in `src/assets/hands.js`). They're posed into weapon grips in code and dressed as tactical gloves.
+A modern military first-person shooter that runs in the browser. It is built with three.js and plain JavaScript, with no build step. Almost everything is generated in code: models, textures, sounds and music. The exceptions:
+
+- **First-person hands**: the rigged WebXR "generic hand" meshes that three.js uses for hand tracking (MIT, embedded as data in `src/assets/hands.js`), posed into weapon grips in code and dressed as tactical gloves.
+- **Soldiers**: the rigged, textured "Vanguard" soldier by Mixamo that ships with the three.js examples (`src/assets/soldier.js`, see `src/assets/SOLDIER_CREDIT.md`). Every army soldier wears it, repainted per faction (ranger green and multicam for ORION, black with red flashes for MERIDIAN, sand and white for the desert and snow forces). The game's own procedural animation (gait, crouch, kneel, aiming, reloads, deaths) drives its skeleton, and the arms are solved with IK so the gloves stay on the weapon. Civilians and the heavy juggernauts keep the procedural body.
+- **Assault rifle and SMG fire**: recorded reports (`src/assets/gunfire.js`), single shots cut from two full-auto recordings, played shot by shot with the burst's echo after the last one. The other guns are synthesized.
 
 *A work of fiction. Field of Honor: US Army Special Forces is not affiliated with, or endorsed by, the U.S. Army or the U.S. Department of Defense. All characters, units, weapons and places are fictional.*
 
@@ -68,7 +72,7 @@ Browsers reserve Ctrl+W, so it can close the tab. The game goes fullscreen with 
 - LMG: M-260 Juggernaut
 - Pistols: P-11 Warden, .50 Raptor
 
-Every weapon has its own synthesized firing sound, damage and range falloff, fire rate, recoil pattern, fire modes and procedurally built model.
+Every weapon has its own firing sound (recorded for the assault rifles and SMGs, synthesized for the rest), damage and range falloff, fire rate, recoil pattern, fire modes and procedurally built model.
 
 The Gunsmith has six attachment slots: optic, muzzle, barrel, underbarrel, magazine and stock. There are 19 attachments, including a suppressor, compensator, extended and fast mags, grips, a laser, and reflex, holo, 4× prism, 6-14× variable sniper and 3-8× thermal optics. Each one changes stats and shows up on the model.
 
@@ -172,7 +176,7 @@ src/ai/                       soldier AI and the animated humanoid model
 src/modes/                    campaign runner, TDM/FFA/Domination/Survival
 src/campaign/Story.js         the 12-mission script, characters and dialogue
 src/world/                    collision world + navigation/cover, map builder, maps, lighting/weather, effects, textures
-src/core/                     input, procedural audio engine, storage, utilities
+src/core/                     input, audio engine, storage, utilities
 ```
 
 ## What a full engine (e.g. Unreal Engine 5) would add

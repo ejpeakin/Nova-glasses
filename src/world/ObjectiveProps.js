@@ -288,13 +288,13 @@ function personProp(game, o, pos, n, kind) {
   if (!model.root.parent) game.scene.add(model.root);
   model.setCaptive(kind === 'detain' ? 'head' : kind === 'cut' ? 'back' : 'side');
   const zip = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.005, 6, 16), mat(0x0e0e0e, 0.6, 0));
-  zip.position.set(0, 0.07, 0.17);
+  zip.position.set(0, 0.07, 0.17).add(model.shift ?? V());
   zip.rotation.y = Math.PI / 2;
   zip.visible = kind === 'cut';
   model.torso.add(zip);
   let crouch = 1, done = false, drag = 0, cueT = 0, zipped = false, standT = 0;
   const home = model.root.position.clone();
-  const workLocal = kind === 'rescue' ? V(0, 0.46, -0.14) : V(0, 0.07, 0.2);
+  const workLocal = (kind === 'rescue' ? V(0, 0.46, -0.14) : V(0, 0.07, 0.2)).add(model.shift ?? V());
   const prop = {
     kind, model, work: V(), n: n.clone(), stand: kind === 'rescue' ? 0.5 : 0.42, crouch: true,
     update(dt, k, acting, t) {

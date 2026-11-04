@@ -1,7 +1,9 @@
-// Procedural audio engine. Every sound — gunfire, explosions, footsteps, UI and
-// music — is synthesized with the Web Audio API, so the game ships no audio files.
+// Audio engine (Web Audio API). Assault rifles and submachine guns play recorded
+// reports (src/assets/gunfire.js); everything else — the other guns, explosions,
+// footsteps, UI and music — is synthesized.
 import { Store } from './Storage.js';
 import { clamp, rand, pick } from './Utils.js';
+import { AR_SHOTS_MP3, SMG_SHOTS_MP3 } from '../assets/gunfire.js';
 
 /**
  * Level acoustics: the reverb impulse is generated from these. early = discrete
@@ -136,6 +138,24 @@ class AudioEngine {
     this.ready = true;
     this.setAcoustics(this._acoustics);
     this.applyVolumes();
+    this._loadSamples();
+  }
+
+  /** Decode the recorded gunfire: each file is shots then a tail, split on silence. */
+  _loadSamples() {
+    this.samples = {};
+    this._bursts = new WeakMap();
+    const c = this.ctx;
+    const load = (key, b64) => {
+      const bin = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0)).buffer;
+      return c.decodeAudioData(bin).then((buf) => {
+        const parts = splitOnSilence(c, buf);
+        if (parts.length < 2) return;
+        this.samples[key] = { heads: parts.slice(0, -1), tail: parts[parts.length - 1], last: -1 };
+      });
+    };
+    Promise.all([load('ar', AR_SHOTS_MP3), load('smg', SMG_SHOTS_MP3)])
+      .catch((e) => console.warn('Recorded gunfire failed to decode; using synthesized shots.', e));
   }
 
   applyVolumes() {
@@ -330,11 +350,12 @@ class AudioEngine {
    * profile: { crack, body, thump, tail, pitch, gain } — per-weapon character.
    * pos null = the local player's own gun (non-spatial, louder).
    */
-  gunshot(profile, pos = null, suppressed = false) {
+  gunshot(profile, pos = null, suppressed = false, source = null) {
     if (!this.ready) return;
     const p = profile;
     const now = this.now;
     const own = !pos;
+    if (!suppressed && p.sample && this.samples?.[p.sample]) { this._recordedShot(p, pos, source); return; }
     const pitch = (p.pitch ?? 1) * rand(0.97, 1.03);
     // Busy firefights: cap how many distant reports start in the same instant.
     if (!own) {
@@ -377,6 +398,65 @@ class AudioEngine {
     this._noise(out, t + 0.004, own ? 0.6 : 0.5, { type: 'lowpass', freq: 300 * pitch, freqEnd: 70, q: 0.5, gain: own ? 1.6 : 1.3, attack: 0.004, decay: own ? 0.55 : 0.45, brown: true });
     // 6. The action cycling, close to the gun.
     if (own || d < 12) this._action(out, t, own ? 0.3 : 0.14);
+  }
+
+  /**
+   * One recorded report: a single shot cut from a full-auto recording (a
+   * different one each time), then that burst's echo once the shooter stops.
+   * source identifies the shooter so a burst plays shot after shot with one tail.
+   */
+  _recordedShot(p, pos, source) {
+    const c = this.ctx, S = this.samples[p.sample];
+    const own = !pos;
+    if (!own) {
+      this._gunVoices = this._gunVoices.filter((t) => t > this.now - 0.06);
+      if (this._gunVoices.length > 8) return;
+      this._gunVoices.push(this.now);
+    }
+    const out = this._out(pos, {
+      gain: (own ? 1.5 : 2.1) * (p.gain ?? 1), ref: 7, rolloff: 1.0, maxDist: 650,
+      // (The recording carries its own echo, so less of the level's reverb.)
+      verb: (p.tail ?? 0.6) * 0.5, ownVerb: 0.5, verbMax: 1.5, bus: this.guns,
+    });
+    if (!out) return;
+    const d = out._dist;
+    const t = this.now + (own ? 0 : Math.min(2, d / SPEED_OF_SOUND));
+    const rate = (p.samplePitch ?? 1) * rand(0.97, 1.03);
+    let i = Math.floor(Math.random() * S.heads.length);
+    if (i === S.last) i = (i + 1) % S.heads.length;
+    S.last = i;
+    const head = S.heads[i];
+    const src = c.createBufferSource();
+    src.buffer = head;
+    src.playbackRate.value = rate;
+    const g = c.createGain();
+    src.connect(g); g.connect(out);
+    src.start(t);
+    // The echo after the burst: starts as this shot's report fades, unless the
+    // same shooter fires again first (the next shot takes over).
+    const tail = c.createBufferSource();
+    tail.buffer = S.tail;
+    tail.playbackRate.value = rate;
+    const tg = c.createGain();
+    tg.gain.value = 0.45;
+    tail.connect(tg); tg.connect(out);
+    const tailAt = t + head.duration / rate - 0.012;
+    tail.start(tailAt);
+    const key = own ? this : source;
+    const prev = key && this._bursts.get(key);
+    if (prev) {
+      const at = Math.max(t, this.now);
+      prev.g.gain.setValueAtTime(1, at);
+      prev.g.gain.linearRampToValueAtTime(0, at + 0.01);
+      prev.tg.gain.setValueAtTime(0.45, at);
+      prev.tg.gain.linearRampToValueAtTime(0, at + 0.015);
+      prev.tail.stop(at + 0.02);
+      prev.src.stop(at + 0.02);
+    }
+    if (key) this._bursts.set(key, { src, g, tail, tg });
+    // Far away, the rolling boom carries further than any recording's highs.
+    if (d > 45) this._noise(out, t + 0.004, 0.5, { type: 'lowpass', freq: 300 * rate, freqEnd: 70, q: 0.5, gain: 0.6 * clamp((d - 45) / 60, 0, 1), attack: 0.004, decay: 0.45, brown: true });
+    if (own || d < 12) this._action(out, t, own ? 0.22 : 0.12);
   }
 
   /** Bolt carrier slamming home and its spring. */
@@ -879,3 +959,25 @@ class AudioEngine {
 }
 
 export const Audio = new AudioEngine();
+
+/** Split a decoded buffer into the sounds between stretches of silence (mono). */
+function splitOnSilence(ctx, buf, thr = 0.002, minGap = 0.08) {
+  const x = buf.getChannelData(0), sr = buf.sampleRate, gap = Math.round(minGap * sr);
+  const parts = [];
+  let i = 0;
+  while (i < x.length) {
+    while (i < x.length && Math.abs(x[i]) < thr) i++;
+    if (i >= x.length) break;
+    const a = Math.max(0, i - 24);
+    let quiet = 0, j = i;
+    while (j < x.length && quiet < gap) { quiet = Math.abs(x[j]) < thr ? quiet + 1 : 0; j++; }
+    const b = j - quiet;
+    if (b - a > sr * 0.02) {
+      const out = ctx.createBuffer(1, b - a, sr);
+      out.getChannelData(0).set(x.subarray(a, b));
+      parts.push(out);
+    }
+    i = j;
+  }
+  return parts;
+}

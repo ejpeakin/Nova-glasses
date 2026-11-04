@@ -646,7 +646,7 @@ export class Soldier {
       this.game.effects.casing(ej, right);
     }
     this.model.fire(wpn);
-    Audio.gunshot(wpn.sound, muzzle, quiet);
+    Audio.gunshot(wpn.sound, muzzle, quiet, this);
     this.lastShotTime = now;
     this.revealed = now;
     this.noiseTimer -= 1;
