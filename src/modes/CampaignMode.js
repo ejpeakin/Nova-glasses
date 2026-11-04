@@ -77,6 +77,7 @@ export class CampaignMode {
     const sp = m.start.pos.length === 3 ? new THREE.Vector3(m.start.pos[0], m.start.pos[1], m.start.pos[2]) : snapGround(game.world, m.start.pos[0], m.start.pos[1]);
     p.spawn(sp.x, sp.y, sp.z, m.start.yaw);
     p.invulnerable = 0;
+    p.measured = true; // every move deliberate: tactical walk pace
     this.checkpoint = { pos: sp.clone(), yaw: m.start.yaw };
     this.squad = [];
     this.props = [];
@@ -490,6 +491,16 @@ export class CampaignMode {
     }
     if (this.done) return;
     this.elapsed += dt;
+    // Sneaking in: the team lead reins you in if you rush ahead.
+    const lead = this.squad.find((s) => s.alive && s.storyChar);
+    if (this.mission.stealth && !this.alarmed && lead && g.player.sprinting) {
+      this._rushT = (this._rushT ?? 0) + dt;
+      if (this._rushT > 1.2 && this.elapsed > (this._easyT ?? 0)) {
+        this._easyT = this.elapsed + 45;
+        const lines = ['Easy. Slow is smooth, smooth is fast.', 'Slow down. Every step counts.', 'Steady. Stay with the team.'];
+        g.hud.say([{ who: (lead.name ?? 'LEAD').toUpperCase(), text: lines[Math.floor(Math.random() * lines.length)] }]);
+      }
+    } else this._rushT = 0;
     for (const t of this.timers) { t.t -= dt; if (t.t <= 0 && !t.fired) { t.fired = true; t.fn(); } }
     this.timers = this.timers.filter((t) => !t.fired);
 

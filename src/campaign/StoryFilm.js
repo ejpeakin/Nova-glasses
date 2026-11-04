@@ -1304,9 +1304,12 @@ export class StoryFilm {
   _enter_briefing() {
     this.camera.fov = 40; this.camera.updateProjectionMatrix();
     this.briefTeam[0].playMove('Interact', { loop: true, hideGun: false });
+    this.briefTeam[2].playMove('Idle_Talking', { loop: true, hideGun: false });
+    this._saluted = false;
   }
   _shot_briefing(t, dt) {
     for (const h of this.briefTeam) h.update(dt, 0, 0, 0, false, 0);
+    if (t > 7 && !this._saluted) { this._saluted = true; this.briefTeam[3].playMove('Salute', { hideGun: false }); } // orders taken
     const sway = Math.sin(t * 0.8) * 0.03;
     this.tentSet.lamp.position.x = sway; this.tentSet.shade.position.x = sway; this.tentSet.bulb.position.x = sway;
     const k = smooth(t / 12);

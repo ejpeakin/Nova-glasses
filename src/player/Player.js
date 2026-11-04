@@ -440,6 +440,8 @@ export class Player {
     this.sprinting = wantsSprint && fwdHeld && iz < 0 && this.stance === 'stand' && !busy && this.sliding <= 0;
     if (this.sprinting && weapons) weapons.cancelAds();
     let speed = STANCE[this.stance].speed;
+    // Campaign: a measured tactical walk (sprint is still there when you need it).
+    if (this.measured && !this.sprinting) speed = Math.min(speed, this.stance === 'stand' ? 3.3 : speed * 0.85);
     if (this.sprinting) speed = 7.3;
     if (weapons) speed *= weapons.moveMult();
 
@@ -450,7 +452,7 @@ export class Player {
       this.vel.z = this.slideDir.z * s;
       if (this.sliding <= 0 && wantsSprint && fwdHeld) this.setStance('stand');
     } else {
-      const accel = this.onGround ? 55 : 12;
+      const accel = this.onGround ? (this.measured && !this.sprinting ? 26 : 55) : 12;
       const tx = wx * speed, tz = wz * speed;
       this.vel.x = damp(this.vel.x, tx, accel / speed, dt);
       this.vel.z = damp(this.vel.z, tz, accel / speed, dt);
@@ -502,7 +504,7 @@ export class Player {
         this.stepDist = 0;
         const mat = this.surfaceMaterial();
         Audio.footstep(mat, null, this.sprinting ? 1.3 : this.stance === 'stand' ? 1 : 0.5);
-        if (this.sprinting || (this.stance === 'stand' && this.speed > 3)) this.noise = Math.max(this.noise, this.sprinting ? 18 : 10);
+        if (this.sprinting || (this.stance === 'stand' && this.speed > (this.measured ? 3.6 : 3))) this.noise = Math.max(this.noise, this.sprinting ? 18 : 10);
       }
     }
     this.bob = damp(this.bob, this.onGround && this.speed > 0.5 ? 1 : 0, 8, dt);

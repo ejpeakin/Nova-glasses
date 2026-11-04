@@ -9,9 +9,10 @@
 //   3. a final pass reads the scene with the tube's spectral response (strong in
 //      the red and near-infrared, so foliage, skin and fabric glow and the sky
 //      stays dark), amplifies it, sharpens it, applies the intensifier response
-//      curve with real blacks, adds fine scintillation (strongest in the dark),
-//      tints it with green (P43) or white (P45) phosphor, and masks it with the
-//      two overlapping 40-degree tubes that open as the goggles flip down.
+//      curve with deep blacks, adds faint scintillation (strongest in the dark)
+//      and tints it with a cool teal phosphor (or white P45). The picture fills
+//      the screen, darkening into the corners, and opens out from the centre as
+//      the goggles flip down.
 import * as THREE from '../lib/three.js';
 
 const VS = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
@@ -142,33 +143,30 @@ export class NightVision {
           float nb = 0.0;
           for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) if (x != 0 || y != 0) nb += lumAt(uv + vec2(float(x), float(y)) * texel * 1.25);
           nb = nb / 8.0 * e;
-          lum = max(0.0, lum + (lum - nb) * 0.85);
-          // Small, tight halos round bright sources.
-          lum += texture2D(tBloom, uv).r * 0.75;
-          // Intensifier response: open shadows, real blacks, highlights that roll off.
-          lum = 1.0 - exp(-lum * 2.1);
-          lum = clamp((lum - 0.035) / 0.965, 0.0, 1.0);
-          lum = mix(lum, lum * lum * (3.0 - 2.0 * lum), 0.55);
-          // Fine scintillation: photon noise, strongest in the dark, fresh every frame.
+          lum = max(0.0, lum + (lum - nb) * 0.9);
+          // Soft halos round bright sources (lights, lasers, muzzle flash).
+          lum += texture2D(tBloom, uv).r * 0.85;
+          // Intensifier response: moody, with deep shadows, clean mids and highlights
+          // that roll off toward white.
+          lum = 1.0 - exp(-lum * 1.8);
+          lum = clamp((lum - 0.05) / 0.95, 0.0, 1.0);
+          lum = mix(lum, lum * lum * (3.0 - 2.0 * lum), 0.7);
+          // Faint scintillation: a clean modern tube, the grain only shows in the dark.
           vec2 px = floor(gl_FragCoord.xy);
           float n = hash(px + fract(time * 17.31) * 173.0) - 0.5;
-          lum += n * (0.018 + 0.07 * (1.0 - lum) * (1.0 - lum));
-          if (hash(px + floor(time * 30.0)) > 0.99988) lum += 0.4;
+          lum += n * (0.008 + 0.035 * (1.0 - lum) * (1.0 - lum));
           lum = clamp(lum, 0.0, 1.0);
-          // Two overlapping tubes (a wide figure-of-eight), opening as the goggles flip down;
-          // a crisp edge with a dark rim and a little falloff toward each tube's edge.
+          // Full-screen picture that opens out from the centre as the goggles flip down,
+          // falling off into dark corners.
           vec2 p = vec2(c.x * aspect, c.y);
-          float rad = mix(0.02, 0.5, amount);
-          vec2 cl = vec2(-0.25, 0.0), cr = vec2(0.25, 0.0);
-          float dl = length(p - cl), dr = length(p - cr);
-          float d = min(dl, dr);
-          float mask = smoothstep(rad, rad - 0.012, d);
-          float rim = smoothstep(rad - 0.03, rad - 0.012, d) * mask;
-          float vig = 1.0 - 0.22 * smoothstep(0.45, 1.0, d / max(rad, 0.01));
-          // Phosphor: P43 yellow-green whose highlights run toward white; P45 cool white.
-          vec3 green = mix(vec3(0.3, 0.92, 0.36), vec3(0.82, 1.0, 0.78), smoothstep(0.55, 1.0, lum)) * lum + vec3(0.003, 0.02, 0.006);
+          float d = length(p);
+          float rad = mix(0.03, 1.25, amount);
+          float mask = smoothstep(rad, rad - 0.06, d);
+          float vig = 1.0 - 0.72 * smoothstep(0.3, 1.0, length(c * vec2(1.25, 1.45)));
+          // Phosphor: cool teal whose highlights run to near white; or P45 white.
+          vec3 teal = mix(vec3(0.17, 0.74, 0.68), vec3(0.72, 1.0, 0.95), smoothstep(0.55, 1.0, lum)) * lum + vec3(0.0, 0.016, 0.016);
           vec3 white = mix(vec3(0.8, 0.88, 0.98), vec3(1.0), smoothstep(0.6, 1.0, lum)) * lum + vec3(0.01, 0.012, 0.016);
-          vec3 col = mix(green, white, phosphor) * mask * vig * (1.0 - 0.6 * rim);
+          vec3 col = mix(teal, white, phosphor) * mask * vig;
           gl_FragColor = vec4(col, 1.0);
           #include <colorspace_fragment>
         }`,

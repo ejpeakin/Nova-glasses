@@ -390,7 +390,7 @@ blockquote cite { display: block; font-size: 15px; color: var(--muted); margin-t
 .hp-num { font-family: var(--mono); font-size: 26px; }
 .stance { font-family: var(--mono); font-size: 12px; letter-spacing: 0.2em; color: var(--accent); margin-bottom: 6px; }
 .stance.sprint { color: var(--warn); }
-.nvg-tag { display: inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; color: #0a1208; background: #7dff7a; padding: 1px 6px; margin: 0 0 6px 8px; vertical-align: top; }
+.nvg-tag { display: inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; color: #0a1208; background: #6ff0dc; padding: 1px 6px; margin: 0 0 6px 8px; vertical-align: top; }
 .stance { display: inline-block; }
 .weapon-panel { position: absolute; right: 26px; bottom: 22px; text-align: right; }
 .wp-name { font-size: 18px; font-weight: 700; letter-spacing: 0.12em; color: #dfe6d6; }
@@ -455,7 +455,7 @@ blockquote cite { display: block; font-size: 15px; color: var(--muted); margin-t
 .scope-breath span { display: block; height: 100%; background: var(--accent-hi); }
 
 /* night vision */
-#nvg-overlay { position: fixed; inset: 0; z-index: 5; pointer-events: none; display: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,20,0,0.85) 100%), repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 3px); }
+#nvg-overlay { position: fixed; inset: 0; z-index: 5; pointer-events: none; display: none; background: radial-gradient(ellipse at center, transparent 62%, rgba(0,10,10,0.55) 100%); }
 body.nvg #nvg-overlay { display: block; }
 
 @media (max-width: 900px) {

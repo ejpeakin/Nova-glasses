@@ -183,6 +183,8 @@ export class Soldier {
         side = Math.sign(rx * dx + rz * dz);
       }
       this.model.hit(side);
+      // A motion-captured flinch through the chest and head (he keeps his feet and his rifle).
+      if (this.alive && !this.model.inMove && Math.random() < 0.7) this.model.playMove(head ? 'Hit_Head' : 'Hit_Chest', { hideGun: false, parts: 'upper' });
     }
     // Being hit throws off aim for a moment.
     this.trackSince = Math.max(this.trackSince, this.game.time - this.diff.settle * 0.5);
@@ -712,8 +714,10 @@ export class Soldier {
     const g = 16;
     const v = Math.sqrt(g * dist) * 0.98;
     const vel = new THREE.Vector3(dx / dist * v * 0.7071, v * 0.7071, dz / dist * v * 0.7071);
-    this.game.grenades.throw('frag', from, vel, this, rand(0, 1));
+    // Wind up and release on the clip's throw (a beat after the decision).
     this.grenades--;
+    if (this.model.playMove('OverhandThrow')) this._throwPending = { t: 0.55, from, vel };
+    else this.game.grenades.throw('frag', from, vel, this, rand(0, 1));
     this.grenadeCD = rand(10, 18);
     if (chance(0.6)) this.game.callout(this, this.team === this.game.player.team ? 'Frag out!' : 'Granata!');
     return true;
@@ -725,6 +729,11 @@ export class Soldier {
       this.deadT += dt;
       this.model.update(dt, 0, 0, 0, false);
       return;
+    }
+    if (this._throwPending && (this._throwPending.t -= dt) <= 0) {
+      const { vel } = this._throwPending;
+      this._throwPending = null;
+      this.game.grenades.throw('frag', this.eyePos.add(new THREE.Vector3(0, 0.3, 0)), vel, this, rand(0, 1));
     }
     if (this.scripted) {
       // Driven by a cutscene (e.g. riding in / fast-roping from a helicopter).
@@ -774,7 +783,7 @@ export class Soldier {
           faceYaw = this.lookTarget ?? this.yaw;
           // Bored guards fiddle with a radio, a device, their kit.
           this.fidgetT = (this.fidgetT ?? rand(4, 14)) - dt;
-          if (this.fidgetT <= 0) { this.fidgetT = rand(10, 22); if (!this.friendly) this.model.playMove('Interact'); }
+          if (this.fidgetT <= 0) { this.fidgetT = rand(10, 22); if (!this.friendly) this.model.playMove(chance(0.5) ? 'Interact' : 'Idle_Listening'); }
           break;
         }
         case 'patrol': {
@@ -921,6 +930,7 @@ export class Soldier {
     }
     if (this.cover) { this.cover.owner = null; this.cover = null; }
     this.path = null;
+    if (this.friendly && !this.model.inMove) this.model.playMove('Head_Nod', { hideGun: false, parts: 'head' }); // copy that
     this.order = { kind, pos, yaw, until: kind === 'regroup' ? now + 14 : this.mpBot ? now + 50 : Infinity };
     if (kind === 'regroup' && this.state === 'combat' && !this.targetVisible) this.state = this.friendly ? 'follow' : this.hunter ? 'hunt' : 'alert';
   }
@@ -1080,33 +1090,43 @@ export class Soldier {
     }
     const ordered = this._obeyOrder(dt, think);
     if (ordered !== null) return this._watchYaw() ?? ordered;
-    // A tight, staggered stack behind you, anchored to the way you are moving (not
-    // where you happen to look), each man aiming into his own sector, matching your pace.
+    // A staggered file trailing behind you, anchored to the way you are moving (not
+    // where you happen to look), each man shouldering his rifle into his own sector.
+    // Every move is measured: they move out one after another a beat after you do, at
+    // a slow tactical walk, don't shuffle for small shifts and take a knee when you halt.
     const now = this.game.time, w = this.game.world;
     const yawF = this._formationHeading();
     const i = this.followIndex % 5;
-    const slot = [[0.8, 1.4], [-0.8, 2.5], [0.8, 3.6], [-0.8, 4.7], [0, 5.8]][i];
+    const slot = [[0.9, 2.6], [-0.9, 4.8], [0.9, 7.0], [-0.9, 9.2], [0, 11.4]][i];
     const sector = [0.55, -0.55, 1.1, -1.1, Math.PI][i];
     const sin = Math.sin(yawF), cos = Math.cos(yawF);
     const goal = new THREE.Vector3(p.pos.x + slot[0] * cos + slot[1] * sin, 0, p.pos.z - slot[0] * sin + slot[1] * cos);
     if (!w.walkable(goal.x, goal.z)) { const c = w.nearestWalkable(goal.x, goal.z, 3); if (c >= 0) w.cellCenter(c, goal); goal.y = 0; }
     const d = Math.hypot(goal.x - this.pos.x, goal.z - this.pos.z);
     const pv = Math.hypot(p.vel.x, p.vel.z);
-    if (d > 0.45) {
+    const fm = (this._fm ??= { go: 0, still: 0, moving: false });
+    fm.go = pv > 0.6 ? fm.go + dt : 0;
+    fm.still = pv < 0.3 ? fm.still + dt : 0;
+    const delay = p.sprinting ? 0.12 * i : 0.45 + 0.45 * i; // stepping off one at a time
+    const hold = d < 1.5 && pv < 0.6 && !fm.moving; // close enough: don't shuffle about
+    const waiting = fm.go < delay && d < 6;
+    if (d > 0.45 && !hold && !waiting) {
+      fm.moving = d > 0.6;
+      const walk = p.sprinting || d > 12 ? 5 : d > 8 ? 4 : 3.1; // jog only to close a big gap
       if (d < 7 && this.pos.y < 0.4 && w.walkLine(this.pos.x, this.pos.z, goal.x, goal.z)) {
-        // Close and clear: steer straight into the slot at your pace (catching up a little).
-        const sp = clamp(pv + (d - 0.45) * 1.8, 0.6, 6);
-        this.vel.x = damp(this.vel.x, ((goal.x - this.pos.x) / d) * sp, 8, dt);
-        this.vel.z = damp(this.vel.z, ((goal.z - this.pos.z) / d) * sp, 8, dt);
+        // Close and clear: ease into the slot, never faster than a tactical walk.
+        const sp = clamp(Math.min(pv, 3.1) * 0.92 + (d - 0.45) * 0.35, 0.5, walk);
+        this.vel.x = damp(this.vel.x, ((goal.x - this.pos.x) / d) * sp, 3.5, dt);
+        this.vel.z = damp(this.vel.z, ((goal.z - this.pos.z) / d) * sp, 3.5, dt);
         this.path = null;
         this.moving = true;
       } else {
         if (now >= (this._followPathT ?? 0) && (!this.path || (this.pathGoal && this.pathGoal.distanceTo(goal) > 1.5))) {
           this._followPathT = now + 0.4;
-          this._pathTo(goal, d > 9 || p.sprinting);
+          this._pathTo(goal, d > 14 || p.sprinting);
         }
-        // Keep pace with you on the way (and close the gap if behind).
-        this.paceOverride = clamp(Math.max(pv, 2.2) + (d - 1) * 0.9, 1.6, 6.2);
+        // Walk the route at your pace, jogging only when well behind.
+        this.paceOverride = clamp(Math.min(Math.max(pv, 2.0), 3.1) + (d - 1) * 0.25, 1.4, walk);
         this._followPath(dt);
         this.paceOverride = 0;
         if (d > 45 && !w.los(this.eyePos, p.eyePos)) {
@@ -1116,12 +1136,15 @@ export class Soldier {
         }
       }
     } else {
-      this.vel.multiplyScalar(0.8);
+      this.vel.multiplyScalar(0.86);
       this.path = null;
       this.moving = false;
+      fm.moving = false;
     }
     const moving = this.speed > 0.4;
-    this.followCrouch = p.stance !== 'stand' ? 1 : moving && !p.sprinting ? 0.3 : 0;
+    // Halted for a while: take a knee and cover your sector.
+    const kneel = !moving && fm.still > 2.2 + i * 0.5;
+    this.followCrouch = p.stance !== 'stand' || kneel ? 1 : moving && !p.sprinting ? 0.3 : 0;
     this.followAim = !p.sprinting && !(this.runMode && this.moving);
     return this._watchYaw() ?? yawF + sector;
   }
@@ -1174,10 +1197,10 @@ export class Soldier {
       }
       return res;
     }
-    if (this.targetVisible && this.meleeCD <= 0 && this.reloadT <= 0 && !this.stationary && Math.hypot(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z) < 1.7
-      && this.model.playMove(Math.random() < 0.5 ? 'Fighting_Right_Jab' : 'Fighting_Left_Jab')) {
-      this.meleeT = 0.9; this.meleeHit = false; this.meleeCD = 1.6;
-      return res;
+    if (this.targetVisible && this.meleeCD <= 0 && this.reloadT <= 0 && !this.stationary && Math.hypot(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z) < 1.7) {
+      // Jab, cross or a front kick; the blow lands when meleeT drops under 0.5.
+      const [move, t] = [['Fighting_Right_Jab', 0.9], ['Fighting_Left_Jab', 0.9], ['Punch_Cross', 0.95], ['Kick_Breach', 1.3]][Math.floor(Math.random() * 4)];
+      if (this.model.playMove(move)) { this.meleeT = t; this.meleeHit = false; this.meleeCD = 1.6; return res; }
     }
 
     // Lost contact for long: give up / search.

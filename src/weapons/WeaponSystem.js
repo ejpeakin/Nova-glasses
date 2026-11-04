@@ -13,7 +13,7 @@ import { buildTools, actionHands } from './Actions.js';
 const ZERO3 = new THREE.Vector3();
 // Overall recoil feel: how hard each shot pushes the view (RECOIL_VIEW) and how far
 // the gun jumps in the hands (RECOIL_GUN), applied on top of every weapon's stats.
-const RECOIL_VIEW = 0.55, RECOIL_GUN = 0.6;
+const RECOIL_VIEW = 0.36, RECOIL_GUN = 0.42;
 // Support hand on a handguard (gun-local offset from the model's hand point) and
 // where its elbow sits below the view.
 const CRADLE_OFF = new THREE.Vector3(-0.004, 0.004, -0.03);
@@ -149,6 +149,7 @@ export class WeaponSystem {
     const att = resolveAttachments(id, chosenAtt ?? Store.getAttachments(id));
     const stats = computeStats(id, att);
     const model = buildWeaponModel(WEAPONS[id], att);
+    if (model.sling) model.sling.visible = false; // slung on soldiers, out of the way in your hands
     return { id, att, stats, model, ammo: stats.mag, reserve: stats.reserve, modeIndex: 0, mode: stats.modes[0], laser: !!Store.data.laser?.[id] };
   }
 

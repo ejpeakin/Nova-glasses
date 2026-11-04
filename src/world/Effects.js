@@ -5,7 +5,55 @@ import { getSpriteTexture } from './Textures.js';
 import { rand } from '../core/Utils.js';
 
 /** How much blood a hit throws (1 = the original amount). */
-const BLOOD_AMOUNT = 1.15;
+const BLOOD_AMOUNT = 1.75;
+
+/** Canvas textures for blood on surfaces: a directional spray with droplets, and a pool. */
+let BLOOD_TEX = null;
+function bloodTextures() {
+  if (BLOOD_TEX) return BLOOD_TEX;
+  const make = (draw) => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    draw(g);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  };
+  const blob = (g, x, y, r, a, col = '110,6,6') => {
+    const grad = g.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, `rgba(${col},${a})`);
+    grad.addColorStop(0.7, `rgba(${col},${a * 0.9})`);
+    grad.addColorStop(1, `rgba(${col},0)`);
+    g.fillStyle = grad;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  };
+  const splat = make((g) => {
+    // Core, lobes, flung droplets and streaks running one way (the spray direction).
+    for (let i = 0; i < 7; i++) blob(g, 64 + (Math.random() - 0.5) * 22, 64 + (Math.random() - 0.5) * 22, 10 + Math.random() * 14, 0.95, '96,4,4');
+    for (let i = 0; i < 34; i++) {
+      const a = (Math.random() - 0.5) * 2.4, d = 18 + Math.random() * 42;
+      blob(g, 64 + Math.cos(a) * d, 64 + Math.sin(a) * d, 1.5 + Math.random() * 4.5, 0.95, '104,6,5');
+    }
+    g.lineCap = 'round';
+    for (let i = 0; i < 9; i++) {
+      const a = (Math.random() - 0.5) * 1.2, d = 26 + Math.random() * 34;
+      g.strokeStyle = 'rgba(92,4,4,0.85)';
+      g.lineWidth = 1.5 + Math.random() * 2.5;
+      g.beginPath(); g.moveTo(64, 64); g.lineTo(64 + Math.cos(a) * d, 64 + Math.sin(a) * d); g.stroke();
+    }
+  });
+  const pool = make((g) => {
+    for (let i = 0; i < 12; i++) {
+      const a = Math.random() * 6.283, d = Math.random() * 22;
+      blob(g, 64 + Math.cos(a) * d, 64 + Math.sin(a) * d, 26 + Math.random() * 18, 0.97, '62,2,2');
+    }
+    blob(g, 60, 60, 30, 0.6, '34,1,1'); // darker, deeper centre
+    for (let i = 0; i < 14; i++) { const a = Math.random() * 6.283, d = 46 + Math.random() * 12; blob(g, 64 + Math.cos(a) * d, 64 + Math.sin(a) * d, 2 + Math.random() * 4, 0.9, '80,4,4'); }
+  });
+  BLOOD_TEX = { splat, pool };
+  return BLOOD_TEX;
+}
 /** Smoke-grenade puffs per second. */
 const SMOKE_RATE = 69;
 
@@ -180,6 +228,31 @@ export class Effects {
       scene.add(m);
       this.decals.push(m);
     }
+    // Blood on walls and floors, and pools spreading under the dead (their own pools so
+    // bullet holes never wipe them). Lit, glossy materials: blood is wet, and dark at night.
+    const bt = bloodTextures();
+    const wet = (map, o) => new THREE.MeshStandardMaterial({ map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5, roughness: 0.4, metalness: 0, envMapIntensity: 0.25, color: 0xd0c8c8, ...o });
+    this.splatMat = wet(bt.splat);
+    this.poolMat = wet(bt.pool, { roughness: 0.32, polygonOffsetFactor: -6, color: 0xb0a4a4 });
+    this.bloodDecals = [];
+    this.bloodIndex = 0;
+    for (let i = 0; i < (quality === 'low' ? 40 : 120); i++) {
+      const m = new THREE.Mesh(dGeo, this.splatMat);
+      m.visible = false;
+      m.renderOrder = 1;
+      scene.add(m);
+      this.bloodDecals.push(m);
+    }
+    this.bloodPools = [];
+    this.poolIndex = 0;
+    for (let i = 0; i < (quality === 'low' ? 10 : 28); i++) {
+      const m = new THREE.Mesh(dGeo, this.poolMat);
+      m.visible = false;
+      m.renderOrder = 1;
+      scene.add(m);
+      this.bloodPools.push({ mesh: m, actor: null, delay: 0, t: 0, size: 1, at: new THREE.Vector3(), placed: false });
+    }
+    this.world = null; // set by the game: lets blood find the wall or floor behind a hit
 
     // Pooled flash lights (fixed count: adding lights at runtime forces shader recompiles).
     this.flashLights = [];
@@ -299,12 +372,82 @@ export class Effects {
     this.decal(point, n, 0.09 + Math.random() * 0.03, this.holeMat);
   }
 
-  blood(point, dir) {
-    // 5.75 puffs per hit on average (15% more than the original five).
-    const n = Math.floor(5 * BLOOD_AMOUNT + Math.random());
+  blood(point, dir, heavy = false) {
+    // Spray puffs (BLOOD_AMOUNT times the original five), a fine mist, and droplets
+    // that arc out of the exit wound and fall.
+    const k = heavy ? 1.5 : 1;
+    const n = Math.floor(5 * BLOOD_AMOUNT * k + Math.random());
     for (let i = 0; i < n; i++) {
-      this.smoke.emit(point.x, point.y, point.z, dir.x * rand(0.5, 2) + rand(-0.6, 0.6), rand(-0.3, 1), dir.z * rand(0.5, 2) + rand(-0.6, 0.6),
-        { life: rand(0.25, 0.5), size: 0.08, sizeEnd: 0.35, color: [0.45, 0.04, 0.03], alpha: 0.75, drag: 4 });
+      this.smoke.emit(point.x, point.y, point.z, dir.x * rand(0.5, 2.4) + rand(-0.6, 0.6), rand(-0.3, 1), dir.z * rand(0.5, 2.4) + rand(-0.6, 0.6),
+        { life: rand(0.3, 0.6), size: 0.09, sizeEnd: 0.42, color: [0.42, 0.03, 0.03], alpha: 0.8, drag: 4 });
+    }
+    this.smoke.emit(point.x, point.y, point.z, dir.x * 0.8, 0.2, dir.z * 0.8, { life: 0.7, size: 0.25, sizeEnd: 0.8, color: [0.38, 0.03, 0.03], alpha: 0.35, drag: 3 });
+    for (let i = 0; i < Math.round(12 * k); i++) {
+      const sp = rand(1.5, 4.5);
+      this.smoke.emit(point.x, point.y, point.z, dir.x * sp + rand(-0.8, 0.8), rand(0, 1.8), dir.z * sp + rand(-0.8, 0.8),
+        { life: rand(0.4, 0.8), size: rand(0.025, 0.05), sizeEnd: 0.02, color: [0.36, 0.02, 0.02], alpha: 0.95, gravity: 9.8, drag: 0.6 });
+    }
+    const w = this.world;
+    if (!w) return;
+    // Spatter on whatever is behind the target (wall, crate, floor).
+    const d = new THREE.Vector3(dir.x + rand(-0.15, 0.15), dir.y - rand(0.05, 0.3), dir.z + rand(-0.15, 0.15)).normalize();
+    const hit = w.raycast(point.x + d.x * 0.3, point.y + d.y * 0.3, point.z + d.z * 0.3, d.x, d.y, d.z, 2.8);
+    if (hit) this.bloodDecal(hit.point, hit.normal, rand(0.45, 0.85) * k * (1 - hit.t / 5));
+    // Drips and splashes on the floor around and behind him.
+    for (let i = 0; i < (heavy ? 3 : 2); i++) {
+      const f = rand(0.2, 1.6);
+      const x = point.x + dir.x * f + rand(-0.35, 0.35), z = point.z + dir.z * f + rand(-0.35, 0.35);
+      const y = w.groundHeight(x, z, point.y, 2.5, 0.05);
+      if (point.y - y > 3) continue;
+      this.bloodDecal(new THREE.Vector3(x, y + 0.012, z), new THREE.Vector3(0, 1, 0), rand(0.18, 0.5) * k);
+    }
+  }
+
+  bloodDecal(point, normal, size) {
+    const m = this.bloodDecals[this.bloodIndex];
+    this.bloodIndex = (this.bloodIndex + 1) % this.bloodDecals.length;
+    m.position.copy(point).addScaledVector(normal, 0.012);
+    m.lookAt(point.x + normal.x, point.y + normal.y, point.z + normal.z);
+    m.rotateZ(Math.random() * 6.28);
+    m.scale.set(size * rand(0.85, 1.2), size * rand(0.85, 1.2), 1);
+    m.visible = true;
+  }
+
+  /** A pool of blood that spreads out under a body once it has come to rest. */
+  bloodPool(actor) {
+    const p = this.bloodPools[this.poolIndex];
+    this.poolIndex = (this.poolIndex + 1) % this.bloodPools.length;
+    p.actor = actor;
+    p.at.copy(actor.pos);
+    p.delay = rand(1.0, 1.6);
+    p.t = 0;
+    p.size = rand(1.3, 1.9);
+    p.placed = false;
+    p.mesh.visible = false;
+  }
+
+  _updatePools(dt, world) {
+    for (const p of this.bloodPools) {
+      if (!p.actor && !p.placed) continue;
+      if (!p.placed) {
+        p.delay -= dt;
+        if (p.delay > 0) continue;
+        // Centre it on the torso where the body ended up (deaths throw them about).
+        const a = p.actor, t = a.model?.torso;
+        if (!a.alive && t) { t.getWorldPosition(p.at); }
+        const y = world ? world.groundHeight(p.at.x, p.at.z, p.at.y + 0.3, 0.6, 0.05) : 0;
+        p.mesh.position.set(p.at.x, y + 0.014, p.at.z);
+        p.mesh.rotation.set(-Math.PI / 2, 0, Math.random() * 6.28);
+        p.placed = true;
+        p.actor = null;
+        p.t = 0;
+        p.mesh.visible = true;
+      }
+      if (p.t > 14) continue;
+      p.t += dt;
+      const g = 1 - Math.pow(1 - Math.min(1, p.t / 14), 3); // fast at first, then creeping
+      const s = p.size * (0.12 + 0.88 * g);
+      p.mesh.scale.set(s, s * 0.85, 1);
     }
   }
 
@@ -440,6 +583,7 @@ export class Effects {
 
   update(dt, world) {
     for (const p of this.pools) p.update(dt);
+    this._updatePools(dt, world ?? this.world);
     for (const t of this.tracers) {
       if (!t.active) continue;
       t.d += t.speed * dt;

@@ -4,7 +4,9 @@
 // cross-section profiles, so receivers, stocks, grips and curved magazines have
 // real outlines. Details: picatinny rails with teeth, slotted handguards, gas
 // blocks, flash hiders, ejection ports, charging handles, selectors, sights and
-// optics. Surfaces use anodised metal, stippled polymer and wood-grain textures.
+// optics, plus roll marks and selector stamps, screws, pins, QD sockets, slings,
+// mag windows, cleaning rods and shell carriers. Surfaces use anodised metal,
+// stippled polymer and wood-grain textures.
 //
 // Weapon space: barrel points down -Z, +Y up, origin at the top of the firing grip.
 import * as THREE from '../lib/three.js';
@@ -270,6 +272,268 @@ function flashHider(parent, z, y, steel, dark) {
   for (let i = 0; i < 4; i++) {
     const a = (i / 4) * Math.PI * 2 + 0.4;
     box(parent, 0.003, 0.0035, 0.026, Math.cos(a) * 0.0105, y + Math.sin(a) * 0.0105, z - 0.03, dark, 0, 0, a);
+  }
+}
+
+
+// ---------------------------------------------------------------------------
+// Fine detail: roll marks and selector stamps, screws and pins, sling hardware and
+// a nylon sling, mag windows and pull tabs, cleaning rods, shell carriers.
+
+const markCache = new Map();
+/** Engraved markings as a transparent decal. lines: [text, sizePx, opts] rows. */
+function markingMaterial(key, w, h, draw) {
+  if (markCache.has(key)) return markCache.get(key);
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = Math.max(32, Math.round(512 * h / w));
+  const g = c.getContext('2d');
+  g.fillStyle = 'rgba(214,214,204,0.9)';
+  g.strokeStyle = 'rgba(214,214,204,0.9)';
+  g.textBaseline = 'middle';
+  draw(g, c.width, c.height);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  const m = new THREE.MeshStandardMaterial({ map: t, transparent: true, depthWrite: false, roughness: 0.55, metalness: 0.3, polygonOffset: true, polygonOffsetFactor: -2 });
+  markCache.set(key, m);
+  return m;
+}
+
+/** A flat marking on the left (side -1) or right (+1) face at x = side * face. */
+function stamp(parent, mat, w, h, face, y, z, side = -1) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+  m.rotation.y = side < 0 ? -Math.PI / 2 : Math.PI / 2;
+  m.position.set(side * (face + 0.0004), y, z);
+  parent.add(m);
+  return m;
+}
+
+/** Roll mark block: maker, model, calibre, serial. */
+function rollMark(name, cal, serial) {
+  return markingMaterial(`roll:${name}:${cal}`, 1, 0.42, (g, W, H) => {
+    g.font = `bold ${H * 0.2}px "Share Tech Mono", monospace`;
+    g.fillText('ORION ARMS', W * 0.04, H * 0.16);
+    g.font = `bold ${H * 0.26}px "Share Tech Mono", monospace`;
+    g.fillText(name.toUpperCase(), W * 0.04, H * 0.42);
+    g.font = `${H * 0.17}px "Share Tech Mono", monospace`;
+    g.fillText(`CAL ${cal}`, W * 0.04, H * 0.66);
+    g.fillText(`SN ${serial}`, W * 0.04, H * 0.86);
+  });
+}
+
+/** Selector stamp: SAFE / SEMI / AUTO (or the AK's dashes) round the lever. */
+function selectorMark(kind) {
+  return markingMaterial(`sel:${kind}`, 1, 0.8, (g, W, H) => {
+    const cx = W * 0.5, cy = H * 0.55;
+    g.font = `bold ${H * 0.17}px "Share Tech Mono", monospace`;
+    g.textAlign = 'center';
+    const labels = kind === 'ak' ? ['—', 'AB', 'OD'] : kind === 'burst' ? ['SAFE', 'SEMI', 'BURST'] : ['SAFE', 'SEMI', 'AUTO'];
+    const ang = [-2.2, -1.57, -0.94];
+    labels.forEach((l, i) => {
+      g.fillText(l, cx + Math.cos(ang[i]) * W * 0.36, cy + Math.sin(ang[i]) * H * 0.42);
+      g.beginPath(); g.arc(cx + Math.cos(ang[i]) * W * 0.2, cy + Math.sin(ang[i]) * H * 0.25, H * 0.025, 0, 6.283); g.fill();
+    });
+    if (kind !== 'ak') { g.fillStyle = 'rgba(200,40,30,0.95)'; g.beginPath(); g.arc(cx + Math.cos(ang[2]) * W * 0.2, cy + Math.sin(ang[2]) * H * 0.25, H * 0.035, 0, 6.283); g.fill(); }
+  });
+}
+
+/** Hex (or slotted) screw head on a side face. */
+function screw(parent, x, y, z, side, m, r = 0.0024, socket = null) {
+  const h = knobX(parent, r, 0.0016, x + side * 0.0008, y, z, m, 6);
+  if (socket) knobX(parent, r * 0.45, 0.0006, x + side * 0.0017, y, z, socket, 6);
+  return h;
+}
+
+/** QD sling socket / swivel loop on a side face. */
+function qd(parent, x, y, z, side, m, dark) {
+  knobX(parent, 0.0062, 0.003, x + side * 0.0015, y, z, m, 14);
+  knobX(parent, 0.0034, 0.0008, x + side * 0.0031, y, z, dark, 10);
+}
+
+/** A nylon sling strap hanging between two points on the left of the gun. */
+function sling(host, a, b, sag, fabric, metal) {
+  const parent = new THREE.Group();
+  parent.name = 'sling';
+  host.add(parent);
+  const n = 18, w = 0.024, pos = [], nrm = [], uv = [], idx = [];
+  const p = new THREE.Vector3(), t = new THREE.Vector3(), side = new THREE.Vector3(1, 0, 0), wv = new THREE.Vector3(), nv = new THREE.Vector3();
+  const at = (u, out) => out.lerpVectors(a, b, u).add(new THREE.Vector3(-Math.sin(u * Math.PI) * 0.012, -Math.sin(u * Math.PI) * sag, 0));
+  for (let i = 0; i <= n; i++) {
+    const u = i / n;
+    at(u, p);
+    at(Math.min(1, u + 0.01), t); at(Math.max(0, u - 0.01), wv); t.sub(wv).normalize();
+    wv.crossVectors(t, side).normalize().multiplyScalar(w / 2); // width across the strap
+    nv.crossVectors(t, wv).normalize();
+    const twist = Math.sin(u * Math.PI) * 0.5; // the strap rolls a little as it hangs
+    const wr = wv.clone().applyAxisAngle(t, twist);
+    pos.push(p.x - wr.x, p.y - wr.y, p.z - wr.z, p.x + wr.x, p.y + wr.y, p.z + wr.z);
+    const nr = nv.clone().applyAxisAngle(t, twist);
+    nrm.push(nr.x, nr.y, nr.z, nr.x, nr.y, nr.z);
+    uv.push(0, u * 8, 1, u * 8);
+    if (i < n) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(idx);
+  const strap = new THREE.Mesh(geo, fabric);
+  parent.add(strap);
+  // Swivels and a ladder-lock buckle.
+  for (const e of [a, b]) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.009, 0.0018, 6, 14), metal);
+    ring.position.copy(e).add(new THREE.Vector3(-0.002, -0.006, 0));
+    ring.rotation.y = Math.PI / 2;
+    parent.add(ring);
+  }
+  at(0.3, p);
+  box(parent, 0.004, 0.03, 0.012, p.x, p.y, p.z, metal);
+  return parent;
+}
+
+let SLING = null;
+function slingMaterial() {
+  return (SLING ??= new THREE.MeshStandardMaterial({ color: 0x3f4232, roughness: 0.95, metalness: 0, bumpMap: textures().cloth, bumpScale: 0.8, side: THREE.DoubleSide }));
+}
+
+/** The detail pass for one weapon body. k: materials and key dimensions. */
+function addDetail(g, body, k) {
+  const { alu, park, steel, bright, dark, poly, rubber, mag, magM, brass, furn, def, muzzleY, leftHand } = k;
+  const cal = { ar: '5.56x45mm', ak: '5.45x39mm', scar: '7.62x51mm', smg: def.name.includes('45') ? '.45 ACP' : '9x19mm', vector: '.45 ACP', bolt: '.338 LAPUA MAG', dmr: '7.62x51mm', pump: '12 GA 3"', autoshotgun: '12 GA', lmg: '5.56 NATO', pistol: '9x19mm', deagle: '.50 AE' }[body] ?? '';
+  const serial = `OA-${(1000 + (def.name.length * 7919) % 9000)}${String.fromCharCode(65 + def.name.length % 26)}`;
+  const roll = rollMark(def.name, cal, serial);
+  const sel = selectorMark(body === 'ak' ? 'ak' : (def.modes ?? []).includes('burst') ? 'burst' : 'auto');
+  const fabric = slingMaterial();
+  const inner = material('inner', 0x070707);
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  switch (body) {
+    case 'ar':
+    case 'dmr': {
+      const hg = body === 'dmr' ? 0.38 : 0.3, he = -0.172 - hg;
+      stamp(g, roll, 0.07, 0.03, 0.023, -0.022, -0.108);
+      stamp(g, sel, 0.036, 0.029, 0.023, -0.009, 0.035);
+      knobX(g, 0.0028, 0.049, 0, -0.019, 0.012, bright, 8); // trigger pin
+      knobX(g, 0.0028, 0.049, 0, -0.01, -0.006, bright, 8); // hammer pin
+      box(g, 0.003, 0.004, 0.016, 0.026, -0.012, 0.035, dark); // ambi selector lever
+      // M-LOK screws, QD sockets and a hand stop on the handguard.
+      for (const side of [-1, 1]) for (let i = 0; i < 3; i++) screw(g, side * 0.027, 0.034, -0.2 - i * (hg / 3), side, dark, 0.0022, bright);
+      qd(g, -0.027, 0.012, he + 0.035, -1, alu, dark);
+      qd(g, -0.024, 0.008, 0.094, -1, alu, dark); // end plate
+      prism(g, [[he + 0.07, -0.024], [he + 0.04, -0.024], [he + 0.045, -0.036], [he + 0.062, -0.036]], 0.02, poly, { bevel: 0.002 });
+      // Stock adjustment lever, QD cup and ribs.
+      box(g, 0.008, 0.006, 0.034, 0, 0.0, 0.215, poly);
+      for (let i = 0; i < 4; i++) box(g, 0.0415, 0.003, 0.004, 0, -0.042 + i * 0.004, 0.282 + i * 0.008, poly);
+      qd(g, -0.02, -0.032, 0.29, -1, alu, dark);
+      // Gas block set screws.
+      for (const dz of [-0.006, 0.006]) screw(g, -0.013, muzzleY + 0.006, he - 0.025 + dz, -1, bright, 0.0016);
+      // PMAG-style witness window and a pull tab under the base plate.
+      box(mag, 0.0012, 0.072, 0.011, -0.0124, -0.07, 0.012, inner);
+      for (let i = 0; i < 6; i++) box(mag, 0.0008, 0.0095, 0.0075, -0.013, -0.04 - i * 0.0115, 0.012, brass);
+      const tab = new THREE.Mesh(new THREE.TorusGeometry(0.01, 0.0025, 6, 14, Math.PI), material('rubber', 0x1a1a1a));
+      tab.rotation.set(0, Math.PI / 2, Math.PI); tab.position.set(0, (body === 'dmr' ? -0.14 : -0.17) - 0.011, -0.01);
+      mag.add(tab);
+      sling(g, V(-0.03, -0.012, he + 0.035), V(-0.026, -0.05, 0.29), 0.06, fabric, bright);
+      break;
+    }
+    case 'ak': {
+      stamp(g, roll, 0.075, 0.032, 0.023, 0.002, -0.06);
+      stamp(g, sel, 0.04, 0.032, 0.023, 0.006, -0.02, 1);
+      prismZ(g, [[-0.004, 0.0555], [0.004, 0.0555], [0.003, 0.0595], [-0.003, 0.0595]], -0.16, 0.09, park); // dust cover rib
+      tube(g, 0.0045, 0.0045, 0.09, 0.106, 0, 0.044, park, 10); // recoil spring button
+      for (const z of [0.09, 0.05, -0.1, -0.15]) for (const side of [-1, 1]) knobX(g, 0.0022, 0.0012, side * 0.0235, 0.022, z, bright, 6); // trunnion rivets
+      tube(g, 0.0024, 0.0024, -0.45, k.muzzleZ + 0.08, 0, muzzleY - 0.016, steel, 8); // cleaning rod
+      box(g, 0.012, 0.012, 0.016, 0, muzzleY - 0.022, k.muzzleZ + 0.07, park); // bayonet lug
+      box(g, 0.02, 0.006, 0.014, 0, -0.03, -0.072, park); // magazine catch paddle
+      box(g, 0.004, 0.012, 0.016, 0.027, 0.0, -0.215, park); // handguard retainer
+      const loop = new THREE.Mesh(new THREE.TorusGeometry(0.008, 0.0016, 6, 12), park);
+      loop.rotation.y = Math.PI / 2; loop.position.set(-0.016, 0.03, -0.445); g.add(loop);
+      // Magazine lock plate and the reinforcing ribs on the spine.
+      box(mag, 0.03, 0.006, 0.05, 0, -0.193, -0.074, magM, 0.5, 0, 0);
+      sling(g, V(-0.02, 0.028, -0.445), V(-0.023, -0.055, 0.31), 0.07, fabric, bright);
+      break;
+    }
+    case 'scar': {
+      stamp(g, roll, 0.068, 0.028, 0.024, -0.02, -0.108);
+      stamp(g, sel, 0.034, 0.027, 0.024, -0.008, 0.035);
+      box(g, 0.0012, 0.007, 0.15, -0.0255, 0.036, -0.12, inner); // charging handle slot
+      for (const side of [-1, 1]) for (let i = 0; i < 4; i++) screw(g, side * 0.025, 0.012, -0.13 - i * 0.035, side, dark, 0.002, bright);
+      knobY(g, 0.006, 0.05, 0, 0.012, 0.105, alu, 12); // stock hinge
+      box(g, 0.012, 0.012, 0.018, 0, 0.068, -0.245, alu); // folding front sight base
+      qd(g, -0.021, -0.03, 0.3, -1, alu, dark);
+      sling(g, V(-0.03, 0.018, -0.245), V(-0.022, -0.05, 0.3), 0.06, fabric, bright);
+      break;
+    }
+    case 'smg':
+    case 'vector': {
+      stamp(g, roll, 0.06, 0.026, body === 'vector' ? 0.025 : 0.022, body === 'vector' ? 0.024 : -0.024, body === 'vector' ? -0.06 : -0.095);
+      stamp(g, sel, 0.03, 0.024, 0.023, -0.008, 0.035);
+      for (const side of [-1, 1]) for (let i = 0; i < 2; i++) screw(g, side * 0.024, 0.026, -0.04 - i * 0.06, side, dark, 0.002, bright);
+      knobX(g, 0.0026, 0.047, 0, -0.016, 0.01, bright, 8);
+      // Mag ribs and a witness hole column.
+      for (let i = 0; i < 4; i++) knobX(mag, 0.0022, 0.023, 0, -0.03 - i * 0.025, 0.006, inner, 8);
+      sling(g, V(-0.024, 0.0, leftHand.z - 0.02), V(-0.016, -0.04, 0.26), 0.05, fabric, bright);
+      break;
+    }
+    case 'bolt': {
+      stamp(g, roll, 0.07, 0.03, 0.025, -0.016, -0.03);
+      for (const side of [-1, 1]) for (let i = 0; i < 5; i++) screw(g, side * 0.029, -0.002, -0.16 - i * 0.085, side, dark, 0.0022, bright);
+      tube(g, 0.016, 0.014, 0.11, 0.135, 0, 0.022, steel, 14); // bolt shroud
+      qd(g, -0.023, -0.07, 0.36, -1, alu, dark);
+      qd(g, -0.029, -0.03, -0.55, -1, alu, dark);
+      sling(g, V(-0.032, -0.03, -0.55), V(-0.026, -0.07, 0.36), 0.07, fabric, bright);
+      break;
+    }
+    case 'lmg': {
+      stamp(g, roll, 0.08, 0.034, 0.034, 0.015, -0.06);
+      stamp(g, sel, 0.034, 0.027, 0.034, -0.012, 0.04);
+      box(g, 0.02, 0.008, 0.012, 0, 0.092, 0.07, alu); // feed cover latch
+      for (const side of [-1, 1]) for (let i = 0; i < 3; i++) screw(g, side * 0.034, 0.045, 0.05 - i * 0.08, side, dark, 0.0026, bright);
+      sling(g, V(-0.03, 0.02, -0.46), V(-0.024, -0.04, 0.31), 0.08, fabric, bright);
+      break;
+    }
+    case 'pump':
+    case 'autoshotgun': {
+      stamp(g, roll, 0.075, 0.032, 0.025, 0.012, -0.05);
+      if (body === 'pump') {
+        // Side-saddle shell carrier with four spare shells on the left of the receiver.
+        box(g, 0.004, 0.05, 0.075, -0.027, 0.0, -0.06, poly);
+        const shell = material('default', 0x5e1712, { roughness: 0.7, metalness: 0.05 });
+        for (let i = 0; i < 4; i++) {
+          const zc = -0.087 + i * 0.018;
+          const s = new THREE.Mesh(new THREE.CylinderGeometry(0.0095, 0.0095, 0.06, 12), shell);
+          s.position.set(-0.035, 0.0, zc);
+          g.add(s);
+          const head = new THREE.Mesh(new THREE.CylinderGeometry(0.0101, 0.0101, 0.012, 12), brass);
+          head.position.set(-0.035, 0.026, zc);
+          g.add(head);
+        }
+        sling(g, V(-0.016, -0.012, -0.62), V(-0.024, -0.06, 0.35), 0.07, fabric, bright);
+      } else {
+        for (const side of [-1, 1]) for (let i = 0; i < 3; i++) screw(g, side * 0.028, 0.03, -0.18 - i * 0.06, side, dark, 0.0022, bright);
+        sling(g, V(-0.03, 0.01, -0.34), V(-0.024, -0.05, 0.31), 0.06, fabric, bright);
+      }
+      break;
+    }
+    case 'pistol':
+    case 'deagle': {
+      const big = body === 'deagle';
+      const top = big ? 0.07 : 0.064, L = big ? 0.24 : 0.19, sw = big ? 0.016 : 0.013;
+      const slideMark = markingMaterial(`slide:${def.name}`, 1, 0.2, (gg, W, H) => {
+        const txt = `${def.name.toUpperCase()}   ${cal}`;
+        gg.font = `bold ${H * 0.62}px "Share Tech Mono", monospace`;
+        const fit = Math.min(1, (W * 0.94) / gg.measureText(txt).width);
+        gg.font = `bold ${H * 0.62 * fit}px "Share Tech Mono", monospace`;
+        gg.fillText(txt, W * 0.03, H * 0.55);
+      });
+      stamp(k.action, slideMark, 0.11, 0.012, sw, (top + 0.028) / 2 + 0.003, 0.03 - L * 0.55);
+      box(g, 0.003, 0.006, 0.012, -(big ? 0.0155 : 0.013), 0.02, -0.05, steel); // takedown lever
+      box(g, 0.003, 0.005, 0.03, -(big ? 0.0155 : 0.013), 0.026, -0.012, steel); // slide stop
+      box(k.action, 0.003, 0.004, 0.018, sw + 0.001, top - 0.012, -0.012, steel); // extractor
+      knobX(g, 0.0022, big ? 0.032 : 0.027, 0, 0.012, -0.03, bright, 8); // trigger pin
+      break;
+    }
+    default:
+      break;
   }
 }
 
@@ -681,6 +945,8 @@ export function buildWeaponModel(def, att = {}) {
     }
   }
 
+  addDetail(g, body, { alu, park, steel, bright, dark, poly, rubber, mag, magM, brass, furn, def, muzzleY, muzzleZ, leftHand: info.leftHand, action });
+
   // Iron sights.
   const optic = att.optic ?? 'iron';
   if (optic === 'iron') {
@@ -869,6 +1135,7 @@ export function buildWeaponModel(def, att = {}) {
   mag.position.copy(magPos);
   g.add(mag);
   info.mag = mag;
+  info.sling = g.getObjectByName('sling') ?? null;
   info.magHome = magPos.clone();
   info.action = action;
   info.actionHome = action ? action.position.clone() : null;

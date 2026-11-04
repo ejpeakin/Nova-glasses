@@ -4,6 +4,7 @@
 // area. Scattered props avoid spawns, objectives, LZs and enemy posts.
 import * as THREE from '../lib/three.js';
 import { MISSIONS } from '../campaign/Story.js';
+import { detailMap } from './Detail.js';
 
 // ---------------------------------------------------------------------------
 // Placement helpers
@@ -20,6 +21,10 @@ function avoidList(b, mapId) {
     if (m.insertion) add(m.insertion.lz[0], m.insertion.lz[1], 7);
     for (const o of m.objectives) if (o.target) add(o.target[0], o.target.length === 3 ? o.target[2] : o.target[1], 3.5);
     for (const g of Object.values(m.groups)) for (const u of g.units) add(u.pos[0], u.pos.length === 3 ? u.pos[2] : u.pos[1], 1.6);
+    // Breach doors (both sides), hostages and weapon caches.
+    for (const d of Object.values(m.doors ?? {})) { const n = d.axis === 'x' ? [0, 1] : [1, 0]; add(d.x + n[0] * 1.8, d.z + n[1] * 1.8, 2.4); add(d.x - n[0] * 1.8, d.z - n[1] * 1.8, 2.4); }
+    for (const c of m.civilians ?? []) add(c.pos[0], c.pos.length === 3 ? c.pos[2] : c.pos[1], 1.5);
+    for (const c of m.caches ?? []) add(c.pos[0], c.pos.length === 3 ? c.pos[2] : c.pos[1], 1.5);
   }
   return pts;
 }
@@ -467,4 +472,5 @@ export function dressMap(id, b) {
   if (!fn) return;
   const free = makeFree(b, avoidList(b, id));
   fn(b, free);
+  detailMap(id, b, free);
 }

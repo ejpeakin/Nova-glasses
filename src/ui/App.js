@@ -568,7 +568,7 @@ export class App {
           <div class="lbl">NIGHT VISION</div>
           ${toggle('nvgAuto', 'Goggles down at the start of night missions')}
           ${toggle('squadVoice', 'Squad voices (spoken radio replies)')}
-          <div class="field"><label>Phosphor</label><div class="seg" id="phosphor">${['green', 'white'].map((q) => `<button class="${q === s.nvgPhosphor ? 'on' : ''}" data-ph="${q}">${q === 'green' ? 'GREEN (P43)' : 'WHITE (P45)'}</button>`).join('')}</div>
+          <div class="field"><label>Phosphor</label><div class="seg" id="phosphor">${['green', 'white'].map((q) => `<button class="${q === s.nvgPhosphor ? 'on' : ''}" data-ph="${q}">${q === 'green' ? 'TEAL' : 'WHITE (P45)'}</button>`).join('')}</div>
           <small class="muted">Press N in game to flip the goggles down or up.</small></div>
         </div>
         <div class="panel"><div class="lbl">GRAPHICS</div>

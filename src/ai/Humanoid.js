@@ -632,9 +632,13 @@ export class Humanoid {
     // (Death_A buckles and falls forward on his face, Death_B is thrown back off his feet.)
     const r = Math.random();
     this.deathStyle = o.head ? 'crumple' : Math.random() < 0.35 ? 'twist' : 'topple';
+    // (Death_C goes over backwards, legs flying; Death_D sags to the knees and keels over.)
     if (movesReady() && !o.head) {
       if (o.heavy && this.deathDir > 0 && r < 0.75) this.deathStyle = 'Death_B';
-      else if (r < (this.deathDir < 0 ? 0.7 : 0.4)) this.deathStyle = 'Death_A';
+      else if (r < (this.deathDir < 0 ? 0.75 : 0.6)) {
+        const pool = this.deathDir < 0 ? ['Death_A', 'Death_A', 'Death_D'] : ['Death_C', 'Death_D', 'Death_A'];
+        this.deathStyle = pool[Math.floor(Math.random() * pool.length)];
+      }
     }
     this.twist = (Math.random() < 0.5 ? -1 : 1);
     this.rl = null;
@@ -652,12 +656,14 @@ export class Humanoid {
 
   /**
    * Play a motion-captured move over the procedural pose: 'Fighting_Right_Jab',
-   * 'Fighting_Left_Jab', 'Interact', 'Slide', ... o: { loop, hideGun }.
+   * 'Fighting_Left_Jab', 'Interact', 'Slide', ... o: { loop, hideGun, parts }.
+   * parts: 'all' (default), 'upper' (chest and head only, so he can keep walking and
+   * holding his rifle) or 'head'.
    */
   playMove(name, o = {}) {
     const info = moveInfo(name);
     if (!info || this.dead) return false;
-    this.move = { name, t: 0, dur: info.duration, loop: !!o.loop, hideGun: o.hideGun ?? true, w: 0 };
+    this.move = { name, t: 0, dur: info.duration, loop: !!o.loop, hideGun: o.hideGun ?? true, w: 0, parts: o.parts ?? 'all' };
     return true;
   }
 
@@ -674,13 +680,18 @@ export class Humanoid {
       return;
     }
     const w = Math.min(1, m.t / 0.15) * (m.loop ? 1 : Math.min(1, (m.dur - m.t) / 0.2));
-    this._wearPose(samplePose(m.name, m.t, m.loop, this._mp ??= samplePose(m.name, 0, false)), w);
+    this._wearPose(samplePose(m.name, m.t, m.loop, this._mp ??= samplePose(m.name, 0, false)), w, m.parts);
     if (m.hideGun && !this.captive) { const show = w < 0.4; this.gun.visible = show; if (this.mag) this.mag.visible = show; }
   }
 
   /** Put a baked clip pose on the procedural rig with weight w. */
   _wearPose(P, w, parts = 'all') {
     if (!P || w <= 0) return;
+    if (parts === 'upper' || parts === 'head') {
+      if (parts === 'upper') this.torso.quaternion.slerp(P.torso, w);
+      this.head.quaternion.slerp(P.head, w);
+      return;
+    }
     const d = this.dim, legLen = d.thigh + d.shin;
     if (parts !== 'legs') {
       this.hips.quaternion.slerp(P.hips, w);

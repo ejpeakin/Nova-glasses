@@ -75,6 +75,7 @@ export class Game {
     this.visRange = Math.max(35, Math.min(200, 0.95 / (this.env.preset.fogDensity || 0.008)));
     if (this.night && weather === 'rain') this.env.enableLightning();
     this.effects = new Effects(this.scene, q);
+    this.effects.world = this.world;
     // Unlit particles (smoke, dust, weather) are dimmed to the level's light so they don't glow at night.
     const ambient = { night: 0.14, indoor: 0.55, dusk: 0.55, dawn: 0.6, overcast: 0.85 }[lighting] ?? 1;
     this.effects.setAmbient(ambient);
@@ -341,7 +342,7 @@ export class Game {
       const dmg = base * (head ? o.headMult : 1) * (o.dmgMult ?? 1);
       const wasAlive = hitActor.alive;
       hitActor.takeDamage(dmg, origin, shooter, head, o.weaponId);
-      if (!hitActor.isPlayer) this.effects.blood(point, dir);
+      if (!hitActor.isPlayer) this.effects.blood(point, dir, head || (wasAlive && !hitActor.alive) || dmg > 60);
       if (shooter === this.player) {
         const killed = wasAlive && !hitActor.alive;
         this.hud?.hitmarker(killed, head);
@@ -493,6 +494,7 @@ export class Game {
     }
     this.mode.onKill?.(killer, victim, weaponId, head);
     if (!victim.isPlayer) {
+      this.effects.bloodPool(victim);
       this.bodies.push({ pos: victim.pos.clone(), team: victim.team, t: this.time, actor: victim });
       if (this.bodies.length > 40) this.bodies.shift();
     }
