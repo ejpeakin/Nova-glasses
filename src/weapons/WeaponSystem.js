@@ -442,9 +442,11 @@ export class WeaponSystem {
       this.game.effects.casing(muzzleWorld.clone().addScaledVector(fwd, -0.4).addScaledVector(right, 0.05), right);
       Audio.shellCasing();
     }
-    this.game.emitNoise(player.pos, s.suppressed ? 9 : 75, player);
+    // (Missions can make the team's gunfire inaudible to the enemy.)
+    const silent = !!this.game.mode?.mission?.silentShots;
+    if (!silent) this.game.emitNoise(player.pos, s.suppressed ? 9 : 75, player);
     player.lastShotTime = this.game.time;
-    if (!s.suppressed) player.revealed = this.game.time;
+    if (!s.suppressed && !silent) player.revealed = this.game.time;
     // Bolt / pump cycle.
     if (w.mode === 'bolt' || w.mode === 'pump') {
       if (w.ammo > 0) { this.state = 'cycle'; this.stateT = 0; this.cycleSounded = false; }

@@ -339,7 +339,11 @@ export class Game {
       const d = origin.distanceTo(point);
       const r = o.range;
       const base = d <= r[0] ? o.damage[0] : d >= r[1] ? o.damage[1] : lerp(o.damage[0], o.damage[1], (d - r[0]) / (r[1] - r[0]));
-      const dmg = base * (head ? o.headMult : 1) * (o.dmgMult ?? 1);
+      let dmg = base * (head ? o.headMult : 1) * (o.dmgMult ?? 1);
+      // Missions can make any headshot on an enemy (by you or your squad) a kill.
+      if (head && this.mode.mission?.headshotKills && !hitActor.isPlayer && !hitActor.storyChar && shooter && this.hostile(this.player, hitActor) && !this.hostile(this.player, shooter)) {
+        dmg = Math.max(dmg, (hitActor.health + 1) / Math.max(0.05, hitActor.armor ?? 1));
+      }
       const wasAlive = hitActor.alive;
       hitActor.takeDamage(dmg, origin, shooter, head, o.weaponId);
       if (!hitActor.isPlayer) this.effects.blood(point, dir, head || (wasAlive && !hitActor.alive) || dmg > 60);

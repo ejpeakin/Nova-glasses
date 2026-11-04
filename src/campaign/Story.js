@@ -731,7 +731,7 @@ export const MISSIONS = [
     recap: 'Vasko is in custody and the satellites are gone. Only Dr. Hart is left, with the last copy of the launch codes, hiding in a Vel Harat apartment block.',
     goal: 'Raid her hideout without making a sound: stack on the door, pick the lock, clear it room by room, free the hostages and arrest Hart.',
     loadout: { primary: 'viper', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { viper: { muzzle: 'suppressor', optic: 'holo', underbarrel: 'laser' }, p11: { muzzle: 'suppressor' } } },
-    loadoutNote: 'Quiet kit: suppressed K-45 Viper and P-11, lock picks, flashbangs for the rooms. The squad carries suppressed weapons too.',
+    loadoutNote: 'Quiet kit: suppressed K-45 Viper and P-11, lock picks, flashbangs for the rooms. The squad carries suppressed weapons too. Nobody hears your team\'s shots, and one headshot drops a man.',
     kitHint: 'Crouch to move quietly  ·  V from behind: silent takedown  ·  Y: squad radio  ·  hold E: pick the lock, cut ties, cuff',
     start: { pos: [-3, 11], yaw: -Math.PI / 2 },
     squad: [
@@ -740,6 +740,8 @@ export const MISSIONS = [
       { name: 'Tex', weapon: 'rk74', suppressed: true },
     ],
     stealth: true,
+    silentShots: true, // the team's gunfire makes no noise the enemy can hear
+    headshotKills: true, // any headshot on an enemy kills him outright
     squadLeash: 7,
     alarmGroup: 'response',
     alarmTimer: 60,

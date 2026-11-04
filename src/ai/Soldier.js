@@ -189,8 +189,8 @@ export class Soldier {
     // Being hit throws off aim for a moment.
     this.trackSince = Math.max(this.trackSince, this.game.time - this.diff.settle * 0.5);
     this.suppression = Math.min(1, this.suppression + 0.35);
-    if (attacker && attacker.alive && this.game.hostile(this, attacker)) {
-      // Know where the shot came from.
+    if (attacker && attacker.alive && this.game.hostile(this, attacker) && this.health > 0) {
+      // Know where the shot came from (unless the hit killed him outright).
       if (!this.target || !this.targetVisible) this._acquire(attacker, true);
       this.lastKnown = attacker.pos.clone();
       this.lastSeenT = this.game.time - 0.5;
@@ -654,7 +654,9 @@ export class Soldier {
     this.lastShotTime = now;
     this.revealed = now;
     this.noiseTimer -= 1;
-    if (this.noiseTimer <= 0) { this.game.emitNoise(this.pos, quiet ? 12 : 60, this); this.noiseTimer = 4; }
+    // (On missions where the team's gunfire is inaudible, the squad's shots make no noise either.)
+    const silent = this.friendly && this.game.mode?.mission?.silentShots;
+    if (this.noiseTimer <= 0) { if (!silent) this.game.emitNoise(this.pos, quiet ? 12 : 60, this); this.noiseTimer = 4; }
     // Rate of fire and trigger discipline: long bursts up close, short bursts and
     // aimed singles at range, LMGs lay down longer strings.
     const rpm = wpn.mode === 'bolt' ? 26 : wpn.mode === 'pump' ? 60 : Math.min(wpn.rpm * 0.9, 750);
