@@ -830,7 +830,14 @@ export class Humanoid {
     const c = this.crouch;
     const moving = speed > 0.2;
     const run = clamp((speed - 2.5) / 3, 0, 1);
-    this.phase += dt * (moving ? 2.2 + speed * 1.55 : 0);
+    // Moving one way while looking (and aiming) another: the hips and legs turn
+    // toward the direction of travel, the upper body stays on target, and walking
+    // away from where you face is a backpedal.
+    const rel = this.moveRel ?? 0;
+    const back = moving && Math.abs(rel) > Math.PI * 0.6;
+    const turn = moving ? clamp(back ? Math.atan2(Math.sin(rel - Math.PI), Math.cos(rel - Math.PI)) : rel, -1.1, 1.1) : 0;
+    this.hipTurn = damp(this.hipTurn ?? 0, turn, 8, dt);
+    this.phase += dt * (moving ? 2.2 + speed * 1.55 : 0) * (back ? -1 : 1);
     const amp = moving ? clamp(speed / 5, 0.32, 0.85) * (1 - c * 0.45) : 0;
     // Stationary and low: take a knee (right knee down, left foot forward) instead of squatting.
     this.kneel = damp(this.kneel ?? 0, c > 0.5 && speed < 0.6 ? 1 : 0, 7, dt);
@@ -849,7 +856,8 @@ export class Humanoid {
     const bob = moving ? Math.abs(s) * (0.03 + run * 0.03) : 0;
     this.breath += dt;
     this.hips.position.y = 0.95 - c * 0.42 + bob + kn * 0.03;
-    this.hips.rotation.y = moving ? Math.sin(this.phase) * 0.08 * amp : 0;
+    this.hipSway = moving ? Math.sin(this.phase) * 0.08 * amp : 0;
+    this.hips.rotation.y = this.hipTurn + this.hipSway;
     this.flinch = Math.max(0, this.flinch - dt * 5);
     this.kick *= Math.exp(-dt * 16);
 
@@ -871,7 +879,7 @@ export class Humanoid {
     // stance and blade the body when shouldering the weapon, flinch when hit.
     const lean = -c * 0.22 * (1 - kn * 0.7) - (moving ? 0.05 + run * 0.12 : 0) * (1 - ab) - ab * 0.07 + this.flinch * 0.35 + this.kick * 0.035 * this.kickPow + Math.sin(this.breath * 1.7) * 0.012;
     this.torso.rotation.x = damp(this.torso.rotation.x, lean, 10, dt);
-    this.torso.rotation.y = -this.hips.rotation.y * 0.8 - ab * this.blade;
+    this.torso.rotation.y = -this.hipTurn - this.hipSway * 0.8 - ab * this.blade;
     this.torso.rotation.z = this.flinchSide * this.flinch * 0.25;
     // Head: look along the sights with a cheek weld when aiming.
     this.aimPitch = damp(this.aimPitch, pitch, 10, dt);

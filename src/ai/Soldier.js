@@ -237,7 +237,7 @@ export class Soldier {
     }
     this.state = 'alert';
     this.alertT = 0;
-    this._pathTo(pos, true);
+    this._pathTo(pos, this.pos.distanceTo(pos) > 25);
   }
 
   onNearMiss() {
@@ -441,10 +441,17 @@ export class Soldier {
       if (this.pathIdx >= this.path.length) { this.moving = false; return true; }
       return false;
     }
-    let sp = this.runMode ? (this.role === 'boss' ? 2.6 : 4.6) : (this.state === 'patrol' ? 1.6 : this.state === 'combat' && this.targetVisible ? 1.9 : 2.6);
+    // Pace: a measured tactical walk with the weapon up when there is a threat about,
+    // a jog (not a flat-out sprint) to cover distance, a slow amble on patrol.
+    let sp;
+    if (this.state === 'flee') sp = 4.8;
+    else if (this.runMode) sp = this.role === 'boss' ? 2.6 : this.mpBot ? 4.6 : 4.0;
+    else if (this.state === 'patrol') sp = 1.5;
+    else if (this.tactical) sp = this.state === 'combat' && this.targetVisible ? 1.8 : 2.2;
+    else sp = 2.6;
     if (this.health < this.maxHealth * 0.35 && !this.storyChar) sp *= 0.75; // wounded
-    if (this.crouch > 0.5) sp = Math.min(sp, 2.2);
-    if (this.mpBot && this.runMode) sp = 5.4;
+    if (this.crouch > 0.5) sp = Math.min(sp, 1.8);
+    if (this.paceOverride) sp = this.paceOverride; // keeping station on the player
     const nx = dx / d, nz = dz / d;
     this.vel.x = damp(this.vel.x, nx * sp, 8, dt);
     this.vel.z = damp(this.vel.z, nz * sp, 8, dt);
@@ -486,7 +493,7 @@ export class Soldier {
         if (this.pos.distanceTo(this.lastPos) < 0.3) {
           this.path = null;
           this.moving = false;
-          this.vel.set(rand(-2, 2), 0, rand(-2, 2));
+          this.vel.set(rand(-0.8, 0.8), 0, rand(-0.8, 0.8)); // small nudge, then repath
         }
         this.lastPos.copy(this.pos);
         this.stuckT = 0;
@@ -501,6 +508,8 @@ export class Soldier {
     const aggr = this.diff.aggression;
     let best = null, bestScore = Infinity;
     const dSelfThreat = this.pos.distanceTo(threat);
+    const mates = this.squad ? this.squad.members.filter((m) => m.alive && m !== this && m.pos.distanceTo(this.pos) < 30) : [];
+    const centre = mates.length ? mates.reduce((a, m) => a.add(m.pos), new THREE.Vector3()).divideScalar(mates.length) : null;
     for (const cp of w.cover) {
       if (cp.owner && cp.owner !== this && cp.owner.alive) continue;
       const ds = Math.hypot(cp.x - this.pos.x, cp.z - this.pos.z);
@@ -508,7 +517,9 @@ export class Soldier {
       const dt = Math.hypot(cp.x - threat.x, cp.z - threat.z);
       if (dt < 5 || dt > 55) continue;
       if (!w.coverProtects(cp, threat)) continue;
-      let score = ds * 1.1 + Math.abs(dt - pref) * 0.6 + rand(0, 4);
+      let score = ds * 1.1 + Math.abs(dt - pref) * 0.6 + rand(0, 1.5);
+      // Keep the squad together: cover far from your mates is worth less.
+      if (centre) score += Math.max(0, Math.hypot(cp.x - centre.x, cp.z - centre.z) - 7) * 0.9;
       if (dt < dSelfThreat) score -= aggr * 6; // advancing cover preferred by aggressive AI
       // Flankers prefer cover off the line between squad and target.
       if (this.flanker) {
@@ -752,6 +763,7 @@ export class Soldier {
       this.path = null;
       this.moving = false;
     } else {
+      this.tactical = false;
       switch (this.state) {
         case 'idle': {
           this.vel.multiplyScalar(0.8);
@@ -776,13 +788,32 @@ export class Soldier {
           break;
         }
         case 'alert': {
+          // Searching: weapons up, moving as a team behind a point man, each man
+          // covering his own side; taking a knee and scanning when stopped.
           this.alertT = (this.alertT ?? 0) + dt;
-          if (this.path && !this._followPath(dt)) faceYaw = this._velYaw() ?? faceYaw;
-          else {
+          this.tactical = true;
+          aiming = this.reloadT <= 0;
+          const lk = this.lastKnown;
+          const look = lk ? Math.atan2(-(lk.x - this.pos.x), -(lk.z - this.pos.z)) : faceYaw;
+          const lead = this._teamLead();
+          if (lead && lead !== this) {
+            const slot = this._fileSlot(lead);
+            const ds = Math.hypot(slot.x - this.pos.x, slot.z - this.pos.z);
+            if (ds > 1.0 && now >= (this._slotPathT ?? 0) && (!this.path || this.pathGoal.distanceTo(slot) > 1.5)) { this._slotPathT = now + 0.5; this._pathTo(slot, ds > 14); }
+            if (!(this.path && !this._followPath(dt))) this.vel.multiplyScalar(0.8);
+            faceYaw = lead.lookYaw + this._sectorOffset();
+          } else if (this._pointManWaits()) {
+            // Point man: hold up until the file closes in behind him.
             this.vel.multiplyScalar(0.8);
-            if (this.lastKnown) faceYaw = Math.atan2(-(this.lastKnown.x - this.pos.x), -(this.lastKnown.z - this.pos.z));
-            if (this.alertT > 3 && !this.path && this.lastKnown && this.pos.distanceTo(this.lastKnown) > 3) this._pathTo(this.lastKnown, false);
+            faceYaw = look + Math.sin(now * 0.6 + this.id) * 0.4;
+          } else if (this.path && !this._followPath(dt)) {
+            faceYaw = look + Math.sin(now * 0.9 + this.id) * 0.35;
+          } else {
+            this.vel.multiplyScalar(0.8);
+            faceYaw = look + Math.sin(now * 0.6 + this.id) * 0.6;
+            if (this.alertT > 3 && !this.path && lk && this.pos.distanceTo(lk) > 3) this._pathTo(lk, false);
           }
+          wantCrouch = this.moving ? 0.3 : 0.6;
           if (this.alertT > 14) {
             this.state = this.friendly ? 'follow' : this.patrol ? 'patrol' : this.hunter ? 'hunt' : 'idle';
             this.path = null;
@@ -798,29 +829,40 @@ export class Soldier {
           break;
         }
         case 'follow': {
+          this.tactical = true;
           const res = this._follow(dt, think);
           faceYaw = res ?? faceYaw;
           wantCrouch = this.followCrouch;
+          aiming = !!this.followAim && this.reloadT <= 0;
           break;
         }
         case 'hunt': {
           const ordered = this._obeyOrder(dt, think);
-          if (ordered !== null) { faceYaw = this._watchYaw() ?? ordered; wantCrouch = this.followCrouch; break; }
+          if (ordered !== null) { faceYaw = this._watchYaw() ?? ordered; wantCrouch = this.followCrouch; aiming = true; break; }
+          // Fresh contact nearby: slow down, weapon up, eyes on where it was.
+          const recent = now - this.lastSeenT < 8 && this.lastKnown;
+          this.tactical = !!recent;
           if (think && (!this.path || this.repathT > 6)) {
             const goal = this.game.mode?.botGoal?.(this) ?? this.game.player.pos;
-            if (goal) this._pathTo(goal, true);
+            if (goal) this._pathTo(goal, !recent);
           }
           this.repathT += dt;
           if (this._followPath(dt)) { this.vel.multiplyScalar(0.8); if (think) this.path = null; }
-          faceYaw = this._velYaw() ?? faceYaw;
+          if (recent) {
+            faceYaw = Math.atan2(-(this.lastKnown.x - this.pos.x), -(this.lastKnown.z - this.pos.z));
+            aiming = this.reloadT <= 0;
+            wantCrouch = this.moving ? 0.3 : 0;
+          } else faceYaw = this._velYaw() ?? faceYaw;
           break;
         }
         case 'combat': {
+          this.tactical = true;
           const r = this._combat(dt, think, now);
           wantCrouch = r.crouch;
           firing = r.firing;
           faceYaw = r.face ?? faceYaw;
-          aiming = (this.targetVisible || now - this.lastShotTime < 0.8) && !(this.runMode && this.moving) && this.reloadT <= 0;
+          // Weapon shouldered whenever in contact or advancing at a walk; only lowered to rush.
+          aiming = (this.targetVisible || now - this.lastShotTime < 0.8 || (this.moving && !this.runMode)) && !(this.runMode && this.moving) && this.reloadT <= 0;
           break;
         }
         default:
@@ -850,6 +892,8 @@ export class Soldier {
     }
     if (coverPitch !== null) pitch = coverPitch;
     this.pitch = pitch;
+    // Direction of travel relative to facing, so the legs can walk sideways/backwards.
+    this.model.moveRel = this.speed > 0.3 ? wrapAngle(Math.atan2(-this.vel.x, -this.vel.z) - this.yaw) : 0;
     this.model.root.position.copy(this.pos);
     this.model.root.rotation.y = this.yaw;
     this.model.update(dt, this.speed, this.crouch, this.pitch, firing, aiming ? 1 : 0);
@@ -971,6 +1015,53 @@ export class Soldier {
     return { face, firing, pitch: Math.atan2(o.pos.y - (e.y - 0.1), Math.hypot(o.pos.x - e.x, o.pos.z - e.z)) };
   }
 
+  /** Position in a line abreast across the squad (-1, 0, 1...), for advancing side by side. */
+  _lineSlot() {
+    if (!this.squad) return 0;
+    const alive = this.squad.members.filter((m) => m.alive);
+    return alive.indexOf(this) - (alive.length - 1) / 2;
+  }
+
+  // ---------- moving as a team ----------
+  /** Squadmates on the move together (searching), point man first. */
+  _team() {
+    if (!this.squad) return [];
+    return this.squad.members.filter((m) => m.alive && m.state === this.state && !m.stationary && m.pos.distanceTo(this.pos) < 30);
+  }
+
+  _teamLead() { return this._team()[0] ?? null; }
+
+  /** As point man of a moving file: keep to a pace the team can hold, and wait for stragglers. */
+  _pointManWaits() {
+    const team = this._team();
+    if (team.length < 2 || team[0] !== this) return false;
+    this.runMode = false;
+    let lag = 0;
+    for (const m of team) if (m !== this) lag = Math.max(lag, m.pos.distanceTo(this.pos));
+    return lag > 6;
+  }
+
+  /** A place in a staggered file behind the point man. */
+  _fileSlot(lead) {
+    const team = this._team();
+    const rank = Math.max(1, team.indexOf(this));
+    const fwd = lead.speed > 0.3 ? new THREE.Vector3(lead.vel.x, 0, lead.vel.z).normalize() : new THREE.Vector3(-Math.sin(lead.lookYaw), 0, -Math.cos(lead.lookYaw));
+    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+    const slot = lead.pos.clone().addScaledVector(fwd, -1.5 * rank).addScaledVector(right, rank % 2 ? 0.7 : -0.7);
+    slot.y = 0;
+    const w = this.game.world;
+    if (!w.walkable(slot.x, slot.z)) { const c = w.nearestWalkable(slot.x, slot.z, 3); if (c >= 0) w.cellCenter(c, slot); }
+    return slot;
+  }
+
+  /** Which way this man's weapon points in a moving file: alternate sides, the last man covers the rear. */
+  _sectorOffset() {
+    const team = this._team();
+    const rank = Math.max(0, team.indexOf(this));
+    if (team.length >= 4 && rank === team.length - 1) return Math.PI;
+    return [0, 0.6, -0.6, 1.1, -1.1][rank % 5];
+  }
+
   _velYaw() {
     if (Math.hypot(this.vel.x, this.vel.z) < 0.3) return null;
     return Math.atan2(-this.vel.x, -this.vel.z);
@@ -984,27 +1075,61 @@ export class Soldier {
     }
     const ordered = this._obeyOrder(dt, think);
     if (ordered !== null) return this._watchYaw() ?? ordered;
-    // Formation slot behind/beside the player.
-    const slot = [[-2.5, 3], [2.5, 3.5], [0, 5], [-4, 6], [4, 6]][this.followIndex % 5];
-    const sin = Math.sin(p.yaw), cos = Math.cos(p.yaw);
-    const gx = p.pos.x + slot[0] * cos + slot[1] * sin;
-    const gz = p.pos.z - slot[0] * sin + slot[1] * cos;
-    const goal = new THREE.Vector3(gx, 0, gz);
-    const d = this.pos.distanceTo(goal);
-    if (d > 2.5) {
-      if (think && (!this.path || (this.pathGoal && this.pathGoal.distanceTo(goal) > 3))) this._pathTo(goal, d > 7 || p.sprinting);
-      this._followPath(dt);
-      if (d > 45 && !this.game.world.los(this.eyePos, p.eyePos)) {
-        // Catch up when hopelessly left behind (off-screen teleport).
-        const near = this.game.world.nearestWalkable(gx, gz, 6);
-        if (near >= 0) { this.game.world.cellCenter(near, this.pos); this.path = null; }
+    // A tight, staggered stack behind you, anchored to the way you are moving (not
+    // where you happen to look), each man aiming into his own sector, matching your pace.
+    const now = this.game.time, w = this.game.world;
+    const yawF = this._formationHeading();
+    const i = this.followIndex % 5;
+    const slot = [[0.8, 1.4], [-0.8, 2.5], [0.8, 3.6], [-0.8, 4.7], [0, 5.8]][i];
+    const sector = [0.55, -0.55, 1.1, -1.1, Math.PI][i];
+    const sin = Math.sin(yawF), cos = Math.cos(yawF);
+    const goal = new THREE.Vector3(p.pos.x + slot[0] * cos + slot[1] * sin, 0, p.pos.z - slot[0] * sin + slot[1] * cos);
+    if (!w.walkable(goal.x, goal.z)) { const c = w.nearestWalkable(goal.x, goal.z, 3); if (c >= 0) w.cellCenter(c, goal); goal.y = 0; }
+    const d = Math.hypot(goal.x - this.pos.x, goal.z - this.pos.z);
+    const pv = Math.hypot(p.vel.x, p.vel.z);
+    if (d > 0.45) {
+      if (d < 7 && this.pos.y < 0.4 && w.walkLine(this.pos.x, this.pos.z, goal.x, goal.z)) {
+        // Close and clear: steer straight into the slot at your pace (catching up a little).
+        const sp = clamp(pv + (d - 0.45) * 1.8, 0.6, 6);
+        this.vel.x = damp(this.vel.x, ((goal.x - this.pos.x) / d) * sp, 8, dt);
+        this.vel.z = damp(this.vel.z, ((goal.z - this.pos.z) / d) * sp, 8, dt);
+        this.path = null;
+        this.moving = true;
+      } else {
+        if (now >= (this._followPathT ?? 0) && (!this.path || (this.pathGoal && this.pathGoal.distanceTo(goal) > 1.5))) {
+          this._followPathT = now + 0.4;
+          this._pathTo(goal, d > 9 || p.sprinting);
+        }
+        // Keep pace with you on the way (and close the gap if behind).
+        this.paceOverride = clamp(Math.max(pv, 2.2) + (d - 1) * 0.9, 1.6, 6.2);
+        this._followPath(dt);
+        this.paceOverride = 0;
+        if (d > 45 && !w.los(this.eyePos, p.eyePos)) {
+          // Catch up when hopelessly left behind (off-screen teleport).
+          const near = w.nearestWalkable(goal.x, goal.z, 6);
+          if (near >= 0) { w.cellCenter(near, this.pos); this.path = null; }
+        }
       }
     } else {
       this.vel.multiplyScalar(0.8);
       this.path = null;
+      this.moving = false;
     }
-    this.followCrouch = p.stance !== 'stand' ? 1 : 0;
-    return this._velYaw() ?? this._watchYaw() ?? p.yaw;
+    const moving = this.speed > 0.4;
+    this.followCrouch = p.stance !== 'stand' ? 1 : moving && !p.sprinting ? 0.3 : 0;
+    this.followAim = !p.sprinting && !(this.runMode && this.moving);
+    return this._watchYaw() ?? yawF + sector;
+  }
+
+  /** Heading of the player's formation: their direction of travel, held while they stand still. */
+  _formationHeading() {
+    const g = this.game, p = g.player;
+    const f = (g._formation ??= { t: -1, yaw: p.yaw });
+    if (f.t !== g.time) {
+      f.t = g.time;
+      if (Math.hypot(p.vel.x, p.vel.z) > 0.8) f.yaw = dampAngle(f.yaw, Math.atan2(-p.vel.x, -p.vel.z), 3, g.dt ?? 1 / 30);
+    }
+    return f.yaw;
   }
 
   _watchYaw() {
@@ -1076,6 +1201,7 @@ export class Soldier {
       this._followPath(dt);
       const canFire = this.mpBot || !this.runMode || distT < 10;
       if (this.targetVisible && canFire) res.firing = this._shootAt(tgt, dt);
+      if (!this.runMode) res.crouch = 0.3; // crouch-walk, weapon on the threat
       if (!this.moving && this.cover) { this.coverPhase = 'hide'; this.coverT = rand(0.6, 1.4); }
       return res;
     }
@@ -1089,30 +1215,30 @@ export class Soldier {
       const wantMove = !this.cover || coverBad || this.repositionT <= 0 || tooClose;
       const squadBusy = this.squad && this.squad.movers() >= Math.max(1, Math.ceil(this.squad.members.filter((m) => m.alive).length / 2));
       if (wantMove && (!squadBusy || coverBad || !this.cover)) {
-        this.flanker = chance(0.3 * this.diff.aggression + (this.mpBot ? 0.2 : 0));
+        // One flanker per squad at most, and only when there are enough men to hold the front.
+        const mates = this.squad ? this.squad.members.filter((m) => m.alive && m !== this) : [];
+        this.flanker = mates.length >= 2 && !mates.some((m) => m.flanker) && chance(0.15 * this.diff.aggression + (this.mpBot ? 0.1 : 0));
         const cp = this._findCover(lk);
         if (cp) {
           if (this.cover) this.cover.owner = null;
           this.cover = cp;
           cp.owner = this;
-          this._pathTo(new THREE.Vector3(cp.x, 0, cp.z), true);
-          this.repositionT = rand(7, 14) * (1.3 - this.diff.aggression);
+          // Short moves at a crouch-walk with the weapon up; only rush to cover that is far.
+          this._pathTo(new THREE.Vector3(cp.x, 0, cp.z), this.targetVisible && Math.hypot(cp.x - this.pos.x, cp.z - this.pos.z) > 13);
+          this.repositionT = rand(11, 18) * (1.3 - this.diff.aggression);
           this.peekOffset = null;
           return res;
         }
         if (!this.cover) {
-          // No cover: advance or strafe.
-          if (distT > (this.weapon.class === 'smg' || this.weapon.class === 'shotgun' ? 8 : 18) || !this.targetVisible) {
+          // No cover: advance deliberately, abreast of the squad, or hold and fight from a knee.
+          const range = this.weapon.class === 'smg' || this.weapon.class === 'shotgun' ? 9 : this.weapon.class === 'sniper' ? 45 : 20;
+          if (distT > range || !this.targetVisible) {
             const toward = lk.clone().sub(this.pos).setY(0).normalize();
-            const side = new THREE.Vector3(-toward.z, 0, toward.x).multiplyScalar(rand(-6, 6));
-            const goal = this.pos.clone().addScaledVector(toward, Math.min(10, distT * 0.5)).add(side);
-            this._pathTo(goal, !this.targetVisible || distT > 35);
-          } else if (chance(0.5)) {
-            const toward = lk.clone().sub(this.pos).setY(0).normalize();
-            const goal = this.pos.clone().add(new THREE.Vector3(-toward.z, 0, toward.x).multiplyScalar(rand(-4, 4)));
-            if (this.game.world.walkable(goal.x, goal.z)) this._pathTo(goal, false);
+            const side = new THREE.Vector3(-toward.z, 0, toward.x).multiplyScalar(this._lineSlot() * 1.8);
+            const goal = this.pos.clone().addScaledVector(toward, Math.min(8, distT * 0.4)).add(side);
+            this._pathTo(goal, !this.targetVisible && distT > 45);
           }
-          this.repositionT = rand(3, 6);
+          this.repositionT = rand(6, 9);
         }
       }
     }
@@ -1148,22 +1274,23 @@ export class Soldier {
         } else {
           res.crouch = this.cover.tall ? 0 : (this.targetVisible ? 0 : 0);
           if (this.peekOffset) {
+            // Lean out at a controlled step, not a lunge.
             const dx = this.peekOffset.x - this.pos.x, dz = this.peekOffset.z - this.pos.z;
-            this.vel.x = dx * 5; this.vel.z = dz * 5;
+            this.vel.x = damp(this.vel.x, dx * 3, 10, dt); this.vel.z = damp(this.vel.z, dz * 3, 10, dt);
           }
           if (this.targetVisible) res.firing = this._shootAt(tgt, dt);
           else if (sinceSeen < 2.5 && this.squad && chance(0.5)) res.firing = this._shootAt(tgt, dt, true);
         }
       } else if (!this.moving) {
-        this._pathTo(new THREE.Vector3(this.cover.x, 0, this.cover.z), true);
+        this._pathTo(new THREE.Vector3(this.cover.x, 0, this.cover.z), this.targetVisible && Math.hypot(this.cover.x - this.pos.x, this.cover.z - this.pos.z) > 13);
       }
     } else if (this.targetVisible) {
       if (think) this.kneel = distT > 15 && chance(0.6);
       res.crouch = this.kneel || this.reloadT > 0 ? 1 : 0;
       res.firing = this._shootAt(tgt, dt);
     } else if (think && sinceSeen > 3 && !this.path) {
-      // Push toward last known position.
-      this._pathTo(lk, true);
+      // Push toward the last known position at a walk, weapon up.
+      this._pathTo(lk, distT > 40);
     }
     return res;
   }
