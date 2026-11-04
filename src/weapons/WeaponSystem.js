@@ -10,6 +10,12 @@ import { Store } from '../core/Storage.js';
 import { clamp, damp, lerp, rand, smoothstep } from '../core/Utils.js';
 import { buildTools, actionHands } from './Actions.js';
 
+const ZERO3 = new THREE.Vector3();
+// Support hand on a handguard (gun-local offset from the model's hand point) and
+// where its elbow sits below the view.
+const CRADLE_OFF = new THREE.Vector3(0.02, 0.015, -0.05);
+const ELBOW_L_CRADLE = new THREE.Vector3(-0.17, -0.42, -0.16);
+
 const DEG = Math.PI / 180;
 
 /*
@@ -743,7 +749,9 @@ export class WeaponSystem {
     this.rig.updateMatrixWorld(true);
     const grip = (w.model.rightHand ?? new THREE.Vector3(0, -0.04, 0.03)).clone().applyMatrix4(this.rig.matrixWorld);
     const leftLocal = leftOverride ?? w.model.leftHand;
-    const lh = leftLocal.clone().applyMatrix4(this.rig.matrixWorld);
+    // The gloved support hand cradles the handguard a little further forward, palm up under it.
+    const cradle = this.arms.real && !leftOverride && !w.model.vgrip && !isPistol;
+    const lh = leftLocal.clone().add(cradle ? CRADLE_OFF : ZERO3).applyMatrix4(this.rig.matrixWorld);
     if (this.cooking || this.state === 'throw') lh.set(-0.15, -0.25, -0.35);
     else if (sb > 0.01 && !leftOverride) {
       // Free arm pumping: forward and up on one stride, back and down on the next.
@@ -751,7 +759,8 @@ export class WeaponSystem {
       const pump = new THREE.Vector3(-0.2 + swing * 0.02, -0.33 + swing * 0.08, -0.36 - swing * 0.1);
       lh.lerp(pump, sb);
     }
-    const elbowR = new THREE.Vector3(0.28, -0.42, 0.05), elbowL = new THREE.Vector3(-0.22, -0.45, -0.05);
+    // Elbows below the view: the support forearm runs forward under the gun.
+    const elbowR = new THREE.Vector3(0.28, -0.42, 0.05), elbowL = cradle ? ELBOW_L_CRADLE : new THREE.Vector3(-0.22, -0.45, -0.05);
     if (this.arms.real && actB >= 0.5) {
       // Working on an objective: hands come up from below to the work.
       this.tools ??= buildTools(this.arms.hands.right);
@@ -793,7 +802,7 @@ export class WeaponSystem {
       const gq = this.rig.getWorldQuaternion(new THREE.Quaternion());
       const leftFree = this.cooking || this.state === 'throw' || (sb > 0.5 && !leftOverride);
       this.arms.attach('right', gq, grip, elbowR, 'trigger');
-      this.arms.attach('left', leftFree ? null : gq, lh, elbowL, leftFree || leftOverride ? 'fist' : 'foregrip');
+      this.arms.attach('left', leftFree ? null : gq, lh, elbowL, leftFree || leftOverride ? 'fist' : cradle ? 'cradle' : 'foregrip');
     } else {
       this.arms.place(this.arms.right, elbowR, grip);
       this.arms.place(this.arms.left, elbowL, lh);

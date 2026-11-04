@@ -426,7 +426,8 @@ function skinPaint(faction, f, opts) {
   if (opts.procedural || f.civilian || f.heavy || !soldierSkinReady()) return null;
   if (opts.colorIndex !== undefined) {
     const c = new THREE.Color(FFA_COLORS[opts.colorIndex % FFA_COLORS.length]);
-    return { key: `ffa${opts.colorIndex % FFA_COLORS.length}`, plate: c.clone().lerp(new THREE.Color(0x9a9a92), 0.35).getHex(), suit: c.clone().multiplyScalar(0.7).getHex(), stripe: 0x1c1c1c };
+    const tone = (k) => c.clone().multiplyScalar(k).getHex();
+    return { key: `ffa${opts.colorIndex % FFA_COLORS.length}`, camo: [tone(1), tone(0.8), tone(1.15), tone(0.6)], gear: tone(0.45) };
   }
   const p = PAINT[faction];
   return p ? { key: faction, ...p } : null;
@@ -597,7 +598,7 @@ export class Humanoid {
     // Detailed skinned body driven by the rig above (the procedural meshes hide).
     this.rig = null;
     if (paint) {
-      this.rig = new SoldierRig(paint.key, paint);
+      this.rig = new SoldierRig(paint.key, paint, SKIN.indexOf(v.skin));
       this.body.add(this.rig.root);
       for (const m of procMeshes) m.visible = false;
     }

@@ -9,6 +9,7 @@
 // Weapon space: barrel points down -Z, +Y up, origin at the top of the firing grip.
 import * as THREE from '../lib/three.js';
 import { handsReady, makeHand } from './Hands.js';
+import { handQuat } from './Actions.js';
 
 // ---------------------------------------------------------------------------
 // Surface textures (generated once).
@@ -749,6 +750,7 @@ export function buildWeaponModel(def, att = {}) {
     vg.position.set(0, -0.072, info.leftHand.z);
     g.add(vg);
     info.leftHand.y -= 0.05;
+    info.vgrip = true;
   } else if (att.underbarrel === 'agrip') {
     prism(g, [[info.leftHand.z + 0.04, -0.026], [info.leftHand.z - 0.035, -0.026], [info.leftHand.z - 0.04, -0.034], [info.leftHand.z + 0.012, -0.062], [info.leftHand.z + 0.04, -0.034]], 0.026, poly, { bevel: 0.004 });
   } else if (att.underbarrel === 'laser') {
@@ -975,7 +977,12 @@ const _q = new THREE.Quaternion(), _m = new THREE.Matrix4(), _v = new THREE.Vect
 // Hand orientation relative to the gun: firing hand on the pistol grip (knuckles down
 // the grip, palm against it, thumb over the top), support hand under the handguard.
 const Q_RIGHT = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 - 0.32, 0.06, 0.05));
-const Q_LEFT = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.12, 0.25, Math.PI / 2 - 0.55));
+// Support hand (gun frame: forward -Z, up +Y). On a handguard it cradles it from
+// below: palm up, fingers reaching under to curl round the far (right) side, thumb
+// along the near side pointing forward. On a vertical grip it wraps the grip:
+// palm toward the grip, fingers round the front, thumb on top.
+const Q_CRADLE = handQuat(new THREE.Vector3(0.79, -0.59, -0.15), new THREE.Vector3(-0.15, 0.05, -1));
+const Q_VGRIP = handQuat(new THREE.Vector3(0.15, -0.15, -1), new THREE.Vector3(0, 1, 0.1));
 // Free hand (no gun to hold): fist, palm down, knuckles leading along the forearm.
 const Q_FREE = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(
   new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, 1), new THREE.Vector3(-1, 0, 0)));
@@ -1158,7 +1165,7 @@ function buildRealArms() {
       const a = side === 'right' ? R : L;
       a.hand.pose(pose);
       if (handQuat) _q.copy(handQuat);
-      else if (gunQuat) _q.copy(gunQuat).multiply(side === 'right' ? Q_RIGHT : Q_LEFT);
+      else if (gunQuat) _q.copy(gunQuat).multiply(side === 'right' ? Q_RIGHT : pose === 'cradle' ? Q_CRADLE : Q_VGRIP);
       else {
         // Point the fist along the forearm.
         _v.subVectors(target, elbow).normalize();

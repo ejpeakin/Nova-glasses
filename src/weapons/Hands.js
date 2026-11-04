@@ -96,6 +96,9 @@ export const POSES = {
   trigger: { index: [0.62, 0.95, 0.42], middle: [1.3, 1.5, 0.85], ring: [1.35, 1.5, 0.85], pinky: [1.4, 1.45, 0.8], thumb: [0.55, 0.45, 0.35], opp: 1.0 },
   // Support hand wrapped around a handguard.
   foregrip: { index: [0.82, 0.95, 0.5], middle: [0.92, 1.05, 0.55], ring: [0.98, 1.05, 0.55], pinky: [1.02, 1.0, 0.5], thumb: [0.3, 0.3, 0.2], opp: 0.42 },
+  // Support hand cradling a handguard from below: fingers in a loose curl round the
+  // far side, thumb lying along the near side.
+  cradle: { index: [0.5, 0.62, 0.35], middle: [0.62, 0.72, 0.4], ring: [0.7, 0.75, 0.42], pinky: [0.78, 0.75, 0.4], thumb: [0.12, 0.12, 0.08], opp: 0.15 },
   // Closed fist (running, holding a magazine or grenade).
   fist: { index: [1.35, 1.55, 0.9], middle: [1.4, 1.6, 0.9], ring: [1.45, 1.6, 0.9], pinky: [1.5, 1.55, 0.85], thumb: [0.65, 0.6, 0.45], opp: 1.1 },
   // Fingers loosely curled over a keyboard.
