@@ -714,7 +714,11 @@ class AudioEngine {
     const out = this._out(pos, { gain: 0.5, ref: 2, maxDist: 40 });
     if (!out) return;
     const t = this.now;
-    if (kind === 'key') {
+    if (kind === 'punch') {
+      // A fist or rifle butt landing on body armour: a dull thud with a slap on top.
+      this._noise(out, t, 0.12, { type: 'lowpass', freq: 380, q: 0.7, gain: 2.4, attack: 0.002, decay: 0.1, brown: true });
+      this._noise(out, t, 0.03, { type: 'bandpass', freq: 1800, q: 1.2, gain: 0.8, attack: 0.001, decay: 0.025 });
+    } else if (kind === 'key') {
       this._noise(out, t, 0.014, { type: 'highpass', freq: 3500 + Math.random() * 1500, gain: 0.35, attack: 0.001 });
       this._noise(out, t, 0.02, { type: 'bandpass', freq: 900, q: 2, gain: 0.15 });
     } else if (kind === 'zip') {

@@ -209,7 +209,9 @@ export class Soldier {
       const dx = fromPos.x - this.pos.x, dz = fromPos.z - this.pos.z;
       dir = fx * dx + fz * dz > 0 ? 1 : -1;
     }
-    this.model.die(dir, { head });
+    // Shotguns, snipers and explosions hit hard enough to throw a man off his feet.
+    const cls = WEAPONS[weaponId]?.class;
+    this.model.die(dir, { head, heavy: !WEAPONS[weaponId] || cls === 'sniper' || cls === 'shotgun' });
     this.deaths++;
     this.game.onKill(attacker, this, weaponId, head);
   }
@@ -770,6 +772,9 @@ export class Soldier {
           this.idleLookT -= dt;
           if (this.idleLookT <= 0) { this.idleLookT = rand(2, 5); this.lookTarget = this.yaw + rand(-1.2, 1.2); }
           faceYaw = this.lookTarget ?? this.yaw;
+          // Bored guards fiddle with a radio, a device, their kit.
+          this.fidgetT = (this.fidgetT ?? rand(4, 14)) - dt;
+          if (this.fidgetT <= 0) { this.fidgetT = rand(10, 22); if (!this.friendly) this.model.playMove('Interact'); }
           break;
         }
         case 'patrol': {
@@ -1153,6 +1158,27 @@ export class Soldier {
     const lk = this.lastKnown ?? tgt.pos;
     const distT = this.pos.distanceTo(lk);
     res.face = Math.atan2(-(lk.x - this.pos.x), -(lk.z - this.pos.z));
+
+    // Hand to hand: an enemy within arm's reach gets a fist instead of a burst.
+    this.meleeCD = (this.meleeCD ?? 0) - dt;
+    if (this.meleeT > 0) {
+      this.meleeT -= dt;
+      this.vel.multiplyScalar(0.7);
+      res.face = Math.atan2(-(tgt.pos.x - this.pos.x), -(tgt.pos.z - this.pos.z));
+      if (!this.meleeHit && this.meleeT < 0.5) {
+        this.meleeHit = true;
+        if (tgt.alive && Math.hypot(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z) < 2.1) {
+          tgt.takeDamage(this.role === 'boss' ? 45 : 30, this.pos.clone(), this);
+          Audio.foley?.('punch', tgt.pos);
+        }
+      }
+      return res;
+    }
+    if (this.targetVisible && this.meleeCD <= 0 && this.reloadT <= 0 && !this.stationary && Math.hypot(tgt.pos.x - this.pos.x, tgt.pos.z - this.pos.z) < 1.7
+      && this.model.playMove(Math.random() < 0.5 ? 'Fighting_Right_Jab' : 'Fighting_Left_Jab')) {
+      this.meleeT = 0.9; this.meleeHit = false; this.meleeCD = 1.6;
+      return res;
+    }
 
     // Lost contact for long: give up / search.
     if (sinceSeen > (this.mpBot ? 8 : 18)) {

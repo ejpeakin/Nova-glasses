@@ -8,6 +8,7 @@ import { WEAPONS, resolveAttachments } from '../weapons/WeaponData.js';
 import { buildWeaponModel } from '../weapons/WeaponModel.js';
 import { damp, clamp, makeRng } from '../core/Utils.js';
 import { SoldierRig, soldierSkinReady, soldierDims, PAINT } from './SoldierSkin.js';
+import { samplePose, movesReady, moveInfo } from './Moves.js';
 
 const SKIN = [0xc99d7e, 0xb48364, 0x8f6146, 0x6b4430, 0xd9b496, 0xa87a5a];
 
@@ -626,12 +627,82 @@ export class Humanoid {
     this.deathT = 0;
     this.deathSide = (Math.random() - 0.5) * 0.8;
     this.deathDir = fromDir ?? 1;
-    // Headshots drop on the spot; other hits topple away or twist and fall sideways.
+    // Headshots drop on the spot; other hits topple away or twist and fall sideways,
+    // or play one of the motion-captured deaths.
+    // (Death_A buckles and falls forward on his face, Death_B is thrown back off his feet.)
+    const r = Math.random();
     this.deathStyle = o.head ? 'crumple' : Math.random() < 0.35 ? 'twist' : 'topple';
+    if (movesReady() && !o.head) {
+      if (o.heavy && this.deathDir > 0 && r < 0.75) this.deathStyle = 'Death_B';
+      else if (r < (this.deathDir < 0 ? 0.7 : 0.4)) this.deathStyle = 'Death_A';
+    }
     this.twist = (Math.random() < 0.5 ? -1 : 1);
     this.rl = null;
     this.cycleT = -1;
+    this.move = null;
     if (this.glint) this.glint.visible = false;
+    if (moveInfo(this.deathStyle) && this.gun.visible) {
+      // The rifle falls out of his hands.
+      this.gun.updateWorldMatrix(true, false);
+      this.onMagDrop?.(this.gun.geometry, this.gun.material, this.gun.matrixWorld.clone());
+      this.gun.visible = false;
+      if (this.mag) this.mag.visible = false;
+    }
+  }
+
+  /**
+   * Play a motion-captured move over the procedural pose: 'Fighting_Right_Jab',
+   * 'Fighting_Left_Jab', 'Interact', 'Slide', ... o: { loop, hideGun }.
+   */
+  playMove(name, o = {}) {
+    const info = moveInfo(name);
+    if (!info || this.dead) return false;
+    this.move = { name, t: 0, dur: info.duration, loop: !!o.loop, hideGun: o.hideGun ?? true, w: 0 };
+    return true;
+  }
+
+  get inMove() { return !!this.move; }
+
+  /** Blend the active move over the procedural pose (after the arms have their targets). */
+  _applyMove(dt) {
+    const m = this.move;
+    if (!m) return;
+    m.t += dt;
+    if (!m.loop && m.t >= m.dur) {
+      this.move = null;
+      if (m.hideGun && !this.captive) { this.gun.visible = true; if (this.mag) this.mag.visible = true; }
+      return;
+    }
+    const w = Math.min(1, m.t / 0.15) * (m.loop ? 1 : Math.min(1, (m.dur - m.t) / 0.2));
+    this._wearPose(samplePose(m.name, m.t, m.loop, this._mp ??= samplePose(m.name, 0, false)), w);
+    if (m.hideGun && !this.captive) { const show = w < 0.4; this.gun.visible = show; if (this.mag) this.mag.visible = show; }
+  }
+
+  /** Put a baked clip pose on the procedural rig with weight w. */
+  _wearPose(P, w, parts = 'all') {
+    if (!P || w <= 0) return;
+    const d = this.dim, legLen = d.thigh + d.shin;
+    if (parts !== 'legs') {
+      this.hips.quaternion.slerp(P.hips, w);
+      this.hips.position.x = lerp(this.hips.position.x, P.dx * legLen, w);
+      this.hips.position.z = lerp(this.hips.position.z, P.dz * legLen, w);
+      this.torso.quaternion.slerp(P.torso, w);
+      this.head.quaternion.slerp(P.head, w);
+    }
+    this.hips.position.y = lerp(this.hips.position.y, P.y * d.hipH, w);
+    for (const l of this.legs) {
+      const L = P.legs[l.side > 0 ? 1 : -1];
+      l.thigh.quaternion.slerp(L.thigh, w);
+      l.shin.quaternion.slerp(L.shin, w);
+      l.ankle = lerp(l.ankle ?? 0, L.ankle, w);
+    }
+    if (parts === 'all') {
+      const reach = d.armA + d.armB;
+      for (const arm of this.arms) {
+        const t = tmpV2.copy(arm.shoulder).addScaledVector(P.hands[arm.side > 0 ? 1 : -1], reach);
+        this._solveArm(arm, tmpV1.copy(arm.target).lerp(t, w));
+      }
+    }
   }
 
   /** Recoil impulse for one shot. */
@@ -818,6 +889,15 @@ export class Humanoid {
   _updateDead(dt) {
     this.deathT += dt;
     const st = this.deathStyle;
+    if (moveInfo(st)) {
+      // Motion-captured death, held on its last frame.
+      this.body.rotation.set(0, 0, 0);
+      this.body.position.y = 0;
+      this._poseArms(dt);
+      this._wearPose(samplePose(st, this.deathT, false, this._mp ??= samplePose(st, 0, false)), 1);
+      if (this.rig) this.rig.pose(this);
+      return;
+    }
     const T = st === 'crumple' ? 0.95 : 0.75;
     const H = this.dim.hipH, hk = H / 0.95;
     const t = clamp(this.deathT / T, 0, 1);
@@ -904,8 +984,16 @@ export class Humanoid {
     const s = Math.sin(this.phase);
     const bob = moving ? Math.abs(s) * (0.03 + run * 0.03) : 0;
     this.breath += dt;
+    // Crouched and on the move: the motion-captured crouch walk drives the legs.
+    this.crouchWalk = damp(this.crouchWalk ?? 0, movesReady() && c > 0.5 && moving && kn < 0.3 && !this.move ? 1 : 0, 6, dt);
+    if (this.crouchWalk > 0.01) {
+      const cw = moveInfo('Crouch_Walk');
+      this._cw = samplePose('Crouch_Walk', ((this.phase / (Math.PI * 2)) % 1 + 1) % 1 * cw.duration, true, this._cw);
+      this._wearPose(this._cw, this.crouchWalk, 'legs');
+    }
     this.hips.position.y = this.dim.hipH - c * 0.42 + bob + kn * 0.03;
-    if (this.rig) this._plantFeet();
+    if (this.crouchWalk > 0.01) this.hips.position.y = lerp(this.hips.position.y, this._cw.y * this.dim.hipH, this.crouchWalk);
+    else if (this.rig) this._plantFeet();
     this.hipSway = moving ? Math.sin(this.phase) * 0.08 * amp : 0;
     this.hips.rotation.y = this.hipTurn + this.hipSway;
     this.flinch = Math.max(0, this.flinch - dt * 5);
@@ -982,6 +1070,7 @@ export class Humanoid {
     this.gunPivot.position.copy(gp);
     this.gunPivot.quaternion.copy(gq);
     this._poseArms(dt);
+    this._applyMove(dt);
     if (this.rig) this.rig.pose(this);
   }
 

@@ -17,6 +17,7 @@ if (!webglAvailable()) {
   Promise.all([
     import('./weapons/Hands.js').then((m) => m.preloadHands()),
     import('./ai/SoldierSkin.js').then((m) => m.preloadSoldier()),
+    import('./ai/Moves.js').then((m) => m.preloadMoves()),
   ])
     .catch(() => {})
     .finally(() => {
