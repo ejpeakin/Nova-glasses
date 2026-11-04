@@ -4,6 +4,9 @@ import * as THREE from '../lib/three.js';
 import { getSpriteTexture } from './Textures.js';
 import { rand } from '../core/Utils.js';
 
+/** How much blood a hit throws (1 = the original amount). */
+const BLOOD_AMOUNT = 1.15;
+
 class ParticlePool {
   constructor(scene, capacity, texture, additive) {
     this.cap = capacity;
@@ -295,7 +298,9 @@ export class Effects {
   }
 
   blood(point, dir) {
-    for (let i = 0; i < 5; i++) {
+    // 5.75 puffs per hit on average (15% more than the original five).
+    const n = Math.floor(5 * BLOOD_AMOUNT + Math.random());
+    for (let i = 0; i < n; i++) {
       this.smoke.emit(point.x, point.y, point.z, dir.x * rand(0.5, 2) + rand(-0.6, 0.6), rand(-0.3, 1), dir.z * rand(0.5, 2) + rand(-0.6, 0.6),
         { life: rand(0.25, 0.5), size: 0.08, sizeEnd: 0.35, color: [0.45, 0.04, 0.03], alpha: 0.75, drag: 4 });
     }

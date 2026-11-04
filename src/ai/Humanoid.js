@@ -598,7 +598,9 @@ export class Humanoid {
     // Detailed skinned body driven by the rig above (the procedural meshes hide).
     this.rig = null;
     if (paint) {
-      this.rig = new SoldierRig(paint.key, paint, SKIN.indexOf(v.skin));
+      this.rig = new SoldierRig(paint.key, paint, SKIN.indexOf(v.skin), Math.floor(rng() * 1e9));
+      // Men come in different builds.
+      this.body.scale.setScalar(0.96 + rng() * 0.08);
       this.body.add(this.rig.root);
       for (const m of procMeshes) m.visible = false;
     }

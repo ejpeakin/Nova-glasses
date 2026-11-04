@@ -35,7 +35,7 @@ export function preloadHands() {
 export const handsReady = () => !!(templates.left && templates.right);
 
 // Glove padding: how far the skin is pushed out along its normals (metres, before scaling).
-const PADDING = 0.0026;
+const PADDING = 0.0043;
 
 /**
  * Turn the bare hand mesh into a padded glove: inflate it along smoothed normals
@@ -143,7 +143,7 @@ function bendChain(names, angles, startK, rest, bones, toward) {
  * A posable gloved hand. root: add to the scene; pose(name); place(quat, target)
  * puts the hand so its grip point sits on `target` with orientation `quat`.
  */
-export function makeHand(side, scale = 1.3) {
+export function makeHand(side, scale = 1.36) {
   materials();
   const root = SkeletonUtils.clone(templates[side]);
   // A touch larger than life: gloved hands read properly next to the weapon at viewmodel distance.
@@ -200,6 +200,11 @@ export function makeHand(side, scale = 1.3) {
     /** Hold an object in the hand's frame (e.g. a tool at fistPoint). */
     hold(obj) { armature.add(obj); },
     wrist: () => bones.wrist.getWorldPosition(new THREE.Vector3()),
+    /** Direction from the wrist to the middle knuckle (where the forearm should continue from). */
+    axis(out = new THREE.Vector3()) {
+      const w = bones.wrist.getWorldPosition(new THREE.Vector3());
+      return bones['middle-finger-phalanx-proximal'].getWorldPosition(out).sub(w).normalize();
+    },
     pose(name) {
       if (this.current === name) return;
       this.current = name;

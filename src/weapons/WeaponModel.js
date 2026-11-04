@@ -974,14 +974,21 @@ export function buildArms(sleeveColor = 0x4d5340) {
 }
 
 const _q = new THREE.Quaternion(), _m = new THREE.Matrix4(), _v = new THREE.Vector3(), _w = new THREE.Vector3();
+const _e = new THREE.Vector3();
 // Hand orientation relative to the gun: firing hand on the pistol grip (knuckles down
 // the grip, palm against it, thumb over the top), support hand under the handguard.
 const Q_RIGHT = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 - 0.32, 0.06, 0.05));
-// Support hand (gun frame: forward -Z, up +Y). On a handguard it cradles it from
-// below: palm up, fingers reaching under to curl round the far (right) side, thumb
-// along the near side pointing forward. On a vertical grip it wraps the grip:
+/** Left-hand rotation from the hand's axis (wrist to knuckles) and palm direction. */
+function handFrame(f, palm) {
+  const F = new THREE.Vector3(...f).normalize(), P = new THREE.Vector3(...palm);
+  P.addScaledVector(F, -P.dot(F)).normalize();
+  return handQuat(F, new THREE.Vector3().crossVectors(P, F));
+}
+// Support hand (gun frame: forward -Z, up +Y). On a handguard it grips the near
+// side, the hand angled up and forward with the fingers curling over the top and
+// the back of the glove toward the camera. On a vertical grip it wraps the grip:
 // palm toward the grip, fingers round the front, thumb on top.
-const Q_CRADLE = handQuat(new THREE.Vector3(0.79, -0.59, -0.15), new THREE.Vector3(-0.15, 0.05, -1));
+const Q_CRADLE = handFrame([0.4, 0.45, -0.8], [1, 0, 0]);
 const Q_VGRIP = handQuat(new THREE.Vector3(0.15, -0.15, -1), new THREE.Vector3(0, 1, 0.1));
 // Free hand (no gun to hold): fist, palm down, knuckles leading along the forearm.
 const Q_FREE = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(
@@ -1173,7 +1180,16 @@ function buildRealArms() {
         _q.setFromRotationMatrix(_m).multiply(Q_FREE);
       }
       a.hand.place(_q, target, anchor);
-      orient(a, elbow, a.hand.wrist());
+      const wrist = a.hand.wrist();
+      let el = elbow;
+      if (side === 'left' && gunQuat) {
+        // The sleeve continues the line of the hand (a little wrist bend, not a
+        // right angle), still running back toward the elbow below the view.
+        const L = _w.subVectors(wrist, elbow).length();
+        const dir = _w.divideScalar(L).lerp(a.hand.axis(_v), 0.55).normalize();
+        el = _e.copy(wrist).addScaledVector(dir, -L);
+      }
+      orient(a, el, wrist);
     },
     place() {},
   };

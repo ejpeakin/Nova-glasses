@@ -11,10 +11,13 @@ import { clamp, damp, lerp, rand, smoothstep } from '../core/Utils.js';
 import { buildTools, actionHands } from './Actions.js';
 
 const ZERO3 = new THREE.Vector3();
+// Overall recoil feel: how hard each shot pushes the view (RECOIL_VIEW) and how far
+// the gun jumps in the hands (RECOIL_GUN), applied on top of every weapon's stats.
+const RECOIL_VIEW = 0.55, RECOIL_GUN = 0.6;
 // Support hand on a handguard (gun-local offset from the model's hand point) and
 // where its elbow sits below the view.
-const CRADLE_OFF = new THREE.Vector3(0.02, 0.015, -0.05);
-const ELBOW_L_CRADLE = new THREE.Vector3(-0.17, -0.42, -0.16);
+const CRADLE_OFF = new THREE.Vector3(-0.004, 0.004, -0.03);
+const ELBOW_L_CRADLE = new THREE.Vector3(-0.3, -0.42, -0.1);
 
 const DEG = Math.PI / 180;
 
@@ -368,10 +371,10 @@ export class WeaponSystem {
     const pat = r.pattern[(this.shotsInRow - 1) % r.pattern.length] ?? 0;
     const v = r.v * stanceM * adsM * rand(0.85, 1.12) * (1 + Math.min(this.shotsInRow, 12) * 0.015);
     const h = (pat * r.h + rand(-0.5, 0.5) * r.h * 0.7) * stanceM * adsM;
-    player.kick(v, h);
-    this.kickZ += r.kick * (1 - this.ads * 0.5);
-    this.kickRot += r.kick * 1.6;
-    this.kickSide += h * 0.003;
+    player.kick(v * RECOIL_VIEW, h * RECOIL_VIEW);
+    this.kickZ += r.kick * (1 - this.ads * 0.5) * RECOIL_GUN;
+    this.kickRot += r.kick * 1.6 * RECOIL_GUN;
+    this.kickSide += h * 0.003 * RECOIL_VIEW;
     this.bloom = Math.min(this.bloom + s.spread.hip * 0.12, s.spread.hip * 0.8);
     // Feedback.
     Audio.gunshot(s.sound, null, s.suppressed);
@@ -574,10 +577,12 @@ export class WeaponSystem {
     const a = smoothstep(this.ads);
     const long = s.class === 'sniper' || s.class === 'lmg' || s.class === 'marksman';
     // Hip carry: framed so both gloved hands sit in the lower part of the view.
-    const hip = isPistol ? new THREE.Vector3(0.13, -0.15, -0.36) : long ? new THREE.Vector3(0.17, -0.165, -0.49) : new THREE.Vector3(0.15, -0.145, -0.42);
+    // Rifles sit low and toward the middle, muzzle angled in, so the support hand on
+    // the near side of the handguard is in full view.
+    const hip = isPistol ? new THREE.Vector3(0.13, -0.15, -0.36) : long ? new THREE.Vector3(0.135, -0.175, -0.49) : new THREE.Vector3(0.115, -0.162, -0.43);
     const adsPos = new THREE.Vector3(0, -w.model.sightY, isPistol ? -0.34 : -0.3 + (s.sight === 'iron' ? 0.02 : 0));
     const pos = hip.clone().lerp(adsPos, a);
-    const rot = new THREE.Euler(0, 0, 0);
+    const rot = new THREE.Euler(0, isPistol ? 0 : 0.06 * (1 - a), isPistol ? 0 : -0.05 * (1 - a));
 
     // Bob.
     const bobA = player.bob * (1 - a * 0.85);
@@ -749,7 +754,7 @@ export class WeaponSystem {
     this.rig.updateMatrixWorld(true);
     const grip = (w.model.rightHand ?? new THREE.Vector3(0, -0.04, 0.03)).clone().applyMatrix4(this.rig.matrixWorld);
     const leftLocal = leftOverride ?? w.model.leftHand;
-    // The gloved support hand cradles the handguard a little further forward, palm up under it.
+    // The gloved support hand grips the near side of the handguard, back of the glove to the camera.
     const cradle = this.arms.real && !leftOverride && !w.model.vgrip && !isPistol;
     const lh = leftLocal.clone().add(cradle ? CRADLE_OFF : ZERO3).applyMatrix4(this.rig.matrixWorld);
     if (this.cooking || this.state === 'throw') lh.set(-0.15, -0.25, -0.35);
