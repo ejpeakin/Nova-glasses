@@ -66,7 +66,8 @@ class BaseMatch {
   _spawnBot(rec, idx) {
     const g = this.game;
     const sp = this._safeSpawn(rec.team, { team: rec.team });
-    const weapon = rec.weapon ?? pick(PRIMARIES);
+    // Your own team (ORION) all carry the RK-74, the AK-47 pattern rifle; the enemy picks any gun.
+    const weapon = rec.weapon ?? (rec.team === 'a' && this.type !== 'ffa' ? 'rk74' : pick(PRIMARIES));
     rec.weapon = weapon;
     const u = spawnSoldier(g, {
       pos: sp.pos, yaw: sp.yaw, team: rec.team, name: rec.name, mpBot: true, hunter: true,

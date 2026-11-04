@@ -35,14 +35,15 @@ export const PROLOGUE = [
   'FIELD OF HONOR: US ARMY SPECIAL FORCES.',
 ];
 
+// Squad weapons: everyone on the backup team carries the RK-74 (the AK-47 pattern rifle).
 const SQUAD_RH = [
-  { name: 'Reyes', weapon: 'vx4' },
-  { name: 'Hatch', weapon: 'breaker' },
+  { name: 'Reyes', weapon: 'rk74' },
+  { name: 'Hatch', weapon: 'rk74' },
 ];
 const SQUAD_FULL = [
-  { name: 'Reyes', weapon: 'vx4' },
-  { name: 'Hatch', weapon: 'juggernaut' },
-  { name: 'Tex', weapon: 'hx30' },
+  { name: 'Reyes', weapon: 'rk74' },
+  { name: 'Hatch', weapon: 'rk74' },
+  { name: 'Tex', weapon: 'rk74' },
 ];
 
 export const MISSIONS = [
@@ -238,7 +239,7 @@ export const MISSIONS = [
     loadoutNote: 'Quiet kit: suppressed MP-9 and P-11. Reyes is with you, suppressed. Tex is on a rooftop with a rifle.',
     kitHint: 'Crouch to move quietly  ·  V from behind: silent takedown  ·  aim at enemies to tag them  ·  Y: squad radio',
     start: { pos: [-57, 0], yaw: -Math.PI / 2 },
-    squad: [{ name: 'Reyes', weapon: 'vx4', suppressed: true }],
+    squad: [{ name: 'Reyes', weapon: 'rk74', suppressed: true }],
     squadLeash: 8,
     stealth: true,
     alarmGroup: 'response',
@@ -398,7 +399,7 @@ export const MISSIONS = [
     goal: 'Get Captain Reyes out of the wreck, then hold the crash site against MERIDIAN until the rescue helicopter arrives at dawn.',
     loadout: { primary: 'juggernaut', secondary: 'raptor', lethal: 'frag', tactical: 'stim', attachments: { juggernaut: { optic: 'holo' } } },
     start: { pos: [-34, -64], yaw: Math.PI * 0.8 },
-    squad: [{ name: 'Hatch', weapon: 'breaker' }],
+    squad: [{ name: 'Hatch', weapon: 'rk74' }],
     crash: [-50, -46],
     smoke: [[-50, -46]],
     briefing: [
@@ -443,7 +444,7 @@ export const MISSIONS = [
     loadout: { primary: 'rk74', secondary: 'raptor', lethal: 'semtex', tactical: 'smoke', attachments: { rk74: { optic: 'acog', muzzle: 'compensator' } } },
     loadoutNote: 'Reyes is at the medical tent with a broken leg. Hatch and Tex are with you.',
     start: { pos: [30, -55], yaw: Math.PI },
-    squad: [{ name: 'Hatch', weapon: 'breaker' }, { name: 'Tex', weapon: 'hx30' }],
+    squad: [{ name: 'Hatch', weapon: 'rk74' }, { name: 'Tex', weapon: 'rk74' }],
     briefing: [
       { who: 'WATCHTOWER', text: 'Hart\'s convoy stopped for the night at a village east of the outpost. They left the missile launcher that hit Raven Two-One there.' },
       { who: 'WATCHTOWER', text: 'While that launcher is up, nothing of ours can fly in this desert. And their command laptop will have the convoy\'s route.' },
@@ -480,16 +481,110 @@ export const MISSIONS = [
       { who: 'REYES', text: 'Then he\'s Wraith\'s.' },
     ],
   },
+  // ------------------------------------------------------------------ 6c
+  {
+    id: 'm6c', title: 'Hard Breach', map: 'downtown', lighting: 'overcast', weather: 'none',
+    location: 'PORT KAVAL — OLD TOWN', time: 'DAY 15 — 06:20 LOCAL',
+    summary: 'Raid MERIDIAN\'s shipping office: blow the front door, clear it floor by floor, arrest the cell leader, free their hostages and take the files that say which ship carries the key.',
+    recap: 'The convoy\'s route ends in Port Kaval\'s old town, at an office block MERIDIAN uses to run everything that moves through the port. Two dock workers who saw too much are held on the top floor.',
+    goal: 'Go in hard and fast before they burn their files: breach the front door, clear the ground floor, arrest the cell leader, clear the top floor and free the hostages, then copy the files.',
+    loadout: { primary: 'vx4', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { vx4: { optic: 'holo', underbarrel: 'vgrip' } } },
+    loadoutNote: 'Entry kit: breaching charge for the door, flashbangs for the rooms. Hatch and Tex stack with you.',
+    kitHint: 'G: throw a flashbang into the room before you go in  ·  hold E: place the charge, cuff, cut ties, copy files  ·  Y: squad radio',
+    start: { pos: [-42, -7], yaw: -Math.PI / 2 },
+    squad: [{ name: 'Hatch', weapon: 'rk74' }, { name: 'Tex', weapon: 'rk74' }],
+    squadLeash: 9,
+    alarmTimer: 75,
+    timerText: 'HOSTAGES',
+    timerFail: ['The hostages were executed.', 'Once the door blows the clock is running. Flash the rooms and keep moving.'],
+    // MERIDIAN's office: the concrete block on the south-west corner (x -24..-8, z -24..-14),
+    // three floors, front door on the north side. Partitions make a lobby, a side
+    // room, a back office and the stair hall; upstairs, the room the hostages are in.
+    doors: { front: { x: -19, z: -14.15, w: 1.7, h: 2.35, axis: 'x', out: 1 } },
+    civilians: [
+      { id: 'leader', pos: [-22.4, -22.3], yaw: Math.PI * 0.8, pose: 'head', stand: true, faction: 'suit' },
+      { pos: [-22.6, 3.3, -16.2], yaw: Math.PI * 0.6 },
+      { pos: [-21.2, 3.3, -15.6], yaw: -Math.PI * 0.7 },
+    ],
+    build(b) {
+      b.keepClear(-24, -24, -8, -14);
+      const h = 3.0, t = 0.15, up = 3.3;
+      // Ground floor.
+      b.wall('x', -23.85, -8.15, -18, 0, h, t, 'plaster', [{ at: -20, w: 1.1, top: 2.2 }, { at: -9.7, w: 1.6, top: 2.2 }]);
+      b.wall('z', -17.85, -14.15, -14, 0, h, t, 'plaster', [{ at: -16, w: 1.1, top: 2.2 }]);
+      b.wall('z', -23.85, -18.15, -16, 0, h, t, 'plaster', [{ at: -21.5, w: 1.0, top: 2.2 }]);
+      // Lobby: reception desk, sofa; side room: table and chairs; back office: desk, cabinets, a server rack.
+      b.box(-21.5, 0, -15.2, 2.0, 1.05, 0.6, 'woodDark');
+      b.box(-23.2, 0, -16.9, 0.8, 0.8, 1.9, 'fabric');
+      b.box(-11, 0, -16, 1.8, 0.76, 1.0, 'wood');
+      b.box(-22.4, 0, -20.6, 1.6, 0.76, 0.8, 'wood');
+      b.box(-17.2, 0, -23.4, 1.4, 1.3, 0.5, 'metalDark');
+      b.box(-18.7, 0, -23.4, 0.6, 2.0, 0.7, 'metalDark');
+      b.box(-13.5, 0, -23.3, 1.2, 1.0, 0.8, 'wood');
+      // Top floor: the hostage room (west) and a hall to the stairs.
+      b.wall('z', -23.85, -14.15, -15, up, h, t, 'plaster', [{ at: -17.2, w: 1.1, top: 2.2 }]);
+      b.box(-20.6, up, -21.8, 1.9, 0.3, 1.0, 'fabric');
+      b.box(-18.5, up, -17.4, 1.0, 0.76, 0.7, 'wood');
+      b.box(-11.5, up, -15.2, 1.6, 0.76, 0.8, 'wood');
+      // Lights inside; the team van on the avenue.
+      b.light(-19.5, 2.7, -16.0, 0xfff0d8, 7, 9);
+      b.light(-20.0, 2.7, -21.0, 0xffe0b8, 6, 8);
+      b.light(-11.5, 2.7, -20.5, 0xfff0d8, 5, 8);
+      b.light(-19.5, 6.0, -19.0, 0xffd0a0, 6, 9);
+      b.car(-33, -10.5, 'x', 'carWhite');
+      b.patrol('office', [[-27, -11.5], [-10, -11.5]]);
+    },
+    briefing: [
+      { who: 'WATCHTOWER', text: 'The convoy\'s route ends at this office block in Port Kaval\'s old town. MERIDIAN\'s logistics cell runs the port from in there.' },
+      { who: 'WATCHTOWER', text: 'They hold two dock workers on the top floor, and they will burn their files the moment they hear us. We need those files.' },
+      { who: 'HATCH', text: 'No quiet way in. I put a charge on the front door, it goes, we flash and flood. Ground floor with me, then up the stairs.' },
+    ],
+    groups: {
+      street: { units: [{ pos: [-21, -11.8] }, { pos: [-14, -11.5], patrol: 'office', weapon: 'wasp' }] },
+      // Barricaded inside: they hold their rooms.
+      ground: { units: [{ pos: [-21.5, -16.6], stationary: true }, { pos: [-17.2, -15.4], weapon: 'wasp', stationary: true }, { pos: [-11.2, -17.0], weapon: 'breaker', stationary: true }, { pos: [-19.5, -22.2], stationary: true }, { pos: [-12.5, -21.5], weapon: 'rk74', stationary: true }] },
+      upstairs: { units: [{ pos: [-19.2, 3.3, -19.5], weapon: 'wasp' }, { pos: [-17.0, 3.3, -22.6], weapon: 'rk74' }, { pos: [-11.5, 3.3, -17.0] }] },
+      response: { spawnOn: 'files', hunter: true, units: [{ pos: [-50, 0], weapon: 'rk74' }, { pos: [0, -40] }, { pos: [-30, 10], weapon: 'breaker' }, { pos: [10, -25] }, { pos: [-45, -30], weapon: 'rk74' }] },
+    },
+    objectives: [
+      { type: 'goto', text: 'Move up behind the van', target: [-30, -9], radius: 3,
+        say: [{ who: 'HATCH', text: 'That\'s the place. Two on the street. Drop them, then we stack on the front door.' }] },
+      { type: 'eliminate', text: 'Drop the two sentries on the street', groups: ['street'],
+        say: [{ who: 'TEX', text: 'One by the door, one walking the front. Take them.' }] },
+      { type: 'goto', text: 'Stack on the front door', target: [-19.3, -12.7], radius: 1.0,
+        stack: [[-20.7, -12.5], [-21.4, -12.3]], stackYaw: 0,
+        say: [{ who: 'HATCH', text: 'Stacked. Charge goes on the door, then everybody back against the wall.' }] },
+      { type: 'interact', text: 'Place the breaching charge on the door', target: [-19, 0, -14.6], label: 'place the breaching charge', duration: 3, act: 'c4', door: 'front', breach: true,
+        doneSay: [{ who: 'HATCH', text: 'BREACHING!' }] },
+      { type: 'eliminate', text: 'Clear the ground floor', groups: ['ground'], squadFollow: true,
+        say: [{ who: 'TEX', text: 'Door\'s gone! Flash the lobby, then the rooms. Go, go, go!' }] },
+      { type: 'interact', text: 'Arrest the cell leader in the back office', target: [-22.4, 0, -22.3], label: 'arrest the cell leader', duration: 3, act: 'detain', modelFrom: 'leader',
+        say: [{ who: 'LEADER', text: 'Don\'t shoot! I give up! I only move the paperwork!' }],
+        doneSay: [{ who: 'HATCH', text: 'Cuffed. Hostages are upstairs. Tex and I hold the stairs, Wraith, top floor is yours. Flash the room.' }] },
+      { type: 'eliminate', text: 'Clear the top floor — don\'t hit the hostages', groups: ['upstairs'] },
+      { type: 'interact', text: 'Cut the hostages free', target: [-22, 3.3, -18.8], label: 'cut the hostages free', duration: 3, freeCivilians: true, stopTimer: true,
+        doneSay: [{ who: 'TEX', text: 'Hostages are safe. Now the files, before anyone else shows up.' }] },
+      { type: 'interact', text: 'Copy the shipping files from the office laptop', target: [-22.4, 0, -20.6], label: 'copy the shipping files', duration: 6, act: 'hack', onComplete: ['files'],
+        doneSay: [{ who: 'WATCHTOWER', text: 'Got them. MERIDIAN is loading the key onto a freighter called the Meridian Star. More of them are coming your way.' }] },
+      { type: 'defend', id: 'hold', text: 'Hold the building until the files are sent', target: [-16, -16], radius: 10, time: 40 },
+      { type: 'extract', text: 'Get everyone to the van', target: [-33, -8], radius: 4,
+        say: [{ who: 'HATCH', text: 'Files are out. Hostages and prisoner to the van. Move!' }] },
+    ],
+    outro: [
+      { who: 'WATCHTOWER', text: 'The files name the ship: the Meridian Star, loading at the Port Kaval docks tomorrow night, guarded by their commander, Kessler.' },
+      { who: 'HATCH', text: 'Then that\'s where the key is. Good breach, Wraith.' },
+    ],
+  },
   // ------------------------------------------------------------------ 7
   {
     id: 'm7', title: 'Iron Tide', map: 'harbor', lighting: 'dusk', weather: 'none',
     location: 'PORT KAVAL — BERTH TWO', time: 'DAY 9 — 19:20 LOCAL',
     summary: 'The key is being loaded onto a ship. Fight through the docks, kill MERIDIAN\'s commander Kessler and take the HALCYON key back.',
-    recap: 'The convoy route led to Port Kaval. MERIDIAN is loading the HALCYON key onto the cargo ship Meridian Star, guarded by their commander, Kessler.',
+    recap: 'The files from the shipping office named the ship: MERIDIAN is loading the HALCYON key onto the cargo ship Meridian Star at Port Kaval, guarded by their commander, Kessler.',
     goal: 'Fight through the container yard before the ship sails, kill Kessler on the quay and take the key back.',
     loadout: { primary: 'hx30', secondary: 'raptor', lethal: 'frag', tactical: 'flash', attachments: { hx30: { optic: 'acog', underbarrel: 'vgrip' } } },
     start: { pos: [-64, -12], yaw: -Math.PI / 2 },
-    squad: [{ name: 'Hatch', weapon: 'juggernaut' }, { name: 'Tex', weapon: 'specter' }],
+    squad: [{ name: 'Hatch', weapon: 'rk74' }, { name: 'Tex', weapon: 'rk74' }],
     insertion: { lz: [-64, -12], from: [-1, -0.1], hover: 12,
       lines: { approach: { who: 'PILOT', text: 'Port Kaval in thirty. Last ride, gentlemen.' }, ropes: { who: 'HATCH', text: 'Ropes out! Let\'s finish this!' } } },
     smoke: [[-6, 30], [40, 30]],
@@ -540,7 +635,7 @@ export const MISSIONS = [
     loadout: { primary: 'hx30', secondary: 'p11', lethal: 'c4', tactical: 'smoke', attachments: { hx30: { optic: 'thermal', muzzle: 'suppressor' }, p11: { muzzle: 'suppressor' } } },
     loadoutNote: 'Thermal sight for the snow. Hatch and Tex are with you, suppressed.',
     start: { pos: [-55, -30], yaw: -Math.PI / 2 },
-    squad: [{ name: 'Hatch', weapon: 'wasp', suppressed: true }, { name: 'Tex', weapon: 'specter', suppressed: true }],
+    squad: [{ name: 'Hatch', weapon: 'rk74', suppressed: true }, { name: 'Tex', weapon: 'rk74', suppressed: true }],
     squadLeash: 10,
     stealth: true,
     alarmGroup: 'alarm',
@@ -640,9 +735,9 @@ export const MISSIONS = [
     kitHint: 'Crouch to move quietly  ·  V from behind: silent takedown  ·  Y: squad radio  ·  hold E: pick the lock, cut ties, cuff',
     start: { pos: [-3, 11], yaw: -Math.PI / 2 },
     squad: [
-      { name: 'Reyes', weapon: 'vx4', suppressed: true },
-      { name: 'Hatch', weapon: 'wasp', suppressed: true },
-      { name: 'Tex', weapon: 'viper', suppressed: true },
+      { name: 'Reyes', weapon: 'rk74', suppressed: true },
+      { name: 'Hatch', weapon: 'rk74', suppressed: true },
+      { name: 'Tex', weapon: 'rk74', suppressed: true },
     ],
     stealth: true,
     squadLeash: 7,

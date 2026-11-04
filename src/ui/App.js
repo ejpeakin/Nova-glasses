@@ -210,7 +210,7 @@ export class App {
         <div class="main-left">
           <h1 class="logo small"><span class="logo-op">TASK FORCE ORION</span><span class="logo-main">FIELD OF HONOR</span><span class="logo-sub">US ARMY SPECIAL FORCES</span></h1>
           <nav class="main-nav">
-            <button class="nav-btn" data-go="campaign"><span>CAMPAIGN</span><small>12 missions · the HALCYON affair</small></button>
+            <button class="nav-btn" data-go="campaign"><span>CAMPAIGN</span><small>13 missions · the HALCYON affair</small></button>
             <button class="nav-btn" data-go="multiplayer"><span>MULTIPLAYER</span><small>TDM · FFA · Domination · vs bots</small></button>
             <button class="nav-btn" data-go="survival"><span>SURVIVAL</span><small>Endless escalating waves</small></button>
             <button class="nav-btn" data-go="armory"><span>ARMORY</span><small>Loadout & gunsmith</small></button>

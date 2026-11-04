@@ -107,7 +107,8 @@ export class CampaignMode {
     // (A person placed here with an id can later be taken over by an objective, e.g. arrested.)
     this.civilians = (m.civilians ?? []).map((c) => {
       const h = new Humanoid(c.faction ?? 'civilian', 'p11', { seed: Math.round(c.pos[0] * 31 + c.pos[1] * 17) });
-      h.root.position.set(c.pos[0], 0, c.pos[1]);
+      // pos: [x, z], or [x, y, z] for someone on an upper floor.
+      if (c.pos.length === 3) h.root.position.set(c.pos[0], c.pos[1], c.pos[2]); else h.root.position.set(c.pos[0], 0, c.pos[1]);
       h.root.rotation.y = c.yaw ?? 0;
       h.setCaptive(c.pose ?? 'back');
       game.scene.add(h.root);
@@ -285,7 +286,35 @@ export class CampaignMode {
 
   _action(a) {
     if (a === 'alarm') this.alarm();
-    if (a === 'joinReyes') this._spawnFriend({ name: 'Reyes', weapon: 'vx4' }, this.squad.length);
+    else if (a === 'joinReyes') this._spawnFriend({ name: 'Reyes', weapon: 'rk74' }, this.squad.length);
+    else this._spawnTrigger(a); // any other name brings in the groups waiting on it
+  }
+
+  /**
+   * Breaching charge on a door: a two-second count, then the door is blown off its
+   * hinges, everyone in the rooms behind it is stunned by the blast and the clock
+   * starts on any hostages.
+   */
+  _breach(o, prop) {
+    const g = this.game;
+    const door = o.doorRef;
+    g.hud.toast('BREACHING — STAND CLEAR', 'warn');
+    for (let i = 0; i < 3; i++) this.timers.push({ t: 0.5 + i * 0.5, fn: () => Audio.foley('beep', prop.work) });
+    this.timers.push({ t: 2.0, fn: () => {
+      const at = prop.work.clone();
+      g.effects.explosion(at, 0.55);
+      Audio.explosion(at, 0.9);
+      g.player.shake = Math.min(1.2, (g.player.shake ?? 0) + 0.7);
+      prop.detonate?.();
+      if (door) { door.unlock(); door.angle = 1.55 * (door.out ?? 1); door.group.visible = false; }
+      for (const a of g.actors) {
+        if (a.isPlayer || !a.alive || a.team === g.player.team) continue;
+        const d = a.pos.distanceTo(at);
+        if (d < 11) a.flashed?.(3.2 - d * 0.18);
+      }
+      this.alarm();
+      this._complete();
+    } });
   }
 
   alarm(spotter) {
@@ -357,7 +386,8 @@ export class CampaignMode {
         pos: at, label: o.label, duration: o.duration, model: false, prop, onComplete: () => {
           prop.complete();
           if (o.aa || o.transformer) this._destroyAA(o);
-          this._complete();
+          if (o.breach) this._breach(o, prop);
+          else this._complete();
         },
       });
       prop._it = o.interact;
