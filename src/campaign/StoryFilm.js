@@ -21,6 +21,7 @@ import { WEAPONS } from '../weapons/WeaponData.js';
 import { Audio } from '../core/Audio.js';
 import { Store } from '../core/Storage.js';
 import { escapeHtml } from '../core/Utils.js';
+import { buildCargoTruck, buildMRAP, dressRoad, rangeTargets, rangeMountains, dressAirfield, dressOffice, dressLab } from './FilmProps.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -281,34 +282,7 @@ function buildSatellite() {
   return g;
 }
 
-// ---------------------------------------------------------------- vehicles & sets
-function buildTruck(color = 0x8a7f62) {
-  const g = new THREE.Group();
-  const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.75, metalness: 0.25 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x1b1c1d, roughness: 0.8, metalness: 0.2 });
-  const glass = new THREE.MeshStandardMaterial({ color: 0x0f1820, roughness: 0.1, metalness: 0.8, emissive: 0x102030, emissiveIntensity: 0.4 });
-  const lamp = new THREE.MeshBasicMaterial({ color: 0xfff1cc, toneMapped: false });
-  const tail = new THREE.MeshBasicMaterial({ color: 0xff2010, toneMapped: false });
-  const add = (geo, m, x, y, z) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); mesh.castShadow = true; mesh.receiveShadow = true; g.add(mesh); return mesh; };
-  add(new THREE.BoxGeometry(6.4, 0.5, 2.4), dark, 0, 0.9, 0);
-  add(new THREE.BoxGeometry(2.0, 1.5, 2.5), paint, 2.2, 1.9, 0);
-  add(new THREE.BoxGeometry(0.05, 0.6, 2.1), glass, 3.22, 2.15, 0);
-  for (const z of [-1.26, 1.26]) add(new THREE.BoxGeometry(1.2, 0.5, 0.04), glass, 2.2, 2.2, z);
-  add(new THREE.BoxGeometry(3.9, 1.9, 2.6), paint, -1.0, 2.1, 0);
-  add(new THREE.CylinderGeometry(0.45, 0.45, 0.3, 16), dark, -0.6, 3.2, 0);
-  add(new THREE.BoxGeometry(0.9, 0.08, 0.08), dark, -0.1, 3.35, 0);
-  add(new THREE.BoxGeometry(0.4, 0.5, 2.6), dark, 3.35, 1.0, 0);
-  for (const z of [-0.85, 0.85]) { add(new THREE.BoxGeometry(0.06, 0.18, 0.3), lamp, 3.56, 1.45, z); add(new THREE.BoxGeometry(0.06, 0.15, 0.22), tail, -3.0, 1.4, z); }
-  const wheels = [];
-  for (const x of [2.2, -0.4, -2.2]) for (const z of [-1.2, 1.2]) {
-    const w = add(new THREE.CylinderGeometry(0.62, 0.62, 0.5, 18), dark, x, 0.62, z);
-    w.rotation.x = Math.PI / 2;
-    wheels.push(w);
-  }
-  g.userData.wheels = wheels;
-  return g;
-}
-
+// ---------------------------------------------------------------- sets
 function skyDome(top, horizon, sunDir, sunColor = 0xffc07a) {
   return new THREE.Mesh(new THREE.SphereGeometry(1500, 32, 16), new THREE.ShaderMaterial({
     uniforms: { top: { value: new THREE.Color(top) }, hor: { value: new THREE.Color(horizon) }, sun: { value: sunDir.clone().normalize() }, sunC: { value: new THREE.Color(sunColor) } },
@@ -482,21 +456,10 @@ export class StoryFilm {
     s.add(sun, new THREE.HemisphereLight(0x8090b0, 0x5a4030, 0.7));
     const ground = terrain(2400, 160, 26, 0xb79466, 5, (x, z) => clamp((Math.hypot(x, z) - 80) / 300, 0.15, 1));
     s.add(ground);
-    for (let i = 0; i < 26; i++) {
-      const a = (i / 26) * Math.PI * 2, r = 900 + Math.random() * 200;
-      const m = new THREE.Mesh(new THREE.ConeGeometry(60 + Math.random() * 90, 60 + Math.random() * 120, 5), new THREE.MeshStandardMaterial({ color: 0x5a4a52, roughness: 1, flatShading: true }));
-      m.position.set(Math.cos(a) * r, 20, Math.sin(a) * r);
-      s.add(m);
-    }
-    // The target: a cluster of test bunkers and a tower.
-    const conc = new THREE.MeshStandardMaterial({ color: 0x9c9284, roughness: 0.95 });
-    this.targets = new THREE.Group();
-    for (const [x, z, w, h, d] of [[0, 0, 14, 5, 10], [18, 6, 8, 4, 8], [-16, -8, 10, 3.5, 7], [6, -16, 6, 9, 6]]) {
-      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), conc);
-      b.position.set(x, h / 2, z);
-      b.castShadow = true;
-      this.targets.add(b);
-    }
+    // Mountain ridges all round the desert range.
+    s.add(rangeMountains(fbm));
+    // The target: a compound of bunkers, containers, a tower, a mast and old vehicles.
+    this.targets = rangeTargets();
     this.targets.position.set(0, 0, -260);
     s.add(this.targets);
     this.streak = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.2, 1, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0xffe0b0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
@@ -561,6 +524,7 @@ export class StoryFilm {
       }
     }
     this.keyCase = k;
+    dressLab(s);
     this.lab = s;
   }
 
@@ -590,8 +554,9 @@ export class StoryFilm {
     const s = new THREE.Scene();
     s.add(skyDome(0x02040a, 0x0c1424, V(0.3, 0.4, -0.8), 0x405070));
     s.fog = new THREE.FogExp2(0x0a1020, 0.008);
-    const moon = new THREE.DirectionalLight(0x9ab4e0, 1.9);
-    moon.position.set(60, 120, -80);
+    // Moonlight from the camera side so the convoy reads in the dark.
+    const moon = new THREE.DirectionalLight(0x9ab4e0, 2.1);
+    moon.position.set(50, 110, 75);
     moon.castShadow = true;
     moon.shadow.mapSize.set(1024, 1024);
     Object.assign(moon.shadow.camera, { left: -60, right: 60, top: 60, bottom: -60, near: 10, far: 400 });
@@ -607,13 +572,23 @@ export class StoryFilm {
     const road = new THREE.Mesh(new THREE.PlaneGeometry(1200, 9), new THREE.MeshStandardMaterial({ map: rt, roughness: 0.85 }));
     road.rotation.x = -Math.PI / 2; road.position.y = 0.03; road.receiveShadow = true;
     s.add(road);
-    this.trucks = [0, 1, 2].map((i) => { const tk = buildTruck(i === 1 ? 0x76705a : 0x8a7f62); tk.position.set(-i * 16, 0, 0); s.add(tk); return tk; });
+    // The convoy: an armoured escort up front, two cargo trucks (the key rides in
+    // the second vehicle), another escort at the rear.
+    this.trucks = [
+      buildMRAP({ code: 'B-2-5 11' }),
+      buildCargoTruck({ color: 0x8a7f62, seed: 2, code: 'HQ-12' }),
+      buildCargoTruck({ color: 0x7d7660, seed: 3, code: 'HQ-14' }),
+      buildMRAP({ seed: 6, code: 'B-2-5 14' }),
+    ];
+    this.trucks.forEach((tk, i) => { tk.position.set(-i * 16, 0, 0); s.add(tk); });
     this.headlights = this.trucks.map((tk) => {
       const L = new THREE.SpotLight(0xfff0d0, 120, 70, 0.42, 0.5, 1.6);
-      L.position.set(3.6, 1.5, 0); L.target.position.set(30, 0, 0);
+      L.position.copy(tk.userData.lightAt); L.target.position.set(30, 0, 0);
       tk.add(L, L.target);
       return L;
     });
+    // Poles and wires, marker posts, rocks, scrub and pines along the road.
+    dressRoad(s, (x, z) => this._hillY(x, z), { from: -300, to: 320 });
     this.roadFire = new Particles(s, this.glow, true, 180);
     this.roadSmoke = new Particles(s, this.smokeTex, false, 200);
     this.muzzles = [];
@@ -711,6 +686,11 @@ export class StoryFilm {
     s.add(this.vasko.root);
     this.office = s;
     this._walls();
+    dressOffice(s);
+    // The banker's lamp on the desk throws a warm pool over the desk and chair.
+    const lampL = new THREE.PointLight(0xffc27a, 5, 7, 1.6);
+    lampL.position.set(1.0, 1.1, 1.3);
+    s.add(lampL);
   }
 
   /** The office: walls, floor and ceiling, with an 8 x 4.4 m window in the back wall. */
@@ -778,13 +758,17 @@ export class StoryFilm {
     this.heli.group.position.set(0, 0, -14);
     this.heli.group.rotation.y = Math.PI / 2;
     this.heli.group.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    // Hangars in the distance.
-    for (let i = 0; i < 4; i++) {
-      const h = new THREE.Mesh(new THREE.CylinderGeometry(12, 12, 30, 24, 1, false, 0, Math.PI), new THREE.MeshStandardMaterial({ color: 0x5a5e58, roughness: 0.7, metalness: 0.4 }));
-      h.rotation.z = Math.PI / 2; h.rotation.y = Math.PI / 2;
-      h.position.set(-70 + i * 40, 0, -90);
-      s.add(h);
-    }
+    // Hangars, barriers, crates, light towers, windsock, taxiway lights; a fuel
+    // truck, an escort vehicle and a second helicopter on the line.
+    dressAirfield(s);
+    const fuel = buildCargoTruck({ body: 'tanker', color: 0x5d6248, seed: 8, code: 'FUEL 3' });
+    fuel.position.set(15, 0, -26); fuel.rotation.y = 2.6; s.add(fuel);
+    const escort = buildMRAP({ color: 0x5d6248, seed: 9, code: 'HQ 5' });
+    escort.position.set(-17, 0, -2); escort.rotation.y = -0.4; s.add(escort);
+    for (const v of [fuel, escort]) v.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    this.heli2 = new Helicopter(s);
+    this.heli2.group.position.set(-34, 0, -40);
+    this.heli2.group.rotation.y = 0.9;
     const names = [
       ['REYES', 'vx4', 'CAPT. MARA REYES', 'Team leader'],
       ['HATCH', 'juggernaut', 'SGT. DMITRI "HATCH" SOROKIN', 'Breacher, demolitions'],
@@ -1019,7 +1003,7 @@ export class StoryFilm {
   _driveTrucks(dt) {
     for (const tk of this.trucks) {
       tk.position.x += tk.userData.v * dt;
-      for (const w of tk.userData.wheels) w.rotation.y += (tk.userData.v * dt) / 0.62;
+      for (const w of tk.userData.wheels) w.rotation.z -= (tk.userData.v * dt) / tk.userData.wheelR;
       tk.position.y = Math.sin(this.t * 9 + tk.position.x) * 0.02 * (tk.userData.v > 1 ? 1 : 0);
     }
   }
@@ -1140,7 +1124,7 @@ export class StoryFilm {
   _shot_vasko(t, dt) {
     // Behind Vasko at the window, then round to the screens: targets and bids.
     const k = smooth(t / 6.5), k2 = smooth((t - 6.5) / 4);
-    this.camera.position.set(lerp(lerp(-2.4, 0.9, k), 3.4, k2), lerp(1.9, 1.75, k), lerp(lerp(4.6, 1.2, k), 1.4, k2));
+    this.camera.position.set(lerp(lerp(-1.7, 0.9, k), 3.4, k2), lerp(1.8, 1.75, k), lerp(lerp(5.3, 1.2, k), 1.4, k2));
     this.camera.lookAt(lerp(0.4, 6.9, k2), lerp(1.7, 2.4, k2), lerp(-4.6, -1.2, k2));
     this.officeRed.intensity = 6 + Math.sin(t * 2.2) * 3;
     this.vasko.root.rotation.y = smooth((t - 7.5) / 2) * -0.6;
