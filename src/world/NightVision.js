@@ -1,18 +1,22 @@
-// Night-vision goggles post-process, modelled on a Gen 3 image intensifier.
+// Night-vision goggles post-process, modelled on modern Gen 3 binocular goggles
+// (PVS-31 class: two filmless high-resolution tubes).
 // The world and viewmodel render into an HDR target, then:
 //   1. the scene's average brightness is measured and adapted over time, driving
 //      automatic brightness control (the goggles dim when a flash or explosion
 //      floods the tube and open up in the dark);
 //   2. bright sources go through a quarter-res bright pass and blur, giving the
-//      characteristic halos around lights, muzzle flashes and IR lasers;
-//   3. a final pass amplifies, sharpens, applies the intensifier response curve,
-//      photon-limited scintillation noise and the faint honeycomb of the
-//      microchannel plate, tints with green (P43) or white (P45) phosphor and masks
-//      it with the dual-tube view that opens as the goggles flip down.
+//      small, tight halos modern tubes put round lights, muzzle flashes and lasers;
+//   3. a final pass reads the scene with the tube's spectral response (strong in
+//      the red and near-infrared, so foliage, skin and fabric glow and the sky
+//      stays dark), amplifies it, sharpens it, applies the intensifier response
+//      curve with real blacks, adds fine scintillation (strongest in the dark),
+//      tints it with green (P43) or white (P45) phosphor, and masks it with the
+//      two overlapping 40-degree tubes that open as the goggles flip down.
 import * as THREE from '../lib/three.js';
 
 const VS = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
-const LUMW = 'vec3(0.3, 0.59, 0.11)';
+// Intensifier spectral response: weighted toward red and near-infrared.
+const LUMW = 'vec3(0.5, 0.42, 0.08)';
 const LUM_SIZE = 32;
 
 /** Shared GLSL: automatic brightness control from the adapted average luminance. */
@@ -20,7 +24,7 @@ const ABC = `
   uniform sampler2D tAvg; uniform float gain;
   float exposure() {
     float avg = max(texture2D(tAvg, vec2(0.5)).r, 1e-4);
-    float abc = clamp(0.2 / (avg * gain), 0.28, 1.45);
+    float abc = clamp(0.24 / (avg * gain), 0.3, 1.6);
     return gain * abc;
   }`;
 
@@ -88,7 +92,7 @@ export class NightVision {
           for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++)
             l += dot(texture2D(tDiffuse, vUv + (vec2(float(x), float(y)) - 0.5) * texel * 2.0).rgb, ${LUMW});
           l = l * 0.25 * e;
-          gl_FragColor = vec4(max(l - 0.85, 0.0), 0.0, 0.0, 1.0);
+          gl_FragColor = vec4(max(l - 1.0, 0.0), 0.0, 0.0, 1.0);
         }`,
       depthTest: false, depthWrite: false,
     });
@@ -130,40 +134,41 @@ export class NightVision {
         float lumAt(vec2 uv) { return dot(texture2D(tDiffuse, uv).rgb, ${LUMW}); }
         void main() {
           vec2 c = vUv - 0.5;
-          // Eyepiece optics: slight barrel distortion.
-          vec2 uv = 0.5 + c * (1.0 - 0.05 * dot(c, c));
+          // Eyepiece optics: very slight barrel distortion.
+          vec2 uv = 0.5 + c * (1.0 - 0.02 * dot(c, c));
           float e = exposure();
           float lum = lumAt(uv) * e;
-          // Crisp tube image: gentle unsharp mask.
-          float nb = (lumAt(uv + vec2(texel.x, 0.0)) + lumAt(uv - vec2(texel.x, 0.0)) + lumAt(uv + vec2(0.0, texel.y)) + lumAt(uv - vec2(0.0, texel.y))) * 0.25 * e;
-          lum = max(0.0, lum + (lum - nb) * 0.55);
-          // Halos around bright sources.
-          lum += texture2D(tBloom, uv).r * 1.1;
-          // Intensifier response with a touch of contrast.
-          lum = 1.0 - exp(-lum * 1.8);
-          lum = smoothstep(0.0, 1.0, pow(lum, 1.08)) * 0.7 + lum * 0.3; // contrast: deeper shadows, brighter highlights
-          // Photon-limited scintillation: fine, fresh every frame, strongest in the dark.
+          // Crisp high-resolution tube: a 3x3 unsharp mask.
+          float nb = 0.0;
+          for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) if (x != 0 || y != 0) nb += lumAt(uv + vec2(float(x), float(y)) * texel * 1.25);
+          nb = nb / 8.0 * e;
+          lum = max(0.0, lum + (lum - nb) * 0.85);
+          // Small, tight halos round bright sources.
+          lum += texture2D(tBloom, uv).r * 0.75;
+          // Intensifier response: open shadows, real blacks, highlights that roll off.
+          lum = 1.0 - exp(-lum * 2.1);
+          lum = clamp((lum - 0.035) / 0.965, 0.0, 1.0);
+          lum = mix(lum, lum * lum * (3.0 - 2.0 * lum), 0.55);
+          // Fine scintillation: photon noise, strongest in the dark, fresh every frame.
           vec2 px = floor(gl_FragCoord.xy);
-          float n = (hash(px + fract(time * 17.31) * 173.0) - 0.5) * 0.65 + (hash(floor(px * 0.5) + fract(time * 9.71) * 91.0) - 0.5) * 0.35;
-          lum += n * (0.045 + 0.13 * (1.0 - lum));
-          if (hash(px + floor(time * 30.0)) > 0.99935) lum += 0.55;
-          // Microchannel-plate honeycomb, barely there.
-          vec2 hp = gl_FragCoord.xy / 3.2;
-          vec2 r = vec2(1.0, 1.7320508), h = r * 0.5;
-          vec2 ha = mod(hp, r) - h, hb = mod(hp - h, r) - h;
-          vec2 hg = dot(ha, ha) < dot(hb, hb) ? ha : hb;
-          lum *= 1.0 - 0.03 * smoothstep(0.32, 0.5, length(hg));
+          float n = hash(px + fract(time * 17.31) * 173.0) - 0.5;
+          lum += n * (0.018 + 0.07 * (1.0 - lum) * (1.0 - lum));
+          if (hash(px + floor(time * 30.0)) > 0.99988) lum += 0.4;
           lum = clamp(lum, 0.0, 1.0);
-          // Dual-tube view; tubes open as the goggles flip down, darker toward each tube's edge.
+          // Two overlapping tubes (a wide figure-of-eight), opening as the goggles flip down;
+          // a crisp edge with a dark rim and a little falloff toward each tube's edge.
           vec2 p = vec2(c.x * aspect, c.y);
-          float rad = mix(0.02, 0.6, amount);
-          float dl = length(p - vec2(-0.22, 0.0)), dr = length(p + vec2(-0.22, 0.0));
+          float rad = mix(0.02, 0.5, amount);
+          vec2 cl = vec2(-0.25, 0.0), cr = vec2(0.25, 0.0);
+          float dl = length(p - cl), dr = length(p - cr);
           float d = min(dl, dr);
-          float mask = smoothstep(rad, rad - 0.05, d);
-          float vig = 1.0 - 0.32 * smoothstep(0.35, 1.0, d / max(rad, 0.01));
-          vec3 green = vec3(0.34, 1.0, 0.45) * lum + vec3(0.004, 0.03, 0.008);
-          vec3 white = vec3(0.87, 0.94, 1.0) * lum + vec3(0.012, 0.014, 0.018);
-          vec3 col = mix(green, white, phosphor) * mask * vig;
+          float mask = smoothstep(rad, rad - 0.012, d);
+          float rim = smoothstep(rad - 0.03, rad - 0.012, d) * mask;
+          float vig = 1.0 - 0.22 * smoothstep(0.45, 1.0, d / max(rad, 0.01));
+          // Phosphor: P43 yellow-green whose highlights run toward white; P45 cool white.
+          vec3 green = mix(vec3(0.3, 0.92, 0.36), vec3(0.82, 1.0, 0.78), smoothstep(0.55, 1.0, lum)) * lum + vec3(0.003, 0.02, 0.006);
+          vec3 white = mix(vec3(0.8, 0.88, 0.98), vec3(1.0), smoothstep(0.6, 1.0, lum)) * lum + vec3(0.01, 0.012, 0.016);
+          vec3 col = mix(green, white, phosphor) * mask * vig * (1.0 - 0.6 * rim);
           gl_FragColor = vec4(col, 1.0);
           #include <colorspace_fragment>
         }`,
@@ -240,7 +245,7 @@ export class NightVision {
     this._pass(this.brightMat, this.bloomA);
     const bu = this.blurMat.uniforms;
     const bx = 1 / this.bloomA.width, by = 1 / this.bloomA.height;
-    for (const s of [1.6, 3.2]) {
+    for (const s of [1.0, 2.0]) {
       bu.tInput.value = this.bloomA.texture; bu.dir.value.set(bx * s, 0);
       this._pass(this.blurMat, this.bloomB);
       bu.tInput.value = this.bloomB.texture; bu.dir.value.set(0, by * s);

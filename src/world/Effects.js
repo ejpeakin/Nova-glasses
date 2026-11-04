@@ -6,6 +6,8 @@ import { rand } from '../core/Utils.js';
 
 /** How much blood a hit throws (1 = the original amount). */
 const BLOOD_AMOUNT = 1.15;
+/** Smoke-grenade puffs per second. */
+const SMOKE_RATE = 69;
 
 class ParticlePool {
   constructor(scene, capacity, texture, additive) {
@@ -416,8 +418,10 @@ export class Effects {
   }
 
   smokeCloud(pos, dt, strength = 1) {
-    // Called every frame while a smoke grenade is pouring.
-    const n = Math.max(1, Math.round(dt * 40 * strength));
+    // Called every frame while a smoke grenade is pouring: 69 puffs a second (15%
+    // more than the original 60 at 60 fps), thicker in the first burst; counted the
+    // same at any frame rate.
+    const n = Math.floor(dt * SMOKE_RATE * (strength > 1 ? 1.3 : 1) + Math.random());
     for (let i = 0; i < n; i++) {
       this.smoke.emit(pos.x + rand(-0.3, 0.3), pos.y + 0.2, pos.z + rand(-0.3, 0.3), rand(-2.5, 2.5), rand(0.3, 1.6), rand(-2.5, 2.5),
         { life: rand(12, 18), size: 1.5, sizeEnd: rand(6, 8), color: [0.82, 0.83, 0.84], alpha: 0.55, drag: 0.6, spin: 0.15 });
