@@ -10,7 +10,7 @@ import { escapeHtml, clamp } from '../core/Utils.js';
 
 const SPEAKER = {
   PILOT: 'Raven 2-1', REYES: 'Capt. Reyes', HATCH: 'Sgt. Sorokin', TEX: 'Cpl. Hale', WATCHTOWER: 'Watchtower', HART: 'Dr. Hart',
-  VASKO: 'Anton Vasko', KESSLER: 'Kessler', COLE: 'Cole', HOSTAGE: 'Hostage',
+  VASKO: 'Anton Vasko', KESSLER: 'Kessler', COLE: 'Cole', HOSTAGE: 'Hostage', BRANDT: 'Oskar Brandt',
 };
 
 export class HUD {

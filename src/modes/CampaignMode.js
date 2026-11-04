@@ -89,6 +89,7 @@ export class CampaignMode {
     // Props tied to objectives.
     for (const o of m.objectives) {
       if (o.aa) o.prop = this._aaGun(new THREE.Vector3(o.target[0], 0, o.target[2]));
+      if (o.transformer) o.prop = this._transformer(new THREE.Vector3(o.target[0], 0, o.target[2]));
       if (o.vasko) {
         const v = new Humanoid('meridian', 'p11');
         v.root.position.set(o.target[0], 0, o.target[2] + 1.5);
@@ -103,13 +104,14 @@ export class CampaignMode {
     // Locked doors (picked open by an objective) and civilians held in the building.
     this.doors = {};
     for (const [id, spec] of Object.entries(m.doors ?? {})) this.doors[id] = buildDoor(game, spec);
+    // (A person placed here with an id can later be taken over by an objective, e.g. arrested.)
     this.civilians = (m.civilians ?? []).map((c) => {
-      const h = new Humanoid('civilian', 'p11', { seed: Math.round(c.pos[0] * 31 + c.pos[1] * 17) });
+      const h = new Humanoid(c.faction ?? 'civilian', 'p11', { seed: Math.round(c.pos[0] * 31 + c.pos[1] * 17) });
       h.root.position.set(c.pos[0], 0, c.pos[1]);
       h.root.rotation.y = c.yaw ?? 0;
       h.setCaptive(c.pose ?? 'back');
       game.scene.add(h.root);
-      return { model: h, crouch: 1, freed: false, yaw: c.yaw ?? 0 };
+      return { id: c.id, model: h, crouch: c.stand ? 0 : 1, freed: false, yaw: c.yaw ?? 0 };
     });
     // Weapon caches (e.g. a suppressed rifle left on a rooftop by an asset).
     for (const c of m.caches ?? []) game.addPickup('weapon', new THREE.Vector3(c.pos[0], c.pos[1], c.pos[2]), c.weapon, c.attachments ?? null);
@@ -340,6 +342,10 @@ export class CampaignMode {
       // The real thing to work on (laptop, charge, hostage, prisoner...) and the hands doing it.
       if (o.vasko) o.model = this.vaskoModel;
       if (o.door) o.doorRef = this.doors[o.door];
+      if (o.modelFrom) {
+        const c = this.civilians.find((cv) => cv.id === o.modelFrom);
+        if (c) { c.taken = true; o.model = c.model; }
+      }
       const toward = this.game.player.pos.clone().sub(pos).setY(0).normalize();
       const prop = buildObjectiveProp(this.game, o, pos, toward);
       o.actionProp = prop;
@@ -350,7 +356,7 @@ export class CampaignMode {
       o.interact = this.game.addInteractable({
         pos: at, label: o.label, duration: o.duration, model: false, prop, onComplete: () => {
           prop.complete();
-          if (o.aa) this._destroyAA(o);
+          if (o.aa || o.transformer) this._destroyAA(o);
           this._complete();
         },
       });
@@ -389,8 +395,32 @@ export class CampaignMode {
     return g;
   }
 
+  /** Electrical transformer: oil tank with cooling fins, bushings and a warning plate. */
+  _transformer(pos) {
+    const g = new THREE.Group();
+    const tank = new THREE.MeshStandardMaterial({ color: 0x4f5a52, roughness: 0.6, metalness: 0.5 });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x2a2e2c, roughness: 0.7, metalness: 0.4 });
+    const porcelain = new THREE.MeshStandardMaterial({ color: 0x8a5a3a, roughness: 0.35, metalness: 0 });
+    const add = (geo, m, x, y, z) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); mesh.castShadow = true; mesh.receiveShadow = true; g.add(mesh); return mesh; };
+    add(new THREE.BoxGeometry(2.2, 0.25, 1.6), dark, 0, 0.12, 0);
+    add(new THREE.BoxGeometry(1.7, 1.9, 1.15), tank, 0, 1.2, 0);
+    for (let i = 0; i < 7; i++) for (const sz of [-1, 1]) add(new THREE.BoxGeometry(0.04, 1.5, 0.28), tank, -0.72 + i * 0.24, 1.15, sz * 0.72);
+    for (const x of [-0.5, 0, 0.5]) {
+      for (let k = 0; k < 4; k++) add(new THREE.CylinderGeometry(0.09 - k * 0.006, 0.09 - k * 0.006, 0.05, 12), porcelain, x, 2.25 + k * 0.1, -0.2);
+      add(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 8), porcelain, x, 2.4, -0.2);
+    }
+    add(new THREE.CylinderGeometry(0.22, 0.22, 0.9, 16), tank, 0.55, 2.35, 0.25).rotation.z = Math.PI / 2;
+    const sign = add(new THREE.PlaneGeometry(0.4, 0.3), new THREE.MeshStandardMaterial({ color: 0xe8c020, roughness: 0.6 }), 0, 1.5, 0.581);
+    sign.rotation.y = 0;
+    g.position.copy(pos);
+    g.userData.face = { x: 0.86, z: 0.6, y: 1.1 };
+    this.game.scene.add(g);
+    this.game.world.add(pos.x - 1.1, 0, pos.z - 0.8, pos.x + 1.1, 2.1, pos.z + 0.8, 'metal');
+    return g;
+  }
+
   _destroyAA(o) {
-    const pos = new THREE.Vector3(o.target[0], 0.5, o.target[2] + 1.4);
+    const pos = o.transformer ? new THREE.Vector3(o.target[0], 1.2, o.target[2]) : new THREE.Vector3(o.target[0], 0.5, o.target[2] + 1.4);
     this.timers.push({
       t: 2.5, fn: () => {
         o.actionProp?.detonate?.();
@@ -398,7 +428,8 @@ export class CampaignMode {
         Audio.explosion(pos, 1.4);
         this.game.player.shake = Math.min(1.2, this.game.player.shake + 0.6);
         o.prop.traverse((m) => { if (m.isMesh) m.material = new THREE.MeshStandardMaterial({ color: 0x1a1816, roughness: 1 }); });
-        o.prop.rotation.z = 0.25;
+        if (!o.transformer) o.prop.rotation.z = 0.25;
+        else for (let i = 0; i < 6; i++) this.game.effects.impact(pos.clone().add(new THREE.Vector3(Math.random() - 0.5, Math.random(), Math.random() - 0.5)), new THREE.Vector3(0, 1, 0), 'metal');
         this.game.smokeColumns.push(pos.clone());
       },
     });
@@ -412,6 +443,7 @@ export class CampaignMode {
     this.armory?.update(dt, g.input);
     for (const d of Object.values(this.doors ?? {})) { d.update(dt); d.block(g.player); }
     for (const c of this.civilians ?? []) {
+      if (c.taken) continue; // animated by the objective that took them over
       if (c.freed) c.crouch = Math.max(0, c.crouch - dt * 1.2);
       c.model.update(dt, 0, c.crouch, 0, false);
     }

@@ -21,6 +21,7 @@ import {
 } from '../weapons/WeaponData.js';
 import { escapeHtml, formatTime, clamp } from '../core/Utils.js';
 import { rankOf } from '../core/Ranks.js';
+import { StoryFilm } from '../campaign/StoryFilm.js';
 
 export { rankOf };
 
@@ -103,7 +104,10 @@ export class App {
     const dt = Math.min(0.1, (now - this.last) / 1000);
     this.last = now;
     try {
-      if (this.game) {
+      if (this.film) {
+        this.film.update(dt);
+        this.film.render();
+      } else if (this.game) {
         this.game.update(dt);
         if (!this.game.paused) Store.stats.playTime += dt;
       } else if (this.menu) {
@@ -206,7 +210,7 @@ export class App {
         <div class="main-left">
           <h1 class="logo small"><span class="logo-op">TASK FORCE ORION</span><span class="logo-main">FIELD OF HONOR</span><span class="logo-sub">US ARMY SPECIAL FORCES</span></h1>
           <nav class="main-nav">
-            <button class="nav-btn" data-go="campaign"><span>CAMPAIGN</span><small>9 missions · the HALCYON affair</small></button>
+            <button class="nav-btn" data-go="campaign"><span>CAMPAIGN</span><small>12 missions · the HALCYON affair</small></button>
             <button class="nav-btn" data-go="multiplayer"><span>MULTIPLAYER</span><small>TDM · FFA · Domination · vs bots</small></button>
             <button class="nav-btn" data-go="survival"><span>SURVIVAL</span><small>Endless escalating waves</small></button>
             <button class="nav-btn" data-go="armory"><span>ARMORY</span><small>Loadout & gunsmith</small></button>
@@ -283,7 +287,7 @@ export class App {
             <div class="seg" id="diff">${Object.entries(DIFFICULTY).map(([k, d]) => `<button class="${k === diff ? 'on' : ''}" data-d="${k}">${d.label.toUpperCase()}</button>`).join('')}</div>
             <div class="diff-desc">${{ recruit: 'Enemies are slow to react and inaccurate.', regular: 'A fair fight. Use cover.', hardened: 'Enemies are sharp, aggressive and hit hard.', veteran: 'One mistake is your last.' }[diff]}</div>
             <div class="row-btns">
-              ${selected === 0 ? '<button class="btn" id="btn-prologue">WATCH PROLOGUE</button>' : ''}
+              <button class="btn" id="btn-prologue">WATCH THE STORY</button>
               <button class="btn primary" id="btn-brief">MISSION BRIEFING ▸</button>
             </div>
           </div>
@@ -299,48 +303,28 @@ export class App {
       }
       for (const b of this.ui.querySelectorAll('#diff button')) b.addEventListener('click', () => { diff = b.dataset.d; Store.settings.difficulty = diff; Store.save(); render(); });
       this.ui.querySelector('#btn-brief').addEventListener('click', () => {
-        if (selected === 0 && !camp.seenIntro) this.show('prologue', { index: 0, difficulty: diff });
+        // Starting a new campaign (Mission 1) always opens with the story film.
+        if (selected === 0) this.show('prologue', { index: 0, difficulty: diff });
         else this.show('briefing', { index: selected, difficulty: diff });
       });
-      this.ui.querySelector('#btn-prologue')?.addEventListener('click', () => this.show('prologue', { index: 0, difficulty: diff }));
+      this.ui.querySelector('#btn-prologue')?.addEventListener('click', () => this.show('prologue', { index: 0, difficulty: diff, then: 'campaign' }));
     };
     render();
   }
 
-  _screen_prologue(arg) {
-    this.ui.innerHTML = `<div class="prologue"><div class="pro-lines" id="pro"></div><div class="pro-skip">SPACE / CLICK — CONTINUE</div></div>`;
-    const box = this.ui.querySelector('#pro');
-    Audio.playMusic('tension');
-    let li = 0, ci = 0, line = null, wait = 0, done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      clearInterval(timer);
-      window.removeEventListener('keydown', key);
+  /**
+   * The story film (StoryFilm.js): plays every time Mission 1 is started, and from
+   * the campaign screen's WATCH THE STORY button. arg.then: where to go after it.
+   */
+  _screen_prologue(arg = {}) {
+    this.film?.finish();
+    const then = arg.then ?? 'briefing';
+    this.film = new StoryFilm(this, () => {
+      this.film = null;
       Store.campaign.seenIntro = true;
       Store.save();
-      if (this.screen === 'prologue') this.show('briefing', arg);
-    };
-    const timer = setInterval(() => {
-      if (this.screen !== 'prologue') { clearInterval(timer); window.removeEventListener('keydown', key); return; }
-      if (wait > 0) { wait -= 28; return; }
-      if (li >= PROLOGUE.length) { finish(); return; }
-      if (!line) {
-        line = document.createElement('p');
-        if (li === PROLOGUE.length - 1) line.className = 'final';
-        box.appendChild(line);
-      }
-      ci += 2;
-      line.textContent = PROLOGUE[li].slice(0, ci);
-      if (ci % 4 === 0) Audio.ui('type');
-      if (ci >= PROLOGUE[li].length) {
-        li++; ci = 0; line = null;
-        wait = li >= PROLOGUE.length ? 2600 : 900;
-      }
-    }, 28);
-    const key = (e) => { if (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape') finish(); };
-    window.addEventListener('keydown', key);
-    this.ui.querySelector('.prologue').addEventListener('click', finish);
+      if (this.screen === 'prologue') this.show(then, then === 'campaign' ? 0 : arg);
+    });
   }
 
   _screen_briefing({ index, difficulty }) {

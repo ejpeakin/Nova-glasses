@@ -91,8 +91,34 @@ Equipment: frag (cookable), sticky semtex, remote C4, flashbang, smoke (blocks A
 - In the campaign, friendly squadmates follow you in formation and fight alongside you.
 
 **Game modes**
-- **Campaign:** 9 missions in the style of a spy thriller. You're a covert operative: you climb onto rooftops by stairs and ledges, rappel down walls on a rope, take guards down silently, and tag targets by holding your sights on them. Guards who find a body raise the alarm unless you silence them. Every mission has cinematic cutscene clips between objectives. *Black Water* is a solo night infiltration of the harbor: climb the fire stairs onto a warehouse, snipe from the roof with a cached suppressed rifle, rappel down the wall, take the office and steal the manifest. *White Silence* starts on a sniper perch on a rock outcrop: rappel down, slip through the wire and splice the uplink from the radar roof. The other missions mix assaults, rescues and boss fights. *Quiet Hours*, the final mission, is a SWAT-style night raid on a downtown safehouse. You and a squad carrying suppressed weapons move quietly. The squad stacks up on doors and waits for you. You pick the lock, clear the hall, the bedroom and the office room by room, free the hostages and cuff Dr. Hart. If the street wakes up, a 60-second countdown starts on the hostages. All missions have briefings, helicopter fast-rope insertions (press E to rope down) or intro cinematics, location and time cards, radio dialogue with subtitles, objective markers and a compass, checkpoints, stealth alarms, defend waves, boss fights and a final mission against a countdown.
-- **Story:** HALCYON is a ring of US satellites that can drop steel rods from orbit onto any target on Earth. Firing it takes three things: the HALCYON key (a suitcase-sized control unit), the launch codes (known only to the engineer who built it, Dr. Lena Hart) and a dish that can reach the satellites. The private army MERIDIAN, run by Anton Vasko, ambushes the convoy carrying the key and takes Hart with it. Task Force ORION tracks the key through a harbor (1) to a desert outpost and rescues Hart (2). Hart's tip leads to a sale in Vel Harat (3), then to MERIDIAN's satellite dish in the mountains (4) and their secret lab, Facility 6 (5). There, the server logs show that Hart staged her own kidnapping. Chasing her, ORION is shot down (6). They take the key back at the docks, but it's a decoy (7). They stop the launch in the vault under Facility 6 and arrest Vasko (8), then capture Hart in a quiet night raid (9). Every mission's menu card and briefing show *the story so far* and *your job*, each mission opens with a one-line "YOUR JOB" message, and the results screen tells you what comes next.
+- **Campaign:** 12 missions in the style of a spy thriller. You're a covert operative: you climb onto rooftops by stairs and ledges, rappel down walls on a rope, take guards down silently, and tag targets by holding your sights on them. Guards who find a body raise the alarm unless you silence them. Every mission has cinematic cutscene clips between objectives. *Black Water* is a solo night infiltration of the harbor: climb the fire stairs onto a warehouse, snipe from the roof with a cached suppressed rifle, rappel down the wall, take the office and steal the manifest. *White Silence* starts on a sniper perch on a rock outcrop: rappel down, slip through the wire and splice the uplink from the radar roof. The other missions mix assaults, rescues and boss fights. *Quiet Hours*, the final mission, is a SWAT-style night raid on a downtown safehouse. You and a squad carrying suppressed weapons move quietly. The squad stacks up on doors and waits for you. You pick the lock, clear the hall, the bedroom and the office room by room, free the hostages and cuff Dr. Hart. If the street wakes up, a 60-second countdown starts on the hostages. All missions have briefings, helicopter fast-rope insertions (press E to rope down) or intro cinematics, location and time cards, radio dialogue with subtitles, objective markers and a compass, checkpoints, stealth alarms, defend waves, boss fights and a final mission against a countdown.
+- **Story:** HALCYON is a ring of US satellites that can drop steel rods from orbit onto any target on Earth. Firing it takes three things: the HALCYON key (a suitcase-sized control unit), the launch codes (known only to the engineer who built it, Dr. Lena Hart) and a dish that can reach the satellites. The private army MERIDIAN, run by Anton Vasko, ambushes the convoy carrying the key and takes Hart with it. Task Force ORION:
+  1. tags the key at a harbor
+  2. rescues Hart from a desert outpost
+  3. breaks up the sale in Vel Harat
+  4. arrests the buyer, Oskar Brandt, at a midnight meeting (*Night Market*)
+  5. takes MERIDIAN's satellite dish in the mountains
+  6. raids their secret lab, Facility 6, where the server logs show that Hart staged her own kidnapping
+  7. chasing Hart, is shot down
+  8. destroys the missile launcher that did it and steals her convoy's route (*Sandstorm*)
+  9. takes the key at the docks, but it's a decoy
+  10. cuts the mountain power to the launch vault (*Blackout*)
+  11. stops the launch and arrests Vasko
+  12. captures Hart in a quiet night raid
+
+  Every mission's menu card and briefing show *the story so far* and *your job*, each mission opens with a one-line "YOUR JOB" message, and the results screen tells you what comes next.
+- **Story film:** every new campaign (starting Mission 1) opens with a 100-second in-engine film. It's also on every mission card as WATCH THE STORY. Everything in it is generated in code:
+  1. a procedurally textured Earth (day and night sides, city lights, clouds, ocean glint and an atmosphere) with the HALCYON satellite ring passing in front
+  2. a satellite opening its magazine and dropping a rod that burns through re-entry
+  3. the strike on a desert test range: flash, fireball, shockwave and mushroom cloud
+  4. the HALCYON key open in a secure lab
+  5. the night convoy
+  6. the ambush (roadside bomb, muzzle flashes and tracers on the hill, fighters filing down, Hart taken)
+  7. Vasko at his office window with his strike targets and buyers' bids on the screens
+  8. Task Force ORION introduced one by one at dawn before boarding the helicopter
+  9. the title over the constellation
+
+  Narration runs as subtitles and is spoken when Squad voices is on. Hold Space or click SKIP to skip it.
 - **Armory and ranks:** at the start of each campaign mission you pick your primary and sidearm from the weapon rack. On helicopter insertions the rack is in the cabin, and the flight waits until you lock in. On other missions you gear up at the start point. Use A and D (or the mouse wheel) for the primary, W and S for the sidearm, and E to lock and load. Better weapons need a higher rank: the K-45 at Private First Class, the RK-74 and .50 Raptor at Corporal, the HX-30 at Sergeant, the AA-20 at Staff Sergeant, the SR-7 at Sergeant First Class, the M-260 at Master Sergeant and the LR-50 at Second Lieutenant. The mission's issued kit is always on the rack, whatever your rank. Kills and completed missions earn XP (more on harder difficulties).
 - **Hands-on objectives:** objectives are real objects that you physically work on. Hold E and you step up to the object, get down to its height and look at it. Your weapon drops out of view and your hands do the job: typing on a rugged laptop patched into a server (the screen shows live progress), pressing a tracker or C4 charge onto the surface and arming it, cutting a hostage's zip ties with a knife, cuffing a prisoner with a zip tie, splicing wires with cutters (with sparks), picking a door lock, pulling a drive or the HALCYON core out, or hauling a wounded man out of a wreck. Work you've done stays done if you step away.
 - **Team Deathmatch:** up to 16 players (you plus bots) in two teams.
@@ -144,7 +170,7 @@ src/player/Player.js          first-person controller
 src/weapons/                  weapon data, attachments, viewmodels, firing system, grenades
 src/ai/                       soldier AI and the animated humanoid model
 src/modes/                    campaign runner, TDM/FFA/Domination/Survival
-src/campaign/Story.js         the 9-mission script, characters and dialogue
+src/campaign/Story.js         the 12-mission script, characters and dialogue
 src/world/                    collision world + navigation/cover, map builder, maps, lighting/weather, effects, textures
 src/core/                     input, procedural audio engine, storage, utilities
 ```

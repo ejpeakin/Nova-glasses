@@ -31,6 +31,10 @@ export const FACTIONS = {
     fabric: 0x5d6673, pants: 0x2c313a, vest: 0x5d6673, gear: 0x515a66, helmet: 0x5d6673, boots: 0x2a2421,
     gloves: 0xb58a6a, mask: 'none', headgear: ['none'], band: 0x5d6673, civilian: true, // plain clothes: no carrier, pouches or kit
   },
+  suit: {
+    fabric: 0x34373e, pants: 0x26282d, vest: 0x34373e, gear: 0x2b2d33, helmet: 0x34373e, boots: 0x1a1513,
+    gloves: 0xc29a7a, mask: 'none', headgear: ['none'], band: 0x34373e, civilian: true, // dark business suit
+  },
   heavy: {
     fabric: 0x2e2f30, pants: 0x2a2b2c, vest: 0x1c1d1e, gear: 0x232425, helmet: 0x18191a, boots: 0x151515,
     gloves: 0x18181a, mask: 'none', headgear: ['juggernaut'], band: 0xb01e1e, heavy: true,

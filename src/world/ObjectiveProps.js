@@ -237,7 +237,8 @@ function c4Prop(game, o, pos, n) {
     aa.updateMatrixWorld(true);
     const inv = new THREE.Matrix4().copy(aa.matrixWorld).invert();
     const ln = n.clone().transformDirection(inv);
-    const lp = Math.abs(ln.x) > Math.abs(ln.z) ? V(Math.sign(ln.x) * 0.71, 1.0, 0) : V(0, 1.0, Math.sign(ln.z) * 0.61);
+    const f = aa.userData.face ?? { x: 0.71, z: 0.61, y: 1.0 }; // half-sizes of the face the charge goes on
+    const lp = Math.abs(ln.x) > Math.abs(ln.z) ? V(Math.sign(ln.x) * f.x, f.y, 0) : V(0, f.y, Math.sign(ln.z) * f.z);
     S = aa.localToWorld(lp);
     N = (Math.abs(ln.x) > Math.abs(ln.z) ? V(Math.sign(ln.x), 0, 0) : V(0, 0, Math.sign(ln.z))).transformDirection(aa.matrixWorld).setY(0).normalize();
   } else S = V(pos.x, pos.y + 1, pos.z).addScaledVector(n, 0.6);
