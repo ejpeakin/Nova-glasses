@@ -51,6 +51,29 @@ function textures() {
         g.beginPath(); g.moveTo(x, y); g.lineTo(x + (Math.random() - 0.5) * 40, y + (Math.random() - 0.5) * 6); g.stroke();
       }
     }, 9),
+    // Service wear: mid-grey base the colour is multiplied by, with fine handling
+    // scratches, rubbed edges, holster/sling wear patches and grime in the corners.
+    wear: make((g, s) => {
+      noise(g, s, 158, 14);
+      for (let i = 0; i < 18; i++) {
+        const x = Math.random() * s, y = Math.random() * s, r = 6 + Math.random() * 26;
+        const gr = g.createRadialGradient(x, y, 0, x, y, r);
+        gr.addColorStop(0, `rgba(255,255,255,${0.08 + Math.random() * 0.12})`);
+        gr.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill();
+      }
+      for (let i = 0; i < 140; i++) {
+        g.strokeStyle = `rgba(255,255,255,${0.15 + Math.random() * 0.45})`;
+        g.lineWidth = 0.4 + Math.random() * 0.8;
+        const x = Math.random() * s, y = Math.random() * s, a = (Math.random() - 0.5) * 0.6, l = 4 + Math.random() * 26;
+        g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke();
+      }
+      for (let i = 0; i < 260; i++) {
+        const v = Math.random() < 0.5 ? 70 : 225;
+        g.fillStyle = `rgba(${v},${v},${v},${0.25 + Math.random() * 0.35})`;
+        g.fillRect(Math.random() * s, Math.random() * s, 1 + Math.random() * 1.5, 1 + Math.random() * 1.5);
+      }
+    }, 3),
     // Aggressive grip stipple.
     stipple: make((g, s) => {
       g.fillStyle = '#888'; g.fillRect(0, 0, s, s);
@@ -107,14 +130,15 @@ function material(kind, color, extra = {}) {
   const t = textures();
   let m;
   switch (kind) {
+    // Metal finishes carry the wear map (the base colour is lifted to match its mid-grey).
     case 'alu': // anodised aluminium receivers
-      m = new THREE.MeshStandardMaterial({ color, roughness: 0.48, metalness: 0.55, roughnessMap: t.finish, bumpMap: t.finish, bumpScale: 0.6 });
+      m = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(1.6), map: t.wear, roughness: 0.48, metalness: 0.55, roughnessMap: t.finish, bumpMap: t.finish, bumpScale: 0.6 });
       break;
     case 'steel': // barrels, bolts, pins
-      m = new THREE.MeshStandardMaterial({ color, roughness: 0.32, metalness: 0.88, roughnessMap: t.finish });
+      m = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(1.5), map: t.wear, roughness: 0.32, metalness: 0.88, roughnessMap: t.finish });
       break;
     case 'park': // parkerised steel (AK, shotgun)
-      m = new THREE.MeshStandardMaterial({ color, roughness: 0.62, metalness: 0.6, roughnessMap: t.finish, bumpMap: t.finish, bumpScale: 0.8 });
+      m = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(1.6), map: t.wear, roughness: 0.62, metalness: 0.6, roughnessMap: t.finish, bumpMap: t.finish, bumpScale: 0.8 });
       break;
     case 'poly': // polymer furniture
       m = new THREE.MeshStandardMaterial({ color, roughness: 0.78, metalness: 0.04, bumpMap: t.finish, bumpScale: 0.5 });
@@ -235,7 +259,36 @@ function rail(parent, zA, zB, y, m, { x = 0, width = 0.021, axis = 'y' } = {}) {
   pts.push([zB, y + 0.0095], [zB, y]);
   const mesh = prism(parent, pts, width, m, { x, bevel: 0.0007, curve: 1 });
   if (axis === 'side') { mesh.rotation.z = -Math.PI / 2; }
+  else if (zA - zB > 0.04) {
+    // Slot numbers engraved on the tooth tops, counting forward from the rear.
+    const L = zA - zB, n = Math.floor(L / pitch);
+    const nm = railNumbers(n);
+    const geo = new THREE.PlaneGeometry(0.0062, n * pitch);
+    geo.rotateX(-Math.PI / 2);
+    const plate = new THREE.Mesh(geo, nm);
+    plate.position.set(x - width * 0.22, y + 0.0097, zA - (n * pitch) / 2);
+    parent.add(plate);
+  }
   return mesh;
+}
+
+const railNumCache = new Map();
+function railNumbers(n) {
+  if (railNumCache.has(n)) return railNumCache.get(n);
+  const c = document.createElement('canvas');
+  c.width = 32; c.height = n * 24;
+  const g = c.getContext('2d');
+  g.fillStyle = 'rgba(232,232,222,0.92)';
+  g.font = 'bold 11px "Share Tech Mono", monospace';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  // Row i (from the rear, at the canvas bottom) sits on the tooth between slots i and i+1.
+  for (let i = 0; i < n; i++) if ((i + 1) % 2 === 1 || n < 14) g.fillText(String(i + 1), 16, c.height - (i + 0.85) * 24);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  const m = new THREE.MeshStandardMaterial({ map: t, transparent: true, depthWrite: false, roughness: 0.6, metalness: 0.2, polygonOffset: true, polygonOffsetFactor: -2 });
+  railNumCache.set(n, m);
+  return m;
 }
 
 function slots(zFrom, zTo, yLow, yHigh, n) {
@@ -1255,8 +1308,8 @@ function handFrame(f, palm) {
 // side, the hand angled up and forward with the fingers curling over the top and
 // the back of the glove toward the camera. On a vertical grip it wraps the grip:
 // palm toward the grip, fingers round the front, thumb on top.
-const Q_CRADLE = handFrame([0.4, 0.45, -0.8], [1, 0, 0]);
-const Q_VGRIP = handQuat(new THREE.Vector3(0.15, -0.15, -1), new THREE.Vector3(0, 1, 0.1));
+export const Q_CRADLE = handFrame([0.4, 0.45, -0.8], [1, 0, 0]);
+export const Q_VGRIP = handQuat(new THREE.Vector3(0.15, -0.15, -1), new THREE.Vector3(0, 1, 0.1));
 // Free hand (no gun to hold): fist, palm down, knuckles leading along the forearm.
 const Q_FREE = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(
   new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, 1), new THREE.Vector3(-1, 0, 0)));

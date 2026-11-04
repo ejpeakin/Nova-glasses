@@ -671,7 +671,7 @@ export class App {
     this.ui.querySelector('#p-resume').addEventListener('click', () => this.resume());
     this.ui.querySelector('#p-check')?.addEventListener('click', () => { g.mode.respawnAtCheckpoint(); this.resume(); });
     this.ui.querySelector('#p-restart').addEventListener('click', () => this.restart());
-    this.ui.querySelector('#p-nvg').addEventListener('click', () => { g.setNvg(!g.nvg); g.nvgFx.amount = g.nvg ? 1 : 0; this.show('pause'); });
+    this.ui.querySelector('#p-nvg').addEventListener('click', () => { g.setNvg(!g.nvg, true); g.nvgFx.amount = g.nvg ? 1 : 0; this.show('pause'); });
     this.ui.querySelector('#p-settings').addEventListener('click', () => this.show('settings', { back: 'pause' }));
     this.ui.querySelector('#p-quit').addEventListener('click', () => this.quitToMenu());
   }

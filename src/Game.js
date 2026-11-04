@@ -722,6 +722,7 @@ export class Game {
       this.comms.closeMenu();
     }
     if (input.pressed('KeyN') && p.alive && !this.over) this.setNvg(!this.nvg);
+    if (this.weapons.nvgAnim && (!p.alive || this.cinematic)) this.weapons.finishNvg();
     this.nvgFx.update(dt);
     this.hud?.nvg(this.nvg);
     // With the goggles down the light is an IR illuminator: a wide flood only the
@@ -778,11 +779,15 @@ export class Game {
   }
 
   /** Flip the night-vision goggles down (on) or up (off). */
-  setNvg(on) {
-    if (this.nvg === on) return;
+  setNvg(on, instant = false) {
+    if (this.nvg === on || this.weapons?.nvgAnim) return;
     this.nvg = on;
-    this.nvgFx.toggle(on);
-    Audio.nvg(on);
+    const apply = () => { this.nvgFx.toggle(on); Audio.nvg(on); };
+    // By hand: reach up and flip them down over your eyes (or up out of the way;
+    // the picture goes the moment the tubes leave your eyes).
+    const byHand = () => { apply(); if (!on) this.nvgFx.amount = 0; };
+    if (!instant && this.player.alive && !this.cinematic && !this.mode.armory && this.weapons?.startNvg(on, byHand)) return;
+    apply();
   }
 
   render() {

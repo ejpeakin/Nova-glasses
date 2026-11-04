@@ -3,12 +3,12 @@
 // animated first-person viewmodel rendered in its own scene.
 import * as THREE from '../lib/three.js';
 import { WEAPONS, EQUIPMENT, computeStats, resolveAttachments } from './WeaponData.js';
-import { buildWeaponModel, buildArms } from './WeaponModel.js';
+import { buildWeaponModel, buildArms, Q_CRADLE, Q_VGRIP } from './WeaponModel.js';
 import { getSpriteTexture } from '../world/Textures.js';
 import { Audio } from '../core/Audio.js';
 import { Store } from '../core/Storage.js';
 import { clamp, damp, lerp, rand, smoothstep } from '../core/Utils.js';
-import { buildTools, actionHands } from './Actions.js';
+import { buildTools, actionHands, handQuat } from './Actions.js';
 
 const ZERO3 = new THREE.Vector3();
 // Overall recoil feel: how hard each shot pushes the view (RECOIL_VIEW) and how far
@@ -76,6 +76,53 @@ function bump(p, a, b) {
   return Math.sin(((p - a) / (b - a)) * Math.PI);
 }
 
+// Night-vision flip: the goggles hinge on the helmet mount above your brow.
+const NVG_PIVOT = new THREE.Vector3(0, 0.105, -0.02);
+const NVG_DOWN = new THREE.Vector3(0, -0.105, -0.058); // pivot -> housing centre, flipped down
+const NVG_UP = 1.95; // radians the arm swings up to stow
+const NVG_DUR = 1.15;
+const _nq = new THREE.Quaternion(), _nv = new THREE.Vector3(), _nx = new THREE.Vector3(1, 0, 0);
+
+/** Binocular goggles (dual tubes on a bridge with a J-arm to the helmet mount). */
+function buildGoggles() {
+  const hull = new THREE.MeshStandardMaterial({ color: 0x23272a, roughness: 0.55, metalness: 0.25 });
+  const rubber = new THREE.MeshStandardMaterial({ color: 0x0f1011, roughness: 0.95, metalness: 0 });
+  const lens = new THREE.MeshStandardMaterial({ color: 0x0b1614, roughness: 0.05, metalness: 0.8, emissive: 0x0f3a34, emissiveIntensity: 0.4 });
+  const root = new THREE.Group();
+  const arm = new THREE.Group(); // swings about X at the pivot
+  arm.position.copy(NVG_PIVOT);
+  root.add(arm);
+  const body = new THREE.Group();
+  body.position.copy(NVG_DOWN);
+  arm.add(body);
+  const add = (geo, m, x, y, z, rx = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.x = rx; body.add(o); return o; };
+  add(new THREE.BoxGeometry(0.03, 0.028, 0.05), hull, 0, 0.012, 0); // bridge
+  for (const s of [-1, 1]) {
+    add(new THREE.CylinderGeometry(0.0175, 0.0175, 0.07, 20), hull, s * 0.032, 0, -0.004, Math.PI / 2); // tube
+    add(new THREE.CylinderGeometry(0.019, 0.0185, 0.02, 20), hull, s * 0.032, 0, -0.045, Math.PI / 2); // objective focus ring
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; add(new THREE.BoxGeometry(0.003, 0.003, 0.018), rubber, s * 0.032 + Math.cos(a) * 0.0195, Math.sin(a) * 0.0195, -0.045); }
+    add(new THREE.CircleGeometry(0.015, 20), lens, s * 0.032, 0, -0.0551, Math.PI); // objective
+    add(new THREE.CylinderGeometry(0.0195, 0.017, 0.022, 20, 1, true), rubber, s * 0.032, 0, 0.042, Math.PI / 2); // eyecup
+    const ep = add(new THREE.CircleGeometry(0.012, 18), lens, s * 0.032, 0, 0.036);
+    ep.material = new THREE.MeshStandardMaterial({ color: 0x0a1210, roughness: 0.1, metalness: 0.5, emissive: 0x2a9f8c, emissiveIntensity: 0 });
+    body.userData[s < 0 ? 'eyeL' : 'eyeR'] = ep.material;
+  }
+  add(new THREE.BoxGeometry(0.016, 0.012, 0.028), hull, 0, 0.032, -0.012); // IR illuminator
+  add(new THREE.CylinderGeometry(0.004, 0.004, 0.004, 10), lens, 0, 0.032, -0.027, Math.PI / 2);
+  add(new THREE.CylinderGeometry(0.008, 0.008, 0.03, 12), hull, 0.024, 0.026, 0.006, 0); // battery cap side knob
+  // J-arm back up to the mount, and the mount itself on the helmet.
+  const len = NVG_DOWN.length();
+  const strut = new THREE.Mesh(new THREE.BoxGeometry(0.012, len * 0.86, 0.01), hull);
+  strut.position.copy(NVG_DOWN).multiplyScalar(0.5);
+  strut.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), NVG_DOWN.clone().normalize());
+  arm.add(strut);
+  const mount = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.02, 0.026), hull);
+  arm.add(mount);
+  root.visible = false;
+  root.traverse((o) => { o.frustumCulled = false; });
+  return { root, arm, body };
+}
+
 export class WeaponSystem {
   constructor(game, loadout) {
     this.game = game;
@@ -90,6 +137,7 @@ export class WeaponSystem {
     this.viewScene.add(this.rig);
     this.arms = buildArms(game.mode?.sleeveColor ?? 0x4d5340);
     this.viewScene.add(this.arms.left, this.arms.right);
+    this.nvgAnim = null;
 
     const flashMat = new THREE.SpriteMaterial({ map: getSpriteTexture('flash'), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false });
     // Shotgun shell held in the left hand during shell-by-shell reloads.
@@ -388,6 +436,8 @@ export class WeaponSystem {
       this.viewFlashLight.intensity = s.suppressed ? 0.5 : 3;
     }
     this.game.effects.muzzle(muzzleWorld, fwd, 1, !s.suppressed && !s.noFlash);
+    // Barrel heat: a burst leaves smoke curling off the muzzle (more through a can).
+    this.heat = Math.min(3, (this.heat ?? 0) + (s.class === 'shotgun' ? 0.55 : s.class === 'sniper' ? 0.7 : 0.16) * (s.suppressed ? 1.6 : 1));
     if (s.class !== 'shotgun' && s.mode !== 'bolt') {
       this.game.effects.casing(muzzleWorld.clone().addScaledVector(fwd, -0.4).addScaledVector(right, 0.05), right);
       Audio.shellCasing();
@@ -743,6 +793,21 @@ export class WeaponSystem {
       pos.x += 0.05 * e;
       rot.x -= 0.75 * e;
     }
+    // Flipping the goggles: the gun drops and cants away while the support hand is up.
+    const nv = this.nvgAnim;
+    let nvPose = null;
+    if (nv) {
+      nv.t += dt / NVG_DUR;
+      nvPose = this._nvgPose(nv);
+      const e = nvPose.gunDip;
+      pos.y -= 0.05 * e; pos.x += 0.025 * e; pos.z += 0.03 * e;
+      rot.x -= 0.12 * e; rot.z -= 0.22 * e;
+      const gg = this.goggles;
+      gg.arm.rotation.x = nvPose.ang;
+      gg.root.visible = nvPose.show;
+      for (const k of ['eyeL', 'eyeR']) gg.body.userData[k].emissiveIntensity = nv.on ? 0 : 0.6; // tubes still glowing as they come off
+      if (nv.t >= 1) { this.finishNvg(); nvPose = null; }
+    }
     this.rig.position.copy(pos);
     this.rig.rotation.copy(rot);
     w.model.group.position.set(0, 0, 0);
@@ -809,7 +874,16 @@ export class WeaponSystem {
       const gq = this.rig.getWorldQuaternion(new THREE.Quaternion());
       const leftFree = this.cooking || this.state === 'throw' || (sb > 0.5 && !leftOverride);
       this.arms.attach('right', gq, grip, elbowR, 'trigger');
-      this.arms.attach('left', leftFree ? null : gq, lh, elbowL, leftFree || leftOverride ? 'fist' : cradle ? 'cradle' : 'foregrip');
+      if (nvPose && nvPose.reach > 0.02) {
+        // Support hand up on the goggle housing: palm to the tubes, fingers forward.
+        const r = nvPose.reach;
+        const hand = lh.clone().lerp(nvPose.grab, r);
+        hand.y += Math.sin(r * Math.PI) * 0.03; // arc up past the gun rather than through it
+        const el = elbowL.clone().lerp(new THREE.Vector3(-0.38, -0.2, -0.14), r);
+        const q = handQuat(new THREE.Vector3(0.35, 0.25, -1), new THREE.Vector3(0.2, -1, 0.1));
+        const hq = gq.clone().multiply(cradle ? Q_CRADLE : Q_VGRIP).slerp(q, Math.min(1, r * 1.6));
+        this.arms.attach('left', null, hand, el, r > 0.5 ? 'cradle' : 'foregrip', hq);
+      } else this.arms.attach('left', leftFree ? null : gq, lh, elbowL, leftFree || leftOverride ? 'fist' : cradle ? 'cradle' : 'foregrip');
     } else {
       this.arms.place(this.arms.right, elbowR, grip);
       this.arms.place(this.arms.left, elbowL, lh);
@@ -830,6 +904,18 @@ export class WeaponSystem {
     }
     const mw = w.model.muzzle.getWorldPosition(new THREE.Vector3());
     this.muzzleView = mw; // muzzle in view space (for the world-space laser beam)
+    // Smoke wisps off a hot barrel once the shooting stops.
+    if (this.heat > 0) {
+      this.heat = Math.max(0, this.heat - dt * 0.45);
+      const quiet = this.game.time - (player.lastShotTime ?? -9) > 0.12;
+      if (quiet && this.heat > 0.3 && this.rig.visible && Math.random() < dt * 22 * Math.min(1.5, this.heat)) {
+        const cam = this.game.camera;
+        const p = mw.clone().applyMatrix4(cam.matrixWorld);
+        const k = Math.min(1, this.heat);
+        this.game.effects.smoke.emit(p.x, p.y, p.z, rand(-0.04, 0.04), rand(0.18, 0.42), rand(-0.04, 0.04),
+          { life: rand(0.9, 1.6), size: 0.02, sizeEnd: rand(0.1, 0.18), color: [0.78, 0.78, 0.76], alpha: 0.2 * k, drag: 1.4, spin: 0.8 });
+      }
+    }
     this.viewFlashLight.position.copy(mw);
 
     // Viewmodel FOV narrows slightly with ADS so optics look right.
@@ -837,7 +923,56 @@ export class WeaponSystem {
     if (Math.abs(this.viewCam.fov - vf) > 0.01) { this.viewCam.fov = vf; this.viewCam.updateProjectionMatrix(); }
   }
 
-  /** Scoped sway (radians) applied to the camera; Shift holds breath. */
+  /**
+   * Flip the goggles down (on) or up (off) by hand: the gun dips, the support hand
+   * reaches up to the mount and swings the tubes over your eyes (or up out of the
+   * way); `apply` fires at the moment they reach your eyes or leave them.
+   * Returns false when the hands can't do it now (the caller applies it at once).
+   */
+  startNvg(on, apply) {
+    if (this.nvgAnim || !this.arms.real || this.game.action || this.state === 'reload') return false;
+    this.goggles ??= buildGoggles();
+    if (!this.goggles.root.parent) this.viewScene.add(this.goggles.root);
+    this.nvgAnim = { on, t: 0, apply, fired: false };
+    return true;
+  }
+
+  /** Snap any flip in progress to its end (death, cutscenes). */
+  finishNvg() {
+    const a = this.nvgAnim;
+    if (!a) return;
+    if (!a.fired) a.apply();
+    this.nvgAnim = null;
+    if (this.goggles) this.goggles.root.visible = false;
+  }
+
+  /**
+   * Goggle swing angle, hand target and gun dip for the flip at progress p (0..1).
+   * On: reach up (0-.3), pull the tubes down over the eyes (.3-.62), hand back.
+   * Off: reach up to the tubes (0-.25), push them up and away (.25-.62), hand back.
+   */
+  _nvgPose(a) {
+    const p = a.t;
+    const ease = (x) => smoothstep(clamp(x, 0, 1));
+    let ang, reach;
+    if (a.on) {
+      ang = lerp(NVG_UP, 0.1, ease((p - 0.3) / 0.32));
+      reach = p < 0.3 ? ease(p / 0.3) : p < 0.62 ? 1 : 1 - ease((p - 0.62) / 0.33);
+      if (!a.fired && p >= 0.6) { a.fired = true; a.apply(); }
+    } else {
+      ang = lerp(0.1, NVG_UP, ease((p - 0.25) / 0.37));
+      reach = p < 0.25 ? ease(p / 0.25) : p < 0.62 ? 1 : 1 - ease((p - 0.62) / 0.33);
+      if (!a.fired && p >= 0.27) { a.fired = true; a.apply(); }
+    }
+    // Hand on the left side of the housing, wherever the arm has swung to.
+    _nq.setFromAxisAngle(_nx, ang);
+    const grab = _nv.set(-0.058, 0.004, 0.0).add(NVG_DOWN).applyQuaternion(_nq).add(NVG_PIVOT);
+    // Shown only while they are moving and out in front of the eyes (once they are
+    // down the picture is the goggles' own).
+    const show = a.on ? !a.fired : a.fired && ang > 0.18;
+    return { ang, reach, grab: grab.clone(), show, gunDip: Math.min(1, reach * 1.4) };
+  }
+
   scopeOffset(dt, input, player) {
     const sc = this.scopeInfo();
     if (!sc.active || sc.kind === 'acog') {
