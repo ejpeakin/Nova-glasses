@@ -549,7 +549,8 @@ export class WeaponSystem {
         const cam = this.game.camera;
         const dir = cam.getWorldDirection(new THREE.Vector3());
         const origin = cam.getWorldPosition(new THREE.Vector3()).addScaledVector(dir, 0.4);
-        const vel = dir.multiplyScalar(17).add(new THREE.Vector3(0, 3, 0)).add(player.vel.clone().multiplyScalar(0.5));
+        // Throw speed 18.25 m/s: about 27 m at the best angle (was 17 m/s, about 24 m).
+        const vel = dir.multiplyScalar(18.25).add(new THREE.Vector3(0, 3, 0)).add(player.vel.clone().multiplyScalar(0.5));
         const g = this.game.grenades.throw(c.id, origin, vel, player, def.cook ? c.t : 0);
         if (def.remote) this.c4 = g;
         this.cooking = null;
