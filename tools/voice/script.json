@@ -1,0 +1,1995 @@
+{
+ "version": 1,
+ "break": "1.5s",
+ "model": "Eleven Multilingual v2",
+ "totalChars": 24221,
+ "files": 21,
+ "lines": 285,
+ "speakers": [
+  {
+   "speaker": "NARRATOR",
+   "role": "Opening film narrator",
+   "voice": "Deep, measured American man in his 50s. Documentary narrator: slow, grave, no drama.",
+   "lines": 23,
+   "parts": [
+    {
+     "file": "narrator-1.mp3",
+     "lines": [
+      {
+       "text": "HALCYON. A ring of American satellites, three hundred kilometres up.",
+       "original": "HALCYON. A ring of American satellites, three hundred kilometres up.",
+       "where": "film:orbit",
+       "whisper": false
+      },
+      {
+       "text": "Each one carries steel rods that can be dropped onto any target on Earth.",
+       "original": "Each one carries steel rods that can be dropped onto any target on Earth.",
+       "where": "film:orbit",
+       "whisper": false
+      },
+      {
+       "text": "No warning. No defence.",
+       "original": "No warning. No defence.",
+       "where": "film:release",
+       "whisper": false
+      },
+      {
+       "text": "One strike hits as hard as a small nuclear weapon.",
+       "original": "One strike hits as hard as a small nuclear weapon.",
+       "where": "film:impact",
+       "whisper": false
+      },
+      {
+       "text": "Anywhere. In minutes.",
+       "original": "Anywhere. In minutes.",
+       "where": "film:impact",
+       "whisper": false
+      },
+      {
+       "text": "Firing it takes the HALCYON key, a control unit the size of a suitcase,",
+       "original": "Firing it takes the HALCYON key, a control unit the size of a suitcase,",
+       "where": "film:key",
+       "whisper": false
+      },
+      {
+       "text": "the launch codes, and a dish big enough to reach the satellites.",
+       "original": "the launch codes, and a dish big enough to reach the satellites.",
+       "where": "film:key",
+       "whisper": false
+      },
+      {
+       "text": "Eleven days ago, the key left the Halden research facility under armed escort.",
+       "original": "Eleven days ago, the key left the Halden research facility under armed escort.",
+       "where": "film:convoy",
+       "whisper": false
+      },
+      {
+       "text": "The convoy was ambushed. Forty-one soldiers and engineers died in under six minutes.",
+       "original": "The convoy was ambushed. Forty-one soldiers and engineers died in under six minutes.",
+       "where": "film:ambush",
+       "whisper": false
+      },
+      {
+       "text": "The key vanished. So did the engineer who built it: Dr. Lena Hart.",
+       "original": "The key vanished. So did the engineer who built it: Dr. Lena Hart.",
+       "where": "film:ambush",
+       "whisper": false
+      },
+      {
+       "text": "By the time a drone reached the road, only the fires were moving.",
+       "original": "By the time a drone reached the road, only the fires were moving.",
+       "where": "film:aftermath",
+       "whisper": false
+      },
+      {
+       "text": "The key's case lay open in the dirt. Empty.",
+       "original": "The key's case lay open in the dirt. Empty.",
+       "where": "film:aftermath",
+       "whisper": false
+      },
+      {
+       "text": "Eleven days later, a drone over the harbour at Port Kaval watched MERIDIAN load crates onto a freighter.",
+       "original": "Eleven days later, a drone over the harbour at Port Kaval watched MERIDIAN load crates onto a freighter.",
+       "where": "film:drone",
+       "whisper": false
+      },
+      {
+       "text": "One of them, the size of a suitcase, never left a man's hands.",
+       "original": "One of them, the size of a suitcase, never left a man's hands.",
+       "where": "film:drone",
+       "whisper": false
+      },
+      {
+       "text": "At a forward base on the Black Sea coast, the footage lands on one table.",
+       "original": "At a forward base on the Black Sea coast, the footage lands on one table.",
+       "where": "film:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Find which container the key is in, before that ship sails.",
+       "original": "Find which container the key is in, before that ship sails.",
+       "where": "film:briefing",
+       "whisper": false
+      },
+      {
+       "text": "That night, ORION flies in low over the water, no lights.",
+       "original": "That night, ORION flies in low over the water, no lights.",
+       "where": "film:flight",
+       "whisper": false
+      },
+      {
+       "text": "Wraith goes into the harbour alone.",
+       "original": "Wraith goes into the harbour alone.",
+       "where": "film:flight",
+       "whisper": false
+      },
+      {
+       "text": "The attackers were MERIDIAN, a private army of former special forces.",
+       "original": "The attackers were MERIDIAN, a private army of former special forces.",
+       "where": "film:vasko",
+       "whisper": false
+      },
+      {
+       "text": "Their founder, Anton Vasko, means to sell HALCYON's power to the highest bidder.",
+       "original": "Their founder, Anton Vasko, means to sell HALCYON's power to the highest bidder.",
+       "where": "film:vasko",
+       "whisper": false
+      },
+      {
+       "text": "Task Force ORION: four US Army Special Forces operators who officially do not exist.",
+       "original": "Task Force ORION: four US Army Special Forces operators who officially do not exist.",
+       "where": "film:orion",
+       "whisper": false
+      },
+      {
+       "text": "Their orders: find the key. Stop MERIDIAN. Bring Vasko in.",
+       "original": "Their orders: find the key. Stop MERIDIAN. Bring Vasko in.",
+       "where": "film:orion",
+       "whisper": false
+      },
+      {
+       "text": "You are Sergeant Elias \"Wraith\" Cole.",
+       "original": "You are Sergeant Elias \"Wraith\" Cole.",
+       "where": "film:title",
+       "whisper": false
+      }
+     ],
+     "script": "HALCYON. A ring of American satellites, three hundred kilometres up. <break time=\"1.5s\" />\nEach one carries steel rods that can be dropped onto any target on Earth. <break time=\"1.5s\" />\nNo warning. No defence. <break time=\"1.5s\" />\nOne strike hits as hard as a small nuclear weapon. <break time=\"1.5s\" />\nAnywhere. In minutes. <break time=\"1.5s\" />\nFiring it takes the HALCYON key, a control unit the size of a suitcase, <break time=\"1.5s\" />\nthe launch codes, and a dish big enough to reach the satellites. <break time=\"1.5s\" />\nEleven days ago, the key left the Halden research facility under armed escort. <break time=\"1.5s\" />\nThe convoy was ambushed. Forty-one soldiers and engineers died in under six minutes. <break time=\"1.5s\" />\nThe key vanished. So did the engineer who built it: Dr. Lena Hart. <break time=\"1.5s\" />\nBy the time a drone reached the road, only the fires were moving. <break time=\"1.5s\" />\nThe key's case lay open in the dirt. Empty. <break time=\"1.5s\" />\nEleven days later, a drone over the harbour at Port Kaval watched MERIDIAN load crates onto a freighter. <break time=\"1.5s\" />\nOne of them, the size of a suitcase, never left a man's hands. <break time=\"1.5s\" />\nAt a forward base on the Black Sea coast, the footage lands on one table. <break time=\"1.5s\" />\nFind which container the key is in, before that ship sails. <break time=\"1.5s\" />\nThat night, ORION flies in low over the water, no lights. <break time=\"1.5s\" />\nWraith goes into the harbour alone. <break time=\"1.5s\" />\nThe attackers were MERIDIAN, a private army of former special forces. <break time=\"1.5s\" />\nTheir founder, Anton Vasko, means to sell HALCYON's power to the highest bidder. <break time=\"1.5s\" />\nTask Force ORION: four US Army Special Forces operators who officially do not exist. <break time=\"1.5s\" />\nTheir orders: find the key. Stop MERIDIAN. Bring Vasko in. <break time=\"1.5s\" />\nYou are Sergeant Elias \"Wraith\" Cole.",
+     "chars": 1930
+    }
+   ]
+  },
+  {
+   "speaker": "WATCHTOWER",
+   "role": "Mission control (radio)",
+   "voice": "Calm, clipped woman in her 40s, neutral American. Steady over the radio even when things go wrong.",
+   "lines": 69,
+   "parts": [
+    {
+     "file": "watchtower-1.mp3",
+     "lines": [
+      {
+       "text": "Wraith, Watchtower. MERIDIAN is moving something heavy through Port Kaval tonight. We think it is the HALCYON key.",
+       "original": "Wraith, Watchtower. MERIDIAN is moving something heavy through Port Kaval tonight. We think it is the HALCYON key.",
+       "where": "m1:briefing",
+       "whisper": false
+      },
+      {
+       "text": "The harbor office has the shipping records. They will tell us which container it is in. Then you tag that container so we can follow it.",
+       "original": "The harbor office has the shipping records. They will tell us which container it is in. Then you tag that container so we can follow it.",
+       "where": "m1:briefing",
+       "whisper": false
+      },
+      {
+       "text": "You go in alone. No squad, no air, no flag. If you are caught, ORION was never here.",
+       "original": "You go in alone. No squad, no air, no flag. If you are caught, ORION was never here.",
+       "where": "m1:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Harbor master's office. The manifest is on the ground-floor terminal. Two guards inside.",
+       "original": "Harbor master's office. The manifest is on the ground-floor terminal. Two guards inside.",
+       "where": "m1:obj1:clip",
+       "whisper": false
+      },
+      {
+       "text": "Manifest received. Container K-77, berth two... Wraith, you tripped a silent alarm.",
+       "original": "Manifest received. Container K-77, berth two... Wraith, you tripped a silent alarm.",
+       "where": "m1:obj4:done",
+       "whisper": false
+      },
+      {
+       "text": "Response team at the east gate. Five, maybe more, coming in fast.",
+       "original": "Response team at the east gate. Five, maybe more, coming in fast.",
+       "where": "m1:obj5:clip",
+       "whisper": false
+      },
+      {
+       "text": "Tracker is live. K-77 is moving. Good work, Wraith.",
+       "original": "Tracker is live. K-77 is moving. Good work, Wraith.",
+       "where": "m1:obj8:clip",
+       "whisper": false
+      },
+      {
+       "text": "K-77 was flown inland to a MERIDIAN outpost in the Al-Rashid desert. Satellite photos show Dr. Lena Hart there, alive, under guard.",
+       "original": "K-77 was flown inland to a MERIDIAN outpost in the Al-Rashid desert. Satellite photos show Dr. Lena Hart there, alive, under guard.",
+       "where": "m1:outro",
+       "whisper": false
+      },
+      {
+       "text": "Dr. Lena Hart built HALCYON. She is the only person alive who knows its launch codes, and MERIDIAN is holding her at this outpost.",
+       "original": "Dr. Lena Hart built HALCYON. She is the only person alive who knows its launch codes, and MERIDIAN is holding her at this outpost.",
+       "where": "m2:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Without her the stolen key is a box of wires. With her, they can fire it. Get her out.",
+       "original": "Without her the stolen key is a box of wires. With her, they can fire it. Get her out.",
+       "where": "m2:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Technicals inbound from the north road. Your bird is four minutes out. Dig in.",
+       "original": "Technicals inbound from the north road. Your bird is four minutes out. Dig in.",
+       "where": "m2:obj4:clip",
+       "whisper": false
+      },
+      {
+       "text": "Helo is ninety seconds out. Hostiles converging from the north and east.",
+       "original": "Helo is ninety seconds out. Hostiles converging from the north and east.",
+       "where": "m2:obj5",
+       "whisper": false
+      },
+      {
+       "text": "MERIDIAN has locked down Vel Harat for the sale. Two anti-aircraft guns cover the city, so our helicopters cannot get close.",
+       "original": "MERIDIAN has locked down Vel Harat for the sale. Two anti-aircraft guns cover the city, so our helicopters cannot get close.",
+       "where": "m3:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Plant charges on both guns. Then the gunships can come in, and you hold the central plaza for pickup.",
+       "original": "Plant charges on both guns. Then the gunships can come in, and you hold the central plaza for pickup.",
+       "where": "m3:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Both batteries down. Gunships inbound in sixty seconds. Hold that plaza.",
+       "original": "Both batteries down. Gunships inbound in sixty seconds. Hold that plaza.",
+       "where": "m3:obj4:done",
+       "whisper": false
+      },
+      {
+       "text": "We have his phone. He meets MERIDIAN again tonight, in the city plaza. Bring him in and he will tell us where they mean to fire it from.",
+       "original": "We have his phone. He meets MERIDIAN again tonight, in the city plaza. Bring him in and he will tell us where they mean to fire it from.",
+       "where": "m3:outro",
+       "whisper": false
+      },
+      {
+       "text": "Oskar Brandt is an arms dealer. He is the buyer Vasko was selling the HALCYON strike to, and he knows where they plan to fire it from.",
+       "original": "Oskar Brandt is an arms dealer. He is the buyer Vasko was selling the HALCYON strike to, and he knows where they plan to fire it from.",
+       "where": "m3b:briefing",
+       "whisper": false
+      },
+      {
+       "text": "He meets a MERIDIAN contact in the city plaza at midnight, with three bodyguards. We want him alive.",
+       "original": "He meets a MERIDIAN contact in the city plaza at midnight, with three bodyguards. We want him alive.",
+       "where": "m3b:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Got every word. Van is coming to you, and MERIDIAN heard the shooting. Hold the plaza.",
+       "original": "Got every word. Van is coming to you, and MERIDIAN heard the shooting. Hold the plaza.",
+       "where": "m3b:obj4:done",
+       "whisper": false
+      }
+     ],
+     "script": "Wraith, Watchtower. MERIDIAN is moving something heavy through Port Kaval tonight. We think it is the HALCYON key. <break time=\"1.5s\" />\nThe harbor office has the shipping records. They will tell us which container it is in. Then you tag that container so we can follow it. <break time=\"1.5s\" />\nYou go in alone. No squad, no air, no flag. If you are caught, ORION was never here. <break time=\"1.5s\" />\nHarbor master's office. The manifest is on the ground-floor terminal. Two guards inside. <break time=\"1.5s\" />\nManifest received. Container K-77, berth two... Wraith, you tripped a silent alarm. <break time=\"1.5s\" />\nResponse team at the east gate. Five, maybe more, coming in fast. <break time=\"1.5s\" />\nTracker is live. K-77 is moving. Good work, Wraith. <break time=\"1.5s\" />\nK-77 was flown inland to a MERIDIAN outpost in the Al-Rashid desert. Satellite photos show Dr. Lena Hart there, alive, under guard. <break time=\"1.5s\" />\nDr. Lena Hart built HALCYON. She is the only person alive who knows its launch codes, and MERIDIAN is holding her at this outpost. <break time=\"1.5s\" />\nWithout her the stolen key is a box of wires. With her, they can fire it. Get her out. <break time=\"1.5s\" />\nTechnicals inbound from the north road. Your bird is four minutes out. Dig in. <break time=\"1.5s\" />\nHelo is ninety seconds out. Hostiles converging from the north and east. <break time=\"1.5s\" />\nMERIDIAN has locked down Vel Harat for the sale. Two anti-aircraft guns cover the city, so our helicopters cannot get close. <break time=\"1.5s\" />\nPlant charges on both guns. Then the gunships can come in, and you hold the central plaza for pickup. <break time=\"1.5s\" />\nBoth batteries down. Gunships inbound in sixty seconds. Hold that plaza. <break time=\"1.5s\" />\nWe have his phone. He meets MERIDIAN again tonight, in the city plaza. Bring him in and he will tell us where they mean to fire it from. <break time=\"1.5s\" />\nOskar Brandt is an arms dealer. He is the buyer Vasko was selling the HALCYON strike to, and he knows where they plan to fire it from. <break time=\"1.5s\" />\nHe meets a MERIDIAN contact in the city plaza at midnight, with three bodyguards. We want him alive. <break time=\"1.5s\" />\nGot every word. Van is coming to you, and MERIDIAN heard the shooting. Hold the plaza.",
+     "chars": 2285
+    },
+    {
+     "file": "watchtower-2.mp3",
+     "lines": [
+      {
+       "text": "Brandt confirmed it: MERIDIAN will send the launch order through the old radar dish at Radar Station 9, in the Korvask mountains.",
+       "original": "Brandt confirmed it: MERIDIAN will send the launch order through the old radar dish at Radar Station 9, in the Korvask mountains.",
+       "where": "m3b:outro",
+       "whisper": false
+      },
+      {
+       "text": "Every forty minutes, the dish at Radar Station 9 calls up to HALCYON's satellites. MERIDIAN is testing it for the launch.",
+       "original": "Every forty minutes, the dish at Radar Station 9 calls up to HALCYON's satellites. MERIDIAN is testing it for the launch.",
+       "where": "m4:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Splice into it and the dish is ours. And whoever is on the other end of that line, we will see them.",
+       "original": "Splice into it and the dish is ours. And whoever is on the other end of that line, we will see them.",
+       "where": "m4:briefing",
+       "whisper": false
+      },
+      {
+       "text": "MERIDIAN enforcer \"Rook\" is on site. Heavy armor. Do not engage him on the ground.",
+       "original": "MERIDIAN enforcer \"Rook\" is on site. Heavy armor. Do not engage him on the ground.",
+       "where": "m4:briefing",
+       "whisper": false
+      },
+      {
+       "text": "The uplink antenna is on the radar building roof. Splice it from up there.",
+       "original": "The uplink antenna is on the radar building roof. Splice it from up there.",
+       "where": "m4:obj1:clip",
+       "whisper": false
+      },
+      {
+       "text": "We have the dish. Tracing the line now... Wait. Heavy signature leaving the hangar. That is Rook.",
+       "original": "We have the dish. Tracing the line now... Wait. Heavy signature leaving the hangar. That is Rook.",
+       "where": "m4:obj4:done",
+       "whisper": false
+      },
+      {
+       "text": "The line from the dish runs to Facility 6: a secret lab sixty metres underground. That is where MERIDIAN's engineers are working on the key.",
+       "original": "The line from the dish runs to Facility 6: a secret lab sixty metres underground. That is where MERIDIAN's engineers are working on the key.",
+       "where": "m4:outro",
+       "whisper": false
+      },
+      {
+       "text": "Rook's keycard opens Facility 6. MERIDIAN has a copy of the launch codes down there, on a drive in the lab.",
+       "original": "Rook's keycard opens Facility 6. MERIDIAN has a copy of the launch codes down there, on a drive in the lab.",
+       "where": "m5:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Logs coming through... The person who handed MERIDIAN the key was... Dr. Lena Hart. Her kidnapping was staged.",
+       "original": "Logs coming through... The person who handed MERIDIAN the key was... Dr. Lena Hart. Her kidnapping was staged.",
+       "where": "m5:obj1:done",
+       "whisper": false
+      },
+      {
+       "text": "Lift is sixty seconds out. They know you're there.",
+       "original": "Lift is sixty seconds out. They know you're there.",
+       "where": "m5:obj4",
+       "whisper": false
+      },
+      {
+       "text": "Hart is gone. A MERIDIAN team broke her out of our safe house an hour ago. Her convoy is racing south across the Al-Rashid desert.",
+       "original": "Hart is gone. A MERIDIAN team broke her out of our safe house an hour ago. Her convoy is racing south across the Al-Rashid desert.",
+       "where": "m5:outro",
+       "whisper": false
+      },
+      {
+       "text": "Raven Two-One is down. A missile from Hart's convoy. I say again, Raven Two-One is down. ORION, report.",
+       "original": "Raven Two-One is down. A missile from Hart's convoy. I say again, Raven Two-One is down. ORION, report.",
+       "where": "m6:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Every MERIDIAN unit in the desert saw that fireball. The rescue bird can only reach you at dawn. Hold on until then.",
+       "original": "Every MERIDIAN unit in the desert saw that fireball. The rescue bird can only reach you at dawn. Hold on until then.",
+       "where": "m6:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Multiple technicals inbound. Dig in, ORION. Use your flashlight sparingly — they'll see it.",
+       "original": "Multiple technicals inbound. Dig in, ORION. Use your flashlight sparingly — they'll see it.",
+       "where": "m6:obj3",
+       "whisper": false
+      },
+      {
+       "text": "Sunrise. Rescue bird on station south-east. Go!",
+       "original": "Sunrise. Rescue bird on station south-east. Go!",
+       "where": "m6:obj4",
+       "whisper": false
+      },
+      {
+       "text": "Hart got away. Her convoy stopped for the night at a village east of the outpost, and the launcher that hit Raven Two-One is still there.",
+       "original": "Hart got away. Her convoy stopped for the night at a village east of the outpost, and the launcher that hit Raven Two-One is still there.",
+       "where": "m6:outro",
+       "whisper": false
+      },
+      {
+       "text": "Hart's convoy stopped for the night at a village east of the outpost. They left the missile launcher that hit Raven Two-One there.",
+       "original": "Hart's convoy stopped for the night at a village east of the outpost. They left the missile launcher that hit Raven Two-One there.",
+       "where": "m6b:briefing",
+       "whisper": false
+      },
+      {
+       "text": "While that launcher is up, nothing of ours can fly in this desert. And their command laptop will have the convoy's route.",
+       "original": "While that launcher is up, nothing of ours can fly in this desert. And their command laptop will have the convoy's route.",
+       "where": "m6b:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Route coming through. Hart's convoy is heading for Port Kaval. She is putting the key on a ship.",
+       "original": "Route coming through. Hart's convoy is heading for Port Kaval. She is putting the key on a ship.",
+       "where": "m6b:obj5:done",
+       "whisper": false
+      }
+     ],
+     "script": "Brandt confirmed it: MERIDIAN will send the launch order through the old radar dish at Radar Station 9, in the Korvask mountains. <break time=\"1.5s\" />\nEvery forty minutes, the dish at Radar Station 9 calls up to HALCYON's satellites. MERIDIAN is testing it for the launch. <break time=\"1.5s\" />\nSplice into it and the dish is ours. And whoever is on the other end of that line, we will see them. <break time=\"1.5s\" />\nMERIDIAN enforcer \"Rook\" is on site. Heavy armor. Do not engage him on the ground. <break time=\"1.5s\" />\nThe uplink antenna is on the radar building roof. Splice it from up there. <break time=\"1.5s\" />\nWe have the dish. Tracing the line now... Wait. Heavy signature leaving the hangar. That is Rook. <break time=\"1.5s\" />\nThe line from the dish runs to Facility 6: a secret lab sixty metres underground. That is where MERIDIAN's engineers are working on the key. <break time=\"1.5s\" />\nRook's keycard opens Facility 6. MERIDIAN has a copy of the launch codes down there, on a drive in the lab. <break time=\"1.5s\" />\nLogs coming through... The person who handed MERIDIAN the key was... Dr. Lena Hart. Her kidnapping was staged. <break time=\"1.5s\" />\nLift is sixty seconds out. They know you're there. <break time=\"1.5s\" />\nHart is gone. A MERIDIAN team broke her out of our safe house an hour ago. Her convoy is racing south across the Al-Rashid desert. <break time=\"1.5s\" />\nRaven Two-One is down. A missile from Hart's convoy. I say again, Raven Two-One is down. ORION, report. <break time=\"1.5s\" />\nEvery MERIDIAN unit in the desert saw that fireball. The rescue bird can only reach you at dawn. Hold on until then. <break time=\"1.5s\" />\nMultiple technicals inbound. Dig in, ORION. Use your flashlight sparingly — they'll see it. <break time=\"1.5s\" />\nSunrise. Rescue bird on station south-east. Go! <break time=\"1.5s\" />\nHart got away. Her convoy stopped for the night at a village east of the outpost, and the launcher that hit Raven Two-One is still there. <break time=\"1.5s\" />\nHart's convoy stopped for the night at a village east of the outpost. They left the missile launcher that hit Raven Two-One there. <break time=\"1.5s\" />\nWhile that launcher is up, nothing of ours can fly in this desert. And their command laptop will have the convoy's route. <break time=\"1.5s\" />\nRoute coming through. Hart's convoy is heading for Port Kaval. She is putting the key on a ship.",
+     "chars": 2395
+    },
+    {
+     "file": "watchtower-3.mp3",
+     "lines": [
+      {
+       "text": "Helicopter is on the ground south of the village. Go!",
+       "original": "Helicopter is on the ground south of the village. Go!",
+       "where": "m6b:obj7",
+       "whisper": false
+      },
+      {
+       "text": "The route ends at berth two, Port Kaval. The cargo ship Meridian Star is waiting there, and MERIDIAN's field commander, Kessler, is guarding it.",
+       "original": "The route ends at berth two, Port Kaval. The cargo ship Meridian Star is waiting there, and MERIDIAN's field commander, Kessler, is guarding it.",
+       "where": "m6b:outro",
+       "whisper": false
+      },
+      {
+       "text": "The convoy's route ends at this office block in Port Kaval's old town. MERIDIAN's logistics cell runs the port from in there.",
+       "original": "The convoy's route ends at this office block in Port Kaval's old town. MERIDIAN's logistics cell runs the port from in there.",
+       "where": "m6c:briefing",
+       "whisper": false
+      },
+      {
+       "text": "They hold two dock workers on the top floor, and they will burn their files the moment they hear us. We need those files.",
+       "original": "They hold two dock workers on the top floor, and they will burn their files the moment they hear us. We need those files.",
+       "where": "m6c:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Got them. MERIDIAN is loading the key onto a freighter called the Meridian Star. More of them are coming your way.",
+       "original": "Got them. MERIDIAN is loading the key onto a freighter called the Meridian Star. More of them are coming your way.",
+       "where": "m6c:obj8:done",
+       "whisper": false
+      },
+      {
+       "text": "The files name the ship: the Meridian Star, loading at the Port Kaval docks tomorrow night, guarded by their commander, Kessler.",
+       "original": "The files name the ship: the Meridian Star, loading at the Port Kaval docks tomorrow night, guarded by their commander, Kessler.",
+       "where": "m6c:outro",
+       "whisper": false
+      },
+      {
+       "text": "The cargo ship Meridian Star sails in forty minutes, and the HALCYON key is in a crate on the quay beside it.",
+       "original": "The cargo ship Meridian Star sails in forty minutes, and the HALCYON key is in a crate on the quay beside it.",
+       "where": "m7:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Kessler Grau, \"The Butcher\", commands the dock. Kill him, take the key, end this.",
+       "original": "Kessler Grau, \"The Butcher\", commands the dock. Kill him, take the key, end this.",
+       "where": "m7:briefing",
+       "whisper": false
+      },
+      {
+       "text": "That's Kessler on the quay. Body armor, auto-shotgun. He doesn't retreat.",
+       "original": "That's Kessler on the quay. Body armor, auto-shotgun. He doesn't retreat.",
+       "where": "m7:obj3:clip",
+       "whisper": false
+      },
+      {
+       "text": "Wraith... that is a fake. Lead weights, no electronics. The ship was bait to pull us away.",
+       "original": "Wraith... that is a fake. Lead weights, no electronics. The ship was bait to pull us away.",
+       "where": "m7:obj5:done",
+       "whisper": false
+      },
+      {
+       "text": "Under Facility 6. A sealed launch vault, three floors below the labs you raided, with its own dish. Hart and Vasko are there. They fire in ten minutes.",
+       "original": "Under Facility 6. A sealed launch vault, three floors below the labs you raided, with its own dish. Hart and Vasko are there. They fire in ten minutes.",
+       "where": "m7:obj5:done",
+       "whisper": false
+      },
+      {
+       "text": "The key on the dock was a fake, and the ship was bait to pull us away. The real key never left Facility 6: it is in a sealed launch vault three floors below the labs you raided, with Hart and Vasko.",
+       "original": "The key on the dock was a fake, and the ship was bait to pull us away. The real key never left Facility 6: it is in a sealed launch vault three floors below the labs you raided, with Hart and Vasko.",
+       "where": "m7:outro",
+       "whisper": false
+      },
+      {
+       "text": "The vault is behind blast doors, and their power comes from a station in the Korvask mountains. Cut it and the doors fail open.",
+       "original": "The vault is behind blast doors, and their power comes from a station in the Korvask mountains. Cut it and the doors fail open.",
+       "where": "m7:outro",
+       "whisper": false
+      },
+      {
+       "text": "The vault under Facility 6 is sealed behind blast doors. The doors run on power from this station, down in the Korvask valley.",
+       "original": "The vault under Facility 6 is sealed behind blast doors. The doors run on power from this station, down in the Korvask valley.",
+       "where": "m7b:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Two transformers outside, a backup generator inside. Kill all three and the doors fail open. Reyes is waiting at the shaft with everyone we have.",
+       "original": "Two transformers outside, a backup generator inside. Kill all three and the doors fail open. Reyes is waiting at the shaft with everyone we have.",
+       "where": "m7b:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Both transformers are down. Backup generator just kicked in, and every guard on that mountain saw the flash. Kill the generator.",
+       "original": "Both transformers are down. Backup generator just kicked in, and every guard on that mountain saw the flash. Kill the generator.",
+       "where": "m7b:obj5:done",
+       "whisper": false
+      },
+      {
+       "text": "Facility 6 just went dark. The vault doors are failing open.",
+       "original": "Facility 6 just went dark. The vault doors are failing open.",
+       "where": "m7b:obj6:done",
+       "whisper": false
+      }
+     ],
+     "script": "Helicopter is on the ground south of the village. Go! <break time=\"1.5s\" />\nThe route ends at berth two, Port Kaval. The cargo ship Meridian Star is waiting there, and MERIDIAN's field commander, Kessler, is guarding it. <break time=\"1.5s\" />\nThe convoy's route ends at this office block in Port Kaval's old town. MERIDIAN's logistics cell runs the port from in there. <break time=\"1.5s\" />\nThey hold two dock workers on the top floor, and they will burn their files the moment they hear us. We need those files. <break time=\"1.5s\" />\nGot them. MERIDIAN is loading the key onto a freighter called the Meridian Star. More of them are coming your way. <break time=\"1.5s\" />\nThe files name the ship: the Meridian Star, loading at the Port Kaval docks tomorrow night, guarded by their commander, Kessler. <break time=\"1.5s\" />\nThe cargo ship Meridian Star sails in forty minutes, and the HALCYON key is in a crate on the quay beside it. <break time=\"1.5s\" />\nKessler Grau, \"The Butcher\", commands the dock. Kill him, take the key, end this. <break time=\"1.5s\" />\nThat's Kessler on the quay. Body armor, auto-shotgun. He doesn't retreat. <break time=\"1.5s\" />\nWraith... that is a fake. Lead weights, no electronics. The ship was bait to pull us away. <break time=\"1.5s\" />\nUnder Facility 6. A sealed launch vault, three floors below the labs you raided, with its own dish. Hart and Vasko are there. They fire in ten minutes. <break time=\"1.5s\" />\nThe key on the dock was a fake, and the ship was bait to pull us away. The real key never left Facility 6: it is in a sealed launch vault three floors below the labs you raided, with Hart and Vasko. <break time=\"1.5s\" />\nThe vault is behind blast doors, and their power comes from a station in the Korvask mountains. Cut it and the doors fail open. <break time=\"1.5s\" />\nThe vault under Facility 6 is sealed behind blast doors. The doors run on power from this station, down in the Korvask valley. <break time=\"1.5s\" />\nTwo transformers outside, a backup generator inside. Kill all three and the doors fail open. Reyes is waiting at the shaft with everyone we have. <break time=\"1.5s\" />\nBoth transformers are down. Backup generator just kicked in, and every guard on that mountain saw the flash. Kill the generator. <break time=\"1.5s\" />\nFacility 6 just went dark. The vault doors are failing open.",
+     "chars": 2341
+    },
+    {
+     "file": "watchtower-4.mp3",
+     "lines": [
+      {
+       "text": "The doors are open. Hart's launch window opens in under an hour, and Vasko is down there with her.",
+       "original": "The doors are open. Hart's launch window opens in under an hour, and Vasko is down there with her.",
+       "where": "m7b:outro",
+       "whisper": false
+      },
+      {
+       "text": "HALCYON is warming up. The launch order goes up through three terminals: in the servers, the lab and the control room. Shut down all three and the satellites never hear it.",
+       "original": "HALCYON is warming up. The launch order goes up through three terminals: in the servers, the lab and the control room. Shut down all three and the satellites never hear it.",
+       "where": "m8:briefing",
+       "whisper": false
+      },
+      {
+       "text": "All three terminals are down. The satellites cannot hear them. Wait... massive heat signature in the containment wing.",
+       "original": "All three terminals are down. The satellites cannot hear them. Wait... massive heat signature in the containment wing.",
+       "where": "m8:obj4:done",
+       "whisper": false
+      },
+      {
+       "text": "Massive heat signature in the vault. Vasko kept his guardian on a leash. It just came off.",
+       "original": "Massive heat signature in the vault. Vasko kept his guardian on a leash. It just came off.",
+       "where": "m8:obj5:clip",
+       "whisper": false
+      },
+      {
+       "text": "The HALCYON satellites were steered safely into the Pacific at 0400. The key is in our hands. Anton Vasko is in custody.",
+       "original": "The HALCYON satellites were steered safely into the Pacific at 0400. The key is in our hands. Anton Vasko is in custody.",
+       "where": "m8:outro",
+       "whisper": false
+      },
+      {
+       "text": "But Dr. Lena Hart got out through a service tunnel, with a laptop holding the last copy of the launch codes. Three weeks later, we found her.",
+       "original": "But Dr. Lena Hart got out through a service tunnel, with a laptop holding the last copy of the launch codes. Three weeks later, we found her.",
+       "where": "m8:outro",
+       "whisper": false
+      },
+      {
+       "text": "Dr. Lena Hart is in a three-storey townhouse on the north-east corner. Her laptop has the last copy of the launch codes.",
+       "original": "Dr. Lena Hart is in a three-storey townhouse on the north-east corner. Her laptop has the last copy of the launch codes.",
+       "where": "m9:briefing",
+       "whisper": false
+      },
+      {
+       "text": "MERIDIAN rents the house through the families living in it. Tenants on every floor. Expect them to be frightened and unpredictable.",
+       "original": "MERIDIAN rents the house through the families living in it. Tenants on every floor. Expect them to be frightened and unpredictable.",
+       "where": "m9:briefing",
+       "whisper": false
+      },
+      {
+       "text": "That's the last copy. HALCYON is finished. Bring them home.",
+       "original": "That's the last copy. HALCYON is finished. Bring them home.",
+       "where": "m9:obj9:done",
+       "whisper": false
+      },
+      {
+       "text": "Dr. Lena Hart is in custody. The last copy of the launch codes is in our hands, and HALCYON is finished.",
+       "original": "Dr. Lena Hart is in custody. The last copy of the launch codes is in our hands, and HALCYON is finished.",
+       "where": "m9:outro",
+       "whisper": false
+      },
+      {
+       "text": "Every family in that house walked out at dawn. None of them will ever know who you were.",
+       "original": "Every family in that house walked out at dawn. None of them will ever know who you were.",
+       "where": "m9:outro",
+       "whisper": false
+      },
+      {
+       "text": "Objective complete. Good work, ORION.",
+       "original": "Objective complete. Good work, ORION.",
+       "where": "src/modes/CampaignMode.js",
+       "whisper": false
+      },
+      {
+       "text": "Negative, Orion. You're on your own out there.",
+       "original": "Negative, Orion. You're on your own out there.",
+       "where": "comms:solo",
+       "whisper": false
+      },
+      {
+       "text": "No friendlies on this net. You're solo.",
+       "original": "No friendlies on this net. You're solo.",
+       "where": "comms:solo",
+       "whisper": false
+      }
+     ],
+     "script": "The doors are open. Hart's launch window opens in under an hour, and Vasko is down there with her. <break time=\"1.5s\" />\nHALCYON is warming up. The launch order goes up through three terminals: in the servers, the lab and the control room. Shut down all three and the satellites never hear it. <break time=\"1.5s\" />\nAll three terminals are down. The satellites cannot hear them. Wait... massive heat signature in the containment wing. <break time=\"1.5s\" />\nMassive heat signature in the vault. Vasko kept his guardian on a leash. It just came off. <break time=\"1.5s\" />\nThe HALCYON satellites were steered safely into the Pacific at 0400. The key is in our hands. Anton Vasko is in custody. <break time=\"1.5s\" />\nBut Dr. Lena Hart got out through a service tunnel, with a laptop holding the last copy of the launch codes. Three weeks later, we found her. <break time=\"1.5s\" />\nDr. Lena Hart is in a three-storey townhouse on the north-east corner. Her laptop has the last copy of the launch codes. <break time=\"1.5s\" />\nMERIDIAN rents the house through the families living in it. Tenants on every floor. Expect them to be frightened and unpredictable. <break time=\"1.5s\" />\nThat's the last copy. HALCYON is finished. Bring them home. <break time=\"1.5s\" />\nDr. Lena Hart is in custody. The last copy of the launch codes is in our hands, and HALCYON is finished. <break time=\"1.5s\" />\nEvery family in that house walked out at dawn. None of them will ever know who you were. <break time=\"1.5s\" />\nObjective complete. Good work, ORION. <break time=\"1.5s\" />\nNegative, Orion. You're on your own out there. <break time=\"1.5s\" />\nNo friendlies on this net. You're solo.",
+     "chars": 1662
+    }
+   ]
+  },
+  {
+   "speaker": "REYES",
+   "role": "ORION team leader",
+   "voice": "Gravelly Latino-American man in his 40s. Quiet authority; low and close when sneaking.",
+   "lines": 57,
+   "parts": [
+    {
+     "file": "reyes-1.mp3",
+     "lines": [
+      {
+       "text": "I'll be on the boat with eyes on your feed. Stay off the ground. Rooftops are yours.",
+       "original": "I'll be on the boat with eyes on your feed. Stay off the ground. Rooftops are yours.",
+       "where": "m1:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Patrol on the south road. Stay in the shadows. Fire stairs on the warehouse's west wall will get you up top.",
+       "original": "Patrol on the south road. Stay in the shadows. Fire stairs on the warehouse's west wall will get you up top.",
+       "where": "m1:obj0",
+       "whisper": false
+      },
+      {
+       "text": "Shooter on the office roof. A friend left you a rifle up there. Suppressed. Use it.",
+       "original": "Shooter on the office roof. A friend left you a rifle up there. Suppressed. Use it.",
+       "where": "m1:obj1:clip",
+       "whisper": false
+      },
+      {
+       "text": "Rifle's by the roof edge. Aim at him to tag him, then one quiet shot.",
+       "original": "Rifle's by the roof edge. Aim at him to tag him, then one quiet shot.",
+       "where": "m1:obj2",
+       "whisper": false
+      },
+      {
+       "text": "Clear. Rope's on your rig. Walk to the east edge of the roof, press T and go down the wall.",
+       "original": "Clear. Rope's on your rig. Walk to the east edge of the roof, press T and go down the wall.",
+       "where": "m1:obj3",
+       "whisper": false
+      },
+      {
+       "text": "West door. Two inside. Take them from behind with V. No noise.",
+       "original": "West door. Two inside. Take them from behind with V. No noise.",
+       "where": "m1:obj4",
+       "whisper": false
+      },
+      {
+       "text": "They're coming to you. Get high, pick your shots, and keep moving.",
+       "original": "They're coming to you. Get high, pick your shots, and keep moving.",
+       "where": "m1:obj5:clip",
+       "whisper": false
+      },
+      {
+       "text": "Hold the office. They have to cross open ground to reach you. Make them pay for it.",
+       "original": "Hold the office. They have to cross open ground to reach you. Make them pay for it.",
+       "where": "m1:obj6",
+       "whisper": false
+      },
+      {
+       "text": "K-77 is under the east crane. Tag it and we are gone.",
+       "original": "K-77 is under the east crane. Tag it and we are gone.",
+       "where": "m1:obj7",
+       "whisper": false
+      },
+      {
+       "text": "Boat's at the west quay. Lights off. Come home.",
+       "original": "Boat's at the west quay. Lights off. Come home.",
+       "where": "m1:obj8:clip",
+       "whisper": false
+      },
+      {
+       "text": "The key is useless without her launch codes. If we get Hart back, they can never fire it. We go in at first light.",
+       "original": "The key is useless without her launch codes. If we get Hart back, they can never fire it. We go in at first light.",
+       "where": "m1:outro",
+       "whisper": false
+      },
+      {
+       "text": "Ropes! Go, go, go!",
+       "original": "Ropes! Go, go, go!",
+       "where": "m2:insertion",
+       "whisper": false
+      },
+      {
+       "text": "Smoke the gate if those towers get a bead on you. ORION, push!",
+       "original": "Smoke the gate if those towers get a bead on you. ORION, push!",
+       "where": "m2:obj0",
+       "whisper": false
+      },
+      {
+       "text": "Compound's ours. Hart is inside the HQ, and they'll have a gun on her.",
+       "original": "Compound's ours. Hart is inside the HQ, and they'll have a gun on her.",
+       "where": "m2:obj2:clip",
+       "whisper": false
+      },
+      {
+       "text": "Tell us on the helo, Doctor. Now we hold.",
+       "original": "Tell us on the helo, Doctor. Now we hold.",
+       "where": "m2:obj3:done",
+       "whisper": false
+      },
+      {
+       "text": "Bird's down on the west side! Go!",
+       "original": "Bird's down on the west side! Go!",
+       "where": "m2:obj6",
+       "whisper": false
+      },
+      {
+       "text": "Then that is where we go. If we break up the sale, nobody gets their demonstration.",
+       "original": "Then that is where we go. If we break up the sale, nobody gets their demonstration.",
+       "where": "m2:outro",
+       "whisper": false
+      },
+      {
+       "text": "Stay off the center of the street. Use the cars.",
+       "original": "Stay off the center of the street. Use the cars.",
+       "where": "m3:obj0",
+       "whisper": false
+      },
+      {
+       "text": "Stay low and in the shadows. I'm on your shoulder.",
+       "original": "(whisper) Stay low and in the shadows. I'm on your shoulder.",
+       "where": "m3b:obj0",
+       "whisper": true
+      },
+      {
+       "text": "Bodyguards first. Brandt does not leave this plaza.",
+       "original": "(whisper) Bodyguards first. Brandt does not leave this plaza.",
+       "where": "m3b:obj3",
+       "whisper": true
+      },
+      {
+       "text": "Van is at the north end of the cross street. Go!",
+       "original": "Van is at the north end of the cross street. Go!",
+       "where": "m3b:obj6",
+       "whisper": false
+      },
+      {
+       "text": "Then we take the dish away from them. Tex, pack your rifle. We are going up the mountain.",
+       "original": "Then we take the dish away from them. Tex, pack your rifle. We are going up the mountain.",
+       "where": "m3b:outro",
+       "whisper": false
+      },
+      {
+       "text": "Tight corridors. Flashbangs before every door. Let's go.",
+       "original": "Tight corridors. Flashbangs before every door. Let's go.",
+       "where": "m5:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Wraith, get on that terminal. We've got your back.",
+       "original": "Wraith, get on that terminal. We've got your back.",
+       "where": "m5:obj1",
+       "whisper": false
+      },
+      {
+       "text": "She has been working with Vasko all along. Grab that drive before she wipes it.",
+       "original": "She has been working with Vasko all along. Grab that drive before she wipes it.",
+       "where": "m5:obj1:done",
+       "whisper": false
+      },
+      {
+       "text": "She still knows the codes, and she is going back to the key. We chase her tonight.",
+       "original": "She still knows the codes, and she is going back to the key. We chase her tonight.",
+       "where": "m5:outro",
+       "whisper": false
+      },
+      {
+       "text": "Took you long enough. Leg's busted. Hand me a rifle — I can still shoot.",
+       "original": "Took you long enough. Leg's busted. Hand me a rifle — I can still shoot.",
+       "where": "m6:obj1:done",
+       "whisper": false
+      }
+     ],
+     "script": "I'll be on the boat with eyes on your feed. Stay off the ground. Rooftops are yours. <break time=\"1.5s\" />\nPatrol on the south road. Stay in the shadows. Fire stairs on the warehouse's west wall will get you up top. <break time=\"1.5s\" />\nShooter on the office roof. A friend left you a rifle up there. Suppressed. Use it. <break time=\"1.5s\" />\nRifle's by the roof edge. Aim at him to tag him, then one quiet shot. <break time=\"1.5s\" />\nClear. Rope's on your rig. Walk to the east edge of the roof, press T and go down the wall. <break time=\"1.5s\" />\nWest door. Two inside. Take them from behind with V. No noise. <break time=\"1.5s\" />\nThey're coming to you. Get high, pick your shots, and keep moving. <break time=\"1.5s\" />\nHold the office. They have to cross open ground to reach you. Make them pay for it. <break time=\"1.5s\" />\nK-77 is under the east crane. Tag it and we are gone. <break time=\"1.5s\" />\nBoat's at the west quay. Lights off. Come home. <break time=\"1.5s\" />\nThe key is useless without her launch codes. If we get Hart back, they can never fire it. We go in at first light. <break time=\"1.5s\" />\nRopes! Go, go, go! <break time=\"1.5s\" />\nSmoke the gate if those towers get a bead on you. ORION, push! <break time=\"1.5s\" />\nCompound's ours. Hart is inside the HQ, and they'll have a gun on her. <break time=\"1.5s\" />\nTell us on the helo, Doctor. Now we hold. <break time=\"1.5s\" />\nBird's down on the west side! Go! <break time=\"1.5s\" />\nThen that is where we go. If we break up the sale, nobody gets their demonstration. <break time=\"1.5s\" />\nStay off the center of the street. Use the cars. <break time=\"1.5s\" />\nStay low and in the shadows. I'm on your shoulder. <break time=\"1.5s\" />\nBodyguards first. Brandt does not leave this plaza. <break time=\"1.5s\" />\nVan is at the north end of the cross street. Go! <break time=\"1.5s\" />\nThen we take the dish away from them. Tex, pack your rifle. We are going up the mountain. <break time=\"1.5s\" />\nTight corridors. Flashbangs before every door. Let's go. <break time=\"1.5s\" />\nWraith, get on that terminal. We've got your back. <break time=\"1.5s\" />\nShe has been working with Vasko all along. Grab that drive before she wipes it. <break time=\"1.5s\" />\nShe still knows the codes, and she is going back to the key. We chase her tonight. <break time=\"1.5s\" />\nTook you long enough. Leg's busted. Hand me a rifle — I can still shoot.",
+     "chars": 2390
+    },
+    {
+     "file": "reyes-2.mp3",
+     "lines": [
+      {
+       "text": "Dawn is two hours out. They'll come at us from every side. Make every round count.",
+       "original": "Dawn is two hours out. They'll come at us from every side. Make every round count.",
+       "where": "m6:obj2:clip",
+       "whisper": false
+      },
+      {
+       "text": "My leg is done. Hatch, Tex, Wraith: put that launcher in the ground and find out where she went.",
+       "original": "My leg is done. Hatch, Tex, Wraith: put that launcher in the ground and find out where she went.",
+       "where": "m6:outro",
+       "whisper": false
+      },
+      {
+       "text": "(from the medical tent) Kessler. He's mine.",
+       "original": "(from the medical tent) Kessler. He's mine.",
+       "where": "m6b:outro",
+       "whisper": false
+      },
+      {
+       "text": "Then he's Wraith's.",
+       "original": "Then he's Wraith's.",
+       "where": "m6b:outro",
+       "whisper": false
+      },
+      {
+       "text": "Climb the stacks and hit him from above. Don't let him get close.",
+       "original": "Climb the stacks and hit him from above. Don't let him get close.",
+       "where": "m7:obj3:clip",
+       "whisper": false
+      },
+      {
+       "text": "Then where is the real key?",
+       "original": "Then where is the real key?",
+       "where": "m7:obj5:done",
+       "whisper": false
+      },
+      {
+       "text": "Then we cut it, tonight. Hatch, Tex, Wraith: back up the mountain.",
+       "original": "Then we cut it, tonight. Hatch, Tex, Wraith: back up the mountain.",
+       "where": "m7:outro",
+       "whisper": false
+      },
+      {
+       "text": "Everyone we have. Everything we have. We go down into that vault tonight.",
+       "original": "Everyone we have. Everything we have. We go down into that vault tonight.",
+       "where": "m7b:outro",
+       "whisper": false
+      },
+      {
+       "text": "Ten minutes is plenty. ORION — this is it. We go now.",
+       "original": "Ten minutes is plenty. ORION — this is it. We go now.",
+       "where": "m8:briefing",
+       "whisper": false
+      },
+      {
+       "text": "That armor's rated for fifty-cal. Hit the joints! Semtex, flashbangs, everything!",
+       "original": "That armor's rated for fifty-cal. Hit the joints! Semtex, flashbangs, everything!",
+       "where": "m8:obj6",
+       "whisper": false
+      },
+      {
+       "text": "Not today. Watchtower — mission complete. Package secured.",
+       "original": "Not today. Watchtower — mission complete. Package secured.",
+       "where": "m8:obj7:done",
+       "whisper": false
+      },
+      {
+       "text": "She is hiding in Vel Harat, with what is left of MERIDIAN. Then we go and get her. Quietly.",
+       "original": "She is hiding in Vel Harat, with what is left of MERIDIAN. Then we go and get her. Quietly.",
+       "where": "m8:outro",
+       "whisper": false
+      },
+      {
+       "text": "We go in the side door, night vision and lasers, room by room. Rules of engagement are strict: nobody fires on anyone who isn't holding a weapon.",
+       "original": "We go in the side door, night vision and lasers, room by room. Rules of engagement are strict: nobody fires on anyone who isn't holding a weapon.",
+       "where": "m9:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Lights off from here. One block.",
+       "original": "(low) Lights off from here. One block.",
+       "where": "m9:van",
+       "whisper": true
+      },
+      {
+       "text": "This is us. Weapons tight: no weapon in their hands, no shot. Out the side, slow.",
+       "original": "This is us. Weapons tight: no weapon in their hands, no shot. Out the side, slow.",
+       "where": "m9:van",
+       "whisper": false
+      },
+      {
+       "text": "Comms quiet. Two on the front. Then the side door into the kitchen.",
+       "original": "Comms quiet. Two on the front. Then the side door into the kitchen.",
+       "where": "m9:obj0",
+       "whisper": false
+      },
+      {
+       "text": "Kitchen. Eyes on hands.",
+       "original": "(whisper) Kitchen. Eyes on hands.",
+       "where": "m9:obj3:done",
+       "whisper": true
+      },
+      {
+       "text": "Bedrooms up there, doors shut, families behind them. Ease them open. Check every corner.",
+       "original": "(whisper) Bedrooms up there, doors shut, families behind them. Ease them open. Check every corner.",
+       "where": "m9:obj5",
+       "whisper": true
+      },
+      {
+       "text": "Hart's up top with whoever she trusts. If they give up, hold fire. If they move for anything, drop them.",
+       "original": "(whisper) Hart's up top with whoever she trusts. If they give up, hold fire. If they move for anything, drop them.",
+       "where": "m9:obj7",
+       "whisper": true
+      },
+      {
+       "text": "We'll talk about it on the plane, Doctor.",
+       "original": "We'll talk about it on the plane, Doctor.",
+       "where": "m9:obj8:done",
+       "whisper": false
+      },
+      {
+       "text": "Task Force ORION was never activated. None of this happened. Good work, Wraith.",
+       "original": "Task Force ORION was never activated. None of this happened. Good work, Wraith.",
+       "where": "m9:outro",
+       "whisper": false
+      },
+      {
+       "text": "We're blown! Weapons free!",
+       "original": "We're blown! Weapons free!",
+       "where": "src/modes/CampaignMode.js",
+       "whisper": false
+      },
+      {
+       "text": "CHECK FIRE! CHECK FIRE! That was a civilian!",
+       "original": "CHECK FIRE! CHECK FIRE! That was a civilian!",
+       "where": "src/modes/CampaignMode.js",
+       "whisper": false
+      },
+      {
+       "text": "Hold fire! He wasn't armed!",
+       "original": "Hold fire! He wasn't armed!",
+       "where": "src/modes/CampaignMode.js",
+       "whisper": false
+      },
+      {
+       "text": "Easy. Slow is smooth, smooth is fast.",
+       "original": "Easy. Slow is smooth, smooth is fast.",
+       "where": "lead:slow",
+       "whisper": false
+      },
+      {
+       "text": "Slow down. Every step counts.",
+       "original": "Slow down. Every step counts.",
+       "where": "lead:slow",
+       "whisper": false
+      },
+      {
+       "text": "Steady. Stay with the team.",
+       "original": "Steady. Stay with the team.",
+       "where": "lead:slow",
+       "whisper": false
+      },
+      {
+       "text": "Movement behind that door. Watch it.",
+       "original": "(whisper) Movement behind that door. Watch it.",
+       "where": "src/modes/CloseQuarters.js",
+       "whisper": true
+      },
+      {
+       "text": "Trigger man down. Good shot.",
+       "original": "Trigger man down. Good shot.",
+       "where": "src/modes/CloseQuarters.js",
+       "whisper": false
+      },
+      {
+       "text": "HE'S GOING FOR THE TRIGGER!",
+       "original": "HE'S GOING FOR THE TRIGGER!",
+       "where": "src/modes/CloseQuarters.js",
+       "whisper": false
+      }
+     ],
+     "script": "Dawn is two hours out. They'll come at us from every side. Make every round count. <break time=\"1.5s\" />\nMy leg is done. Hatch, Tex, Wraith: put that launcher in the ground and find out where she went. <break time=\"1.5s\" />\n(from the medical tent) Kessler. He's mine. <break time=\"1.5s\" />\nThen he's Wraith's. <break time=\"1.5s\" />\nClimb the stacks and hit him from above. Don't let him get close. <break time=\"1.5s\" />\nThen where is the real key? <break time=\"1.5s\" />\nThen we cut it, tonight. Hatch, Tex, Wraith: back up the mountain. <break time=\"1.5s\" />\nEveryone we have. Everything we have. We go down into that vault tonight. <break time=\"1.5s\" />\nTen minutes is plenty. ORION — this is it. We go now. <break time=\"1.5s\" />\nThat armor's rated for fifty-cal. Hit the joints! Semtex, flashbangs, everything! <break time=\"1.5s\" />\nNot today. Watchtower — mission complete. Package secured. <break time=\"1.5s\" />\nShe is hiding in Vel Harat, with what is left of MERIDIAN. Then we go and get her. Quietly. <break time=\"1.5s\" />\nWe go in the side door, night vision and lasers, room by room. Rules of engagement are strict: nobody fires on anyone who isn't holding a weapon. <break time=\"1.5s\" />\nLights off from here. One block. <break time=\"1.5s\" />\nThis is us. Weapons tight: no weapon in their hands, no shot. Out the side, slow. <break time=\"1.5s\" />\nComms quiet. Two on the front. Then the side door into the kitchen. <break time=\"1.5s\" />\nKitchen. Eyes on hands. <break time=\"1.5s\" />\nBedrooms up there, doors shut, families behind them. Ease them open. Check every corner. <break time=\"1.5s\" />\nHart's up top with whoever she trusts. If they give up, hold fire. If they move for anything, drop them. <break time=\"1.5s\" />\nWe'll talk about it on the plane, Doctor. <break time=\"1.5s\" />\nTask Force ORION was never activated. None of this happened. Good work, Wraith. <break time=\"1.5s\" />\nWe're blown! Weapons free! <break time=\"1.5s\" />\nCHECK FIRE! CHECK FIRE! That was a civilian! <break time=\"1.5s\" />\nHold fire! He wasn't armed! <break time=\"1.5s\" />\nEasy. Slow is smooth, smooth is fast. <break time=\"1.5s\" />\nSlow down. Every step counts. <break time=\"1.5s\" />\nSteady. Stay with the team. <break time=\"1.5s\" />\nMovement behind that door. Watch it. <break time=\"1.5s\" />\nTrigger man down. Good shot. <break time=\"1.5s\" />\nHE'S GOING FOR THE TRIGGER!",
+     "chars": 2362
+    }
+   ]
+  },
+  {
+   "speaker": "HATCH",
+   "role": "ORION breacher",
+   "voice": "Dry, laconic American man in his 30s. Slightly sardonic, very calm.",
+   "lines": 30,
+   "parts": [
+    {
+     "file": "hatch-1.mp3",
+     "lines": [
+      {
+       "text": "Contact, courtyard! They're dug in behind the sandbags.",
+       "original": "Contact, courtyard! They're dug in behind the sandbags.",
+       "where": "m2:obj1",
+       "whisper": false
+      },
+      {
+       "text": "South door. Quick and quiet, Wraith. Don't give them time to think.",
+       "original": "South door. Quick and quiet, Wraith. Don't give them time to think.",
+       "where": "m2:obj2:clip",
+       "whisper": false
+      },
+      {
+       "text": "Charges are prepped. Get me to the guns and I'll do the rest. Actually — you do the rest. I'll watch.",
+       "original": "Charges are prepped. Get me to the guns and I'll do the rest. Actually — you do the rest. I'll watch.",
+       "where": "m3:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Ropes out! Move it, Wraith!",
+       "original": "Ropes out! Move it, Wraith!",
+       "where": "m3:insertion",
+       "whisper": false
+      },
+      {
+       "text": "Charge set... and boom. One down!",
+       "original": "Charge set... and boom. One down!",
+       "where": "m3:obj3:done",
+       "whisper": false
+      },
+      {
+       "text": "Lab's across the atrium. It's going to be loud.",
+       "original": "Lab's across the atrium. It's going to be loud.",
+       "where": "m5:obj2",
+       "whisper": false
+      },
+      {
+       "text": "Wraith... you alive? Reyes is still in the wreck. We have to get her out.",
+       "original": "Wraith... you alive? Reyes is still in the wreck. We have to get her out.",
+       "where": "m6:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Scouts are already picking through the wreck. Drop them!",
+       "original": "Scouts are already picking through the wreck. Drop them!",
+       "where": "m6:obj0",
+       "whisper": false
+      },
+      {
+       "text": "Storm's coming in. They won't see us until we're on top of them. Neither will we, so stay close.",
+       "original": "Storm's coming in. They won't see us until we're on top of them. Neither will we, so stay close.",
+       "where": "m6b:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Heavy gunner by the north wall. Hit him from cover, don't trade with him in the open.",
+       "original": "Heavy gunner by the north wall. Hit him from cover, don't trade with him in the open.",
+       "where": "m6b:obj3",
+       "whisper": false
+      },
+      {
+       "text": "Charge is on. Back up... and down she goes. Skies are open.",
+       "original": "Charge is on. Back up... and down she goes. Skies are open.",
+       "where": "m6b:obj4:done",
+       "whisper": false
+      },
+      {
+       "text": "Captain, you can barely walk.",
+       "original": "Captain, you can barely walk.",
+       "where": "m6b:outro",
+       "whisper": false
+      },
+      {
+       "text": "No quiet way in. I put a charge on the front door, it goes, we flash and flood. Ground floor with me, then up the stairs.",
+       "original": "No quiet way in. I put a charge on the front door, it goes, we flash and flood. Ground floor with me, then up the stairs.",
+       "where": "m6c:briefing",
+       "whisper": false
+      },
+      {
+       "text": "That's the place. Two on the street. Drop them, then we stack on the front door.",
+       "original": "That's the place. Two on the street. Drop them, then we stack on the front door.",
+       "where": "m6c:obj0",
+       "whisper": false
+      },
+      {
+       "text": "Stacked. Charge goes on the door, then everybody back against the wall.",
+       "original": "Stacked. Charge goes on the door, then everybody back against the wall.",
+       "where": "m6c:obj2",
+       "whisper": false
+      },
+      {
+       "text": "BREACHING!",
+       "original": "BREACHING!",
+       "where": "m6c:obj3:done",
+       "whisper": false
+      },
+      {
+       "text": "Cuffed. Hostages are upstairs. Tex and I hold the stairs, Wraith, top floor is yours. Flash the room.",
+       "original": "Cuffed. Hostages are upstairs. Tex and I hold the stairs, Wraith, top floor is yours. Flash the room.",
+       "where": "m6c:obj5:done",
+       "whisper": false
+      },
+      {
+       "text": "Files are out. Hostages and prisoner to the van. Move!",
+       "original": "Files are out. Hostages and prisoner to the van. Move!",
+       "where": "m6c:obj10",
+       "whisper": false
+      },
+      {
+       "text": "Then that's where the key is. Good breach, Wraith.",
+       "original": "Then that's where the key is. Good breach, Wraith.",
+       "where": "m6c:outro",
+       "whisper": false
+      },
+      {
+       "text": "Ropes out! Let's finish this!",
+       "original": "Ropes out! Let's finish this!",
+       "where": "m7:insertion",
+       "whisper": false
+      },
+      {
+       "text": "Warehouse on the left is crawling. Keep moving!",
+       "original": "Warehouse on the left is crawling. Keep moving!",
+       "where": "m7:obj0",
+       "whisper": false
+      },
+      {
+       "text": "Two transformers either side of the station, generator inside. Guards on all three.",
+       "original": "Two transformers either side of the station, generator inside. Guards on all three.",
+       "where": "m7b:obj2:clip",
+       "whisper": false
+      },
+      {
+       "text": "A is cooking. One more.",
+       "original": "A is cooking. One more.",
+       "where": "m7b:obj4:done",
+       "whisper": false
+      },
+      {
+       "text": "Cell three. He's hiding in a cage he built for someone else.",
+       "original": "Cell three. He's hiding in a cage he built for someone else.",
+       "where": "m8:obj7",
+       "whisper": false
+      },
+      {
+       "text": "Two on the front of the house. Families on every floor. Hart's at the top.",
+       "original": "Two on the front of the house. Families on every floor. Hart's at the top.",
+       "where": "m9:van",
+       "whisper": false
+      },
+      {
+       "text": "One on the door, one walking the block. Headshots. Nobody hears these.",
+       "original": "One on the door, one walking the block. Headshots. Nobody hears these.",
+       "where": "m9:obj1",
+       "whisper": false
+      },
+      {
+       "text": "Stacked. Locked. Your call.",
+       "original": "(whisper) Stacked. Locked. Your call.",
+       "where": "m9:obj2",
+       "whisper": true
+      },
+      {
+       "text": "Hart's with me. Tenants are staying put till the police come. Move.",
+       "original": "Hart's with me. Tenants are staying put till the police come. Move.",
+       "where": "m9:obj10",
+       "whisper": false
+      },
+      {
+       "text": "He's going for the rifle!",
+       "original": "(whisper) He's going for the rifle!",
+       "where": "src/modes/CloseQuarters.js",
+       "whisper": true
+      },
+      {
+       "text": "WARDROBE!",
+       "original": "WARDROBE!",
+       "where": "src/modes/CloseQuarters.js",
+       "whisper": false
+      }
+     ],
+     "script": "Contact, courtyard! They're dug in behind the sandbags. <break time=\"1.5s\" />\nSouth door. Quick and quiet, Wraith. Don't give them time to think. <break time=\"1.5s\" />\nCharges are prepped. Get me to the guns and I'll do the rest. Actually — you do the rest. I'll watch. <break time=\"1.5s\" />\nRopes out! Move it, Wraith! <break time=\"1.5s\" />\nCharge set... and boom. One down! <break time=\"1.5s\" />\nLab's across the atrium. It's going to be loud. <break time=\"1.5s\" />\nWraith... you alive? Reyes is still in the wreck. We have to get her out. <break time=\"1.5s\" />\nScouts are already picking through the wreck. Drop them! <break time=\"1.5s\" />\nStorm's coming in. They won't see us until we're on top of them. Neither will we, so stay close. <break time=\"1.5s\" />\nHeavy gunner by the north wall. Hit him from cover, don't trade with him in the open. <break time=\"1.5s\" />\nCharge is on. Back up... and down she goes. Skies are open. <break time=\"1.5s\" />\nCaptain, you can barely walk. <break time=\"1.5s\" />\nNo quiet way in. I put a charge on the front door, it goes, we flash and flood. Ground floor with me, then up the stairs. <break time=\"1.5s\" />\nThat's the place. Two on the street. Drop them, then we stack on the front door. <break time=\"1.5s\" />\nStacked. Charge goes on the door, then everybody back against the wall. <break time=\"1.5s\" />\nBREACHING! <break time=\"1.5s\" />\nCuffed. Hostages are upstairs. Tex and I hold the stairs, Wraith, top floor is yours. Flash the room. <break time=\"1.5s\" />\nFiles are out. Hostages and prisoner to the van. Move! <break time=\"1.5s\" />\nThen that's where the key is. Good breach, Wraith. <break time=\"1.5s\" />\nRopes out! Let's finish this! <break time=\"1.5s\" />\nWarehouse on the left is crawling. Keep moving! <break time=\"1.5s\" />\nTwo transformers either side of the station, generator inside. Guards on all three. <break time=\"1.5s\" />\nA is cooking. One more. <break time=\"1.5s\" />\nCell three. He's hiding in a cage he built for someone else. <break time=\"1.5s\" />\nTwo on the front of the house. Families on every floor. Hart's at the top. <break time=\"1.5s\" />\nOne on the door, one walking the block. Headshots. Nobody hears these. <break time=\"1.5s\" />\nStacked. Locked. Your call. <break time=\"1.5s\" />\nHart's with me. Tenants are staying put till the police come. Move. <break time=\"1.5s\" />\nHe's going for the rifle! <break time=\"1.5s\" />\nWARDROBE!",
+     "chars": 2396
+    }
+   ]
+  },
+  {
+   "speaker": "TEX",
+   "role": "ORION rifleman",
+   "voice": "Texan man in his 30s. Loud, energetic drawl.",
+   "lines": 30,
+   "parts": [
+    {
+     "file": "tex-1.mp3",
+     "lines": [
+      {
+       "text": "Two towers on the south wall. I'll call them out, but you'll want to keep your head down on the approach.",
+       "original": "Two towers on the south wall. I'll call them out, but you'll want to keep your head down on the approach.",
+       "where": "m2:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Thermal shows a body in the HQ, ground floor. More hostiles upstairs.",
+       "original": "Thermal shows a body in the HQ, ground floor. More hostiles upstairs.",
+       "where": "m2:obj3",
+       "whisper": false
+      },
+      {
+       "text": "South-west battery. Crew of three, and they've got a spotter up high.",
+       "original": "South-west battery. Crew of three, and they've got a spotter up high.",
+       "where": "m3:obj2:clip",
+       "whisper": false
+      },
+      {
+       "text": "Sniper on that roof. Stay out of his line of sight until you're close.",
+       "original": "Sniper on that roof. Stay out of his line of sight until you're close.",
+       "where": "m3:obj2:clip",
+       "whisper": false
+      },
+      {
+       "text": "Sniper on the tower roof, south-west. Watch the high windows.",
+       "original": "Sniper on the tower roof, south-west. Watch the high windows.",
+       "where": "m3:obj3",
+       "whisper": false
+      },
+      {
+       "text": "The buyer slipped out in the fighting. Arms dealer, name of Oskar Brandt.",
+       "original": "The buyer slipped out in the fighting. Arms dealer, name of Oskar Brandt.",
+       "where": "m3:outro",
+       "whisper": false
+      },
+      {
+       "text": "I'll be on a rooftop with eyes on the plaza. One sentry walks the avenue, another the cross street. Quiet is the whole job.",
+       "original": "I'll be on a rooftop with eyes on the plaza. One sentry walks the avenue, another the cross street. Quiet is the whole job.",
+       "where": "m3b:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Sentry on the avenue, another on the cross street. From behind, or one suppressed round. No noise.",
+       "original": "Sentry on the avenue, another on the cross street. From behind, or one suppressed round. No noise.",
+       "where": "m3b:obj1",
+       "whisper": false
+      },
+      {
+       "text": "There's Brandt, grey suit, by the monument. Three bodyguards and a MERIDIAN contact. Nobody touches Brandt.",
+       "original": "There's Brandt, grey suit, by the monument. Three bodyguards and a MERIDIAN contact. Nobody touches Brandt.",
+       "where": "m3b:obj2:clip",
+       "whisper": false
+      },
+      {
+       "text": "I'm on the far ridge with a spotter scope. You're the gun, Wraith. Whiteout's our friend: they can't see far, but neither can we.",
+       "original": "I'm on the far ridge with a spotter scope. You're the gun, Wraith. Whiteout's our friend: they can't see far, but neither can we.",
+       "where": "m4:briefing",
+       "whisper": false
+      },
+      {
+       "text": "East tower first. Hold your scope on him to tag him, and breathe out before you shoot.",
+       "original": "East tower first. Hold your scope on him to tag him, and breathe out before you shoot.",
+       "where": "m4:obj0",
+       "whisper": false
+      },
+      {
+       "text": "Then the two at the gate. Suppressor's on, so they won't know where it came from.",
+       "original": "Then the two at the gate. Suppressor's on, so they won't know where it came from.",
+       "where": "m4:obj0",
+       "whisper": false
+      },
+      {
+       "text": "Hangar's full of Rook's people. Stay out of the open. Use the buildings.",
+       "original": "Hangar's full of Rook's people. Stay out of the open. Use the buildings.",
+       "where": "m4:obj1:clip",
+       "whisper": false
+      },
+      {
+       "text": "Walk to the south edge of the rock and press T to rappel down. Then the gate, a gap in the wire, or just climb the fence.",
+       "original": "Walk to the south edge of the rock and press T to rappel down. Then the gate, a gap in the wire, or just climb the fence.",
+       "where": "m4:obj2",
+       "whisper": false
+      },
+      {
+       "text": "Stairs inside go up to the roof. Two inside. Take them quietly.",
+       "original": "Stairs inside go up to the roof. Two inside. Take them quietly.",
+       "where": "m4:obj3",
+       "whisper": false
+      },
+      {
+       "text": "There he is. He knows where you are. He's coming straight at you.",
+       "original": "There he is. He knows where you are. He's coming straight at you.",
+       "where": "m4:obj5:clip",
+       "whisper": false
+      },
+      {
+       "text": "Keep the high ground and aim for the head. The armor stops everything else.",
+       "original": "Keep the high ground and aim for the head. The armor stops everything else.",
+       "where": "m4:obj5:clip",
+       "whisper": false
+      },
+      {
+       "text": "Rook is down. Let's not be here when his friends arrive.",
+       "original": "Rook is down. Let's not be here when his friends arrive.",
+       "where": "m4:obj7",
+       "whisper": false
+      },
+      {
+       "text": "And Rook was carrying a keycard for it. Somebody on the inside has been helping them.",
+       "original": "And Rook was carrying a keycard for it. Somebody on the inside has been helping them.",
+       "where": "m4:outro",
+       "whisper": false
+      },
+      {
+       "text": "Three on the south edge of the village. Close in slow. Let the dust hide us.",
+       "original": "Three on the south edge of the village. Close in slow. Let the dust hide us.",
+       "where": "m6b:obj0",
+       "whisper": false
+      },
+      {
+       "text": "There it is, by the well. Truck-mounted launcher. That is what killed Raven Two-One.",
+       "original": "There it is, by the well. Truck-mounted launcher. That is what killed Raven Two-One.",
+       "where": "m6b:obj2:clip",
+       "whisper": false
+      },
+      {
+       "text": "Contacts! Trucks coming in from the north!",
+       "original": "Contacts! Trucks coming in from the north!",
+       "where": "m6b:obj5:done",
+       "whisper": false
+      },
+      {
+       "text": "One by the door, one walking the front. Take them.",
+       "original": "One by the door, one walking the front. Take them.",
+       "where": "m6c:obj1",
+       "whisper": false
+      }
+     ],
+     "script": "Two towers on the south wall. I'll call them out, but you'll want to keep your head down on the approach. <break time=\"1.5s\" />\nThermal shows a body in the HQ, ground floor. More hostiles upstairs. <break time=\"1.5s\" />\nSouth-west battery. Crew of three, and they've got a spotter up high. <break time=\"1.5s\" />\nSniper on that roof. Stay out of his line of sight until you're close. <break time=\"1.5s\" />\nSniper on the tower roof, south-west. Watch the high windows. <break time=\"1.5s\" />\nThe buyer slipped out in the fighting. Arms dealer, name of Oskar Brandt. <break time=\"1.5s\" />\nI'll be on a rooftop with eyes on the plaza. One sentry walks the avenue, another the cross street. Quiet is the whole job. <break time=\"1.5s\" />\nSentry on the avenue, another on the cross street. From behind, or one suppressed round. No noise. <break time=\"1.5s\" />\nThere's Brandt, grey suit, by the monument. Three bodyguards and a MERIDIAN contact. Nobody touches Brandt. <break time=\"1.5s\" />\nI'm on the far ridge with a spotter scope. You're the gun, Wraith. Whiteout's our friend: they can't see far, but neither can we. <break time=\"1.5s\" />\nEast tower first. Hold your scope on him to tag him, and breathe out before you shoot. <break time=\"1.5s\" />\nThen the two at the gate. Suppressor's on, so they won't know where it came from. <break time=\"1.5s\" />\nHangar's full of Rook's people. Stay out of the open. Use the buildings. <break time=\"1.5s\" />\nWalk to the south edge of the rock and press T to rappel down. Then the gate, a gap in the wire, or just climb the fence. <break time=\"1.5s\" />\nStairs inside go up to the roof. Two inside. Take them quietly. <break time=\"1.5s\" />\nThere he is. He knows where you are. He's coming straight at you. <break time=\"1.5s\" />\nKeep the high ground and aim for the head. The armor stops everything else. <break time=\"1.5s\" />\nRook is down. Let's not be here when his friends arrive. <break time=\"1.5s\" />\nAnd Rook was carrying a keycard for it. Somebody on the inside has been helping them. <break time=\"1.5s\" />\nThree on the south edge of the village. Close in slow. Let the dust hide us. <break time=\"1.5s\" />\nThere it is, by the well. Truck-mounted launcher. That is what killed Raven Two-One. <break time=\"1.5s\" />\nContacts! Trucks coming in from the north! <break time=\"1.5s\" />\nOne by the door, one walking the front. Take them.",
+     "chars": 2366
+    },
+    {
+     "file": "tex-2.mp3",
+     "lines": [
+      {
+       "text": "Door's gone! Flash the lobby, then the rooms. Go, go, go!",
+       "original": "Door's gone! Flash the lobby, then the rooms. Go, go, go!",
+       "where": "m6c:obj4",
+       "whisper": false
+      },
+      {
+       "text": "Hostages are safe. Now the files, before anyone else shows up.",
+       "original": "Hostages are safe. Now the files, before anyone else shows up.",
+       "where": "m6c:obj7:done",
+       "whisper": false
+      },
+      {
+       "text": "I'll set up on the office roof. You two go through the yard.",
+       "original": "I'll set up on the office roof. You two go through the yard.",
+       "where": "m7:briefing",
+       "whisper": false
+      },
+      {
+       "text": "In position. I've got eyes on the yard — I'll thin them out.",
+       "original": "In position. I've got eyes on the yard — I'll thin them out.",
+       "where": "m7:obj1",
+       "whisper": false
+      },
+      {
+       "text": "Snow's thick tonight. Thermal sight will see them before they see us.",
+       "original": "Snow's thick tonight. Thermal sight will see them before they see us.",
+       "where": "m7b:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Two walking the valley floor. Take them quietly, or the whole station wakes up.",
+       "original": "Two walking the valley floor. Take them quietly, or the whole station wakes up.",
+       "where": "m7b:obj0",
+       "whisper": false
+      },
+      {
+       "text": "Terminal A offline. Two to go.",
+       "original": "Terminal A offline. Two to go.",
+       "where": "m8:obj2:done",
+       "whisper": false
+      }
+     ],
+     "script": "Door's gone! Flash the lobby, then the rooms. Go, go, go! <break time=\"1.5s\" />\nHostages are safe. Now the files, before anyone else shows up. <break time=\"1.5s\" />\nI'll set up on the office roof. You two go through the yard. <break time=\"1.5s\" />\nIn position. I've got eyes on the yard — I'll thin them out. <break time=\"1.5s\" />\nSnow's thick tonight. Thermal sight will see them before they see us. <break time=\"1.5s\" />\nTwo walking the valley floor. Take them quietly, or the whole station wakes up. <break time=\"1.5s\" />\nTerminal A offline. Two to go.",
+     "chars": 555
+    }
+   ]
+  },
+  {
+   "speaker": "WRAITH",
+   "role": "You (squad orders)",
+   "voice": "Terse American man in his 30s. Short, firm commands.",
+   "lines": 16,
+   "parts": [
+    {
+     "file": "wraith-1.mp3",
+     "lines": [
+      {
+       "text": "On me!",
+       "original": "On me!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Form up on me!",
+       "original": "Form up on me!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Regroup on me!",
+       "original": "Regroup on me!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Hold this position!",
+       "original": "Hold this position!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Hold here!",
+       "original": "Hold here!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Move up! Over there!",
+       "original": "Move up! Over there!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Push up to that spot!",
+       "original": "Push up to that spot!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Move, move!",
+       "original": "Move, move!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Cover me!",
+       "original": "Cover me!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Suppressing fire, there!",
+       "original": "Suppressing fire, there!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Lay it down, there!",
+       "original": "Lay it down, there!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Enemy spotted!",
+       "original": "Enemy spotted!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Contact, there!",
+       "original": "Contact, there!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Tango, there!",
+       "original": "Tango, there!",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Hold fire! Weapons tight.",
+       "original": "Hold fire! Weapons tight.",
+       "where": "comms:order",
+       "whisper": false
+      },
+      {
+       "text": "Weapons free!",
+       "original": "Weapons free!",
+       "where": "comms:order",
+       "whisper": false
+      }
+     ],
+     "script": "On me! <break time=\"1.5s\" />\nForm up on me! <break time=\"1.5s\" />\nRegroup on me! <break time=\"1.5s\" />\nHold this position! <break time=\"1.5s\" />\nHold here! <break time=\"1.5s\" />\nMove up! Over there! <break time=\"1.5s\" />\nPush up to that spot! <break time=\"1.5s\" />\nMove, move! <break time=\"1.5s\" />\nCover me! <break time=\"1.5s\" />\nSuppressing fire, there! <break time=\"1.5s\" />\nLay it down, there! <break time=\"1.5s\" />\nEnemy spotted! <break time=\"1.5s\" />\nContact, there! <break time=\"1.5s\" />\nTango, there! <break time=\"1.5s\" />\nHold fire! Weapons tight. <break time=\"1.5s\" />\nWeapons free!",
+     "chars": 592
+    }
+   ]
+  },
+  {
+   "speaker": "SQUAD",
+   "role": "Squadmates answering your orders",
+   "voice": "Use Hatch's voice again (or any squadmate). Quick radio replies.",
+   "lines": 27,
+   "parts": [
+    {
+     "file": "squad-1.mp3",
+     "lines": [
+      {
+       "text": "On you!",
+       "original": "On you!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Moving to you!",
+       "original": "Moving to you!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Coming to you, boss!",
+       "original": "Coming to you, boss!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Copy, on you!",
+       "original": "Copy, on you!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Holding!",
+       "original": "Holding!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Roger, holding here.",
+       "original": "Roger, holding here.",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Copy, we hold.",
+       "original": "Copy, we hold.",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Moving up!",
+       "original": "Moving up!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Moving!",
+       "original": "Moving!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "On the move!",
+       "original": "On the move!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Covering!",
+       "original": "Covering!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Suppressing!",
+       "original": "Suppressing!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Got you covered!",
+       "original": "Got you covered!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Eyes on!",
+       "original": "Eyes on!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "I see him!",
+       "original": "I see him!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Copy, tracking!",
+       "original": "Copy, tracking!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Weapons tight.",
+       "original": "Weapons tight.",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Holding fire.",
+       "original": "Holding fire.",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Copy, on your shot.",
+       "original": "Copy, on your shot.",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Weapons free!",
+       "original": "Weapons free!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Copy, weapons free!",
+       "original": "Copy, weapons free!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Engaging!",
+       "original": "Engaging!",
+       "where": "comms:reply",
+       "whisper": false
+      },
+      {
+       "text": "Contact front!",
+       "original": "Contact front!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "Reloading!",
+       "original": "Reloading!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "Changing mags!",
+       "original": "Changing mags!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "Cover me, reloading!",
+       "original": "Cover me, reloading!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "Frag out!",
+       "original": "Frag out!",
+       "where": "callout",
+       "whisper": false
+      }
+     ],
+     "script": "On you! <break time=\"1.5s\" />\nMoving to you! <break time=\"1.5s\" />\nComing to you, boss! <break time=\"1.5s\" />\nCopy, on you! <break time=\"1.5s\" />\nHolding! <break time=\"1.5s\" />\nRoger, holding here. <break time=\"1.5s\" />\nCopy, we hold. <break time=\"1.5s\" />\nMoving up! <break time=\"1.5s\" />\nMoving! <break time=\"1.5s\" />\nOn the move! <break time=\"1.5s\" />\nCovering! <break time=\"1.5s\" />\nSuppressing! <break time=\"1.5s\" />\nGot you covered! <break time=\"1.5s\" />\nEyes on! <break time=\"1.5s\" />\nI see him! <break time=\"1.5s\" />\nCopy, tracking! <break time=\"1.5s\" />\nWeapons tight. <break time=\"1.5s\" />\nHolding fire. <break time=\"1.5s\" />\nCopy, on your shot. <break time=\"1.5s\" />\nWeapons free! <break time=\"1.5s\" />\nCopy, weapons free! <break time=\"1.5s\" />\nEngaging! <break time=\"1.5s\" />\nContact front! <break time=\"1.5s\" />\nReloading! <break time=\"1.5s\" />\nChanging mags! <break time=\"1.5s\" />\nCover me, reloading! <break time=\"1.5s\" />\nFrag out!",
+     "chars": 947
+    }
+   ]
+  },
+  {
+   "speaker": "PILOT",
+   "role": "Helicopter pilot (intercom)",
+   "voice": "Calm American man, pilot on the intercom. Even and professional.",
+   "lines": 6,
+   "parts": [
+    {
+     "file": "pilot-1.mp3",
+     "lines": [
+      {
+       "text": "Thirty seconds! Compound is hot, expect fire from the towers!",
+       "original": "Thirty seconds! Compound is hot, expect fire from the towers!",
+       "where": "m2:insertion",
+       "whisper": false
+      },
+      {
+       "text": "Coming in low over the avenue. AA is still up, so this is a quick drop!",
+       "original": "Coming in low over the avenue. AA is still up, so this is a quick drop!",
+       "where": "m3:insertion",
+       "whisper": false
+      },
+      {
+       "text": "Port Kaval in thirty. Last ride, gentlemen.",
+       "original": "Port Kaval in thirty. Last ride, gentlemen.",
+       "where": "m7:insertion",
+       "whisper": false
+      },
+      {
+       "text": "Thirty seconds! Get ready on the ropes!",
+       "original": "Thirty seconds! Get ready on the ropes!",
+       "where": "src/modes/Insertion.js",
+       "whisper": false
+      },
+      {
+       "text": "Ropes out! Go, go, go!",
+       "original": "Ropes out! Go, go, go!",
+       "where": "src/modes/Insertion.js",
+       "whisper": false
+      },
+      {
+       "text": "Raven Two-One is clear. Good hunting.",
+       "original": "Raven Two-One is clear. Good hunting.",
+       "where": "src/modes/Insertion.js",
+       "whisper": false
+      }
+     ],
+     "script": "Thirty seconds! Compound is hot, expect fire from the towers! <break time=\"1.5s\" />\nComing in low over the avenue. AA is still up, so this is a quick drop! <break time=\"1.5s\" />\nPort Kaval in thirty. Last ride, gentlemen. <break time=\"1.5s\" />\nThirty seconds! Get ready on the ropes! <break time=\"1.5s\" />\nRopes out! Go, go, go! <break time=\"1.5s\" />\nRaven Two-One is clear. Good hunting.",
+     "chars": 388
+    }
+   ]
+  },
+  {
+   "speaker": "HART",
+   "role": "Dr. Lena Hart",
+   "voice": "Cold, precise woman in her 50s with a Northern European accent (Danish or Dutch).",
+   "lines": 6,
+   "parts": [
+    {
+     "file": "hart-1.mp3",
+     "lines": [
+      {
+       "text": "You're American? Thank God. Listen: Vasko is selling a strike. One shot, to a buyer, as a demonstration.",
+       "original": "You're American? Thank God. Listen: Vasko is selling a strike. One shot, to a buyer, as a demonstration.",
+       "where": "m2:obj3:done",
+       "whisper": false
+      },
+      {
+       "text": "The buyer is meeting MERIDIAN in Vel Harat. Vasko will show him the key and take the money there.",
+       "original": "The buyer is meeting MERIDIAN in Vel Harat. Vasko will show him the key and take the money there.",
+       "where": "m2:outro",
+       "whisper": false
+      },
+      {
+       "text": "(from the safe house) The server room records everyone who touched HALCYON. If someone inside helped Vasko, their name will be there.",
+       "original": "(from the safe house) The server room records everyone who touched HALCYON. If someone inside helped Vasko, their name will be there.",
+       "where": "m5:briefing",
+       "whisper": false
+      },
+      {
+       "text": "(over PA) You don't understand what you're stopping! Nobody would ever start a war again!",
+       "original": "(over PA) You don't understand what you're stopping! Nobody would ever start a war again!",
+       "where": "m8:obj3:done",
+       "whisper": false
+      },
+      {
+       "text": "Don't shoot! I'm not armed. I'm not armed!",
+       "original": "Don't shoot! I'm not armed. I'm not armed!",
+       "where": "m9:obj8",
+       "whisper": false
+      },
+      {
+       "text": "You have no idea what you have just done.",
+       "original": "You have no idea what you have just done.",
+       "where": "m9:obj8:done",
+       "whisper": false
+      }
+     ],
+     "script": "You're American? Thank God. Listen: Vasko is selling a strike. One shot, to a buyer, as a demonstration. <break time=\"1.5s\" />\nThe buyer is meeting MERIDIAN in Vel Harat. Vasko will show him the key and take the money there. <break time=\"1.5s\" />\n(from the safe house) The server room records everyone who touched HALCYON. If someone inside helped Vasko, their name will be there. <break time=\"1.5s\" />\n(over PA) You don't understand what you're stopping! Nobody would ever start a war again! <break time=\"1.5s\" />\nDon't shoot! I'm not armed. I'm not armed! <break time=\"1.5s\" />\nYou have no idea what you have just done.",
+     "chars": 621
+    }
+   ]
+  },
+  {
+   "speaker": "VASKO",
+   "role": "Anton Vasko, MERIDIAN founder",
+   "voice": "Eastern European man in his 50s. Smooth, quiet menace.",
+   "lines": 3,
+   "parts": [
+    {
+     "file": "vasko-1.mp3",
+     "lines": [
+      {
+       "text": "(intercepted) You are late, Captain. In ten minutes the world will learn what balance really means.",
+       "original": "(intercepted) You are late, Captain. In ten minutes the world will learn what balance really means.",
+       "where": "m8:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Goliath. Show them.",
+       "original": "Goliath. Show them.",
+       "where": "m8:obj4:done",
+       "whisper": false
+      },
+      {
+       "text": "You think this ends with me? Balance always returns, Sergeant.",
+       "original": "You think this ends with me? Balance always returns, Sergeant.",
+       "where": "m8:obj7:done",
+       "whisper": false
+      }
+     ],
+     "script": "(intercepted) You are late, Captain. In ten minutes the world will learn what balance really means. <break time=\"1.5s\" />\nGoliath. Show them. <break time=\"1.5s\" />\nYou think this ends with me? Balance always returns, Sergeant.",
+     "chars": 226
+    }
+   ]
+  },
+  {
+   "speaker": "KESSLER",
+   "role": "Kessler, MERIDIAN commander",
+   "voice": "German-accented man in his 50s. Hard and clipped.",
+   "lines": 1,
+   "parts": [
+    {
+     "file": "kessler-1.mp3",
+     "lines": [
+      {
+       "text": "ORION! I buried better soldiers than you in that desert. Come and get your box.",
+       "original": "ORION! I buried better soldiers than you in that desert. Come and get your box.",
+       "where": "m7:obj4",
+       "whisper": false
+      }
+     ],
+     "script": "ORION! I buried better soldiers than you in that desert. Come and get your box.",
+     "chars": 79
+    }
+   ]
+  },
+  {
+   "speaker": "BRANDT",
+   "role": "Brandt, a nervous businessman",
+   "voice": "Middle-aged man with a Swiss-German accent. Nervous, sweating.",
+   "lines": 2,
+   "parts": [
+    {
+     "file": "brandt-1.mp3",
+     "lines": [
+      {
+       "text": "Don't shoot! I'm only a businessman!",
+       "original": "Don't shoot! I'm only a businessman!",
+       "where": "m3b:obj4",
+       "whisper": false
+      },
+      {
+       "text": "All right! They will fire it from the mountains. Radar Station 9, in the Korvask range. The dish there can reach the satellites.",
+       "original": "All right! They will fire it from the mountains. Radar Station 9, in the Korvask range. The dish there can reach the satellites.",
+       "where": "m3b:obj4:done",
+       "whisper": false
+      }
+     ],
+     "script": "Don't shoot! I'm only a businessman! <break time=\"1.5s\" />\nAll right! They will fire it from the mountains. Radar Station 9, in the Korvask range. The dish there can reach the satellites.",
+     "chars": 187
+    }
+   ]
+  },
+  {
+   "speaker": "LEADER",
+   "role": "MERIDIAN cell leader, surrendering",
+   "voice": "Frightened middle-aged man, Eastern European accent.",
+   "lines": 1,
+   "parts": [
+    {
+     "file": "leader-1.mp3",
+     "lines": [
+      {
+       "text": "Don't shoot! I give up! I only move the paperwork!",
+       "original": "Don't shoot! I give up! I only move the paperwork!",
+       "where": "m6c:obj5",
+       "whisper": false
+      }
+     ],
+     "script": "Don't shoot! I give up! I only move the paperwork!",
+     "chars": 50
+    }
+   ]
+  },
+  {
+   "speaker": "TECHNICIAN",
+   "role": "Hart's technician, fake surrender",
+   "voice": "Panicked man in his 30s, Eastern European accent.",
+   "lines": 1,
+   "parts": [
+    {
+     "file": "technician-1.mp3",
+     "lines": [
+      {
+       "text": "Okay! Okay! Hands up! Don't shoot!",
+       "original": "Okay! Okay! Hands up! Don't shoot!",
+       "where": "m9:cqb",
+       "whisper": false
+      }
+     ],
+     "script": "Okay! Okay! Hands up! Don't shoot!",
+     "chars": 34
+    }
+   ]
+  },
+  {
+   "speaker": "CIVILIAN",
+   "role": "Tenants in the final mission",
+   "voice": "Terrified local tenant (man or woman), light Eastern European accent.",
+   "lines": 2,
+   "parts": [
+    {
+     "file": "civilian-1.mp3",
+     "lines": [
+      {
+       "text": "Please! Please! I live here!",
+       "original": "Please! Please! I live here!",
+       "where": "m9:cqb",
+       "whisper": false
+      },
+      {
+       "text": "No! No, no, don't—",
+       "original": "No! No, no, don't—",
+       "where": "m9:cqb",
+       "whisper": false
+      }
+     ],
+     "script": "Please! Please! I live here! <break time=\"1.5s\" />\nNo! No, no, don't—",
+     "chars": 69
+    }
+   ]
+  },
+  {
+   "speaker": "ENEMY",
+   "role": "MERIDIAN fighters (shouts)",
+   "voice": "Rough Eastern European man shouting in combat.",
+   "lines": 11,
+   "parts": [
+    {
+     "file": "enemy-1.mp3",
+     "lines": [
+      {
+       "text": "Contact!",
+       "original": "Contact!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "There! Enemy!",
+       "original": "There! Enemy!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "Intruder!",
+       "original": "Intruder!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "Reloading!",
+       "original": "Reloading!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "Cover me!",
+       "original": "Cover me!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "Changing mag!",
+       "original": "Changing mag!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "Granata!",
+       "original": "Granata!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "GRENADE!",
+       "original": "GRENADE!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "Man down!",
+       "original": "Man down!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "Body here!",
+       "original": "Body here!",
+       "where": "callout",
+       "whisper": false
+      },
+      {
+       "text": "We have a man down!",
+       "original": "We have a man down!",
+       "where": "callout",
+       "whisper": false
+      }
+     ],
+     "script": "Contact! <break time=\"1.5s\" />\nThere! Enemy! <break time=\"1.5s\" />\nIntruder! <break time=\"1.5s\" />\nReloading! <break time=\"1.5s\" />\nCover me! <break time=\"1.5s\" />\nChanging mag! <break time=\"1.5s\" />\nGranata! <break time=\"1.5s\" />\nGRENADE! <break time=\"1.5s\" />\nMan down! <break time=\"1.5s\" />\nBody here! <break time=\"1.5s\" />\nWe have a man down!",
+     "chars": 346
+    }
+   ]
+  }
+ ]
+}
