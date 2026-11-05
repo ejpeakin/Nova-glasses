@@ -140,7 +140,7 @@ export class CloseQuarters {
           a.surrendered = false; a.hidden = false; // reaching for a weapon: fair game
           a.lookYaw = a.yaw = Math.atan2(-(r.weapon[0] - a.pos.x), -(r.weapon[2] - a.pos.z));
           a.model.playMove('Interact', { hideGun: true });
-          g.hud.say([{ who: 'HATCH', text: '(whisper) He\'s going for the rifle!' }]);
+          g.hud.say([{ who: 'REYES', text: 'He\'s going for the rifle!' }]);
         }
       } else if (r.phase === 'reach') {
         r.t += dt;
@@ -163,7 +163,7 @@ export class CloseQuarters {
       a.stationary = true;
       a.lookYaw = a.yaw = Math.atan2(-(door.centre.x - a.pos.x), -(door.centre.z - a.pos.z));
       if (!near(p.pos, door.centre, b.ear ?? 4.5)) continue;
-      if (!b.heard) { b.heard = true; g.hud.say([{ who: 'REYES', text: '(whisper) Movement behind that door. Watch it.' }]); b.cool = 1.4; }
+      if (!b.heard) { b.heard = true; g.hud.say([{ who: 'REYES', text: '(low) Thermal\'s got someone behind that door. Watch it.' }]); b.cool = 1.4; }
       b.cool -= dt;
       if (b.cool > 0) continue;
       if (b.burst <= 0) b.burst = 3 + Math.floor(Math.random() * 4);
@@ -188,7 +188,7 @@ export class CloseQuarters {
           if (a.alive) {
             a.hidden = false; a.stunT = 0; a.stationary = false;
             a.state = 'combat'; a.target = p; a.lastKnown = p.pos.clone(); a.lastSeenT = now; a.acquiredT = now + 0.45;
-            g.hud.say([{ who: 'HATCH', text: 'WARDROBE!' }]);
+            g.hud.say([{ who: 'HATCH', text: 'Heat in the wardrobe! WARDROBE!' }]);
           }
         }
       }

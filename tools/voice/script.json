@@ -2,9 +2,9 @@
  "version": 1,
  "break": "1.5s",
  "model": "Eleven Multilingual v2",
- "totalChars": 24221,
- "files": 21,
- "lines": 285,
+ "totalChars": 25171,
+ "files": 23,
+ "lines": 295,
  "speakers": [
   {
    "speaker": "NARRATOR",
@@ -163,7 +163,7 @@
    "speaker": "WATCHTOWER",
    "role": "Mission control (radio)",
    "voice": "Calm, clipped woman in her 40s, neutral American. Steady over the radio even when things go wrong.",
-   "lines": 69,
+   "lines": 70,
    "parts": [
     {
      "file": "watchtower-1.mp3",
@@ -277,14 +277,20 @@
        "whisper": false
       },
       {
+       "text": "Brandt is at the plaza with Vasko's men. Keep him alive.",
+       "original": "Brandt is at the plaza with Vasko's men. Keep him alive.",
+       "where": "m3b:van",
+       "whisper": false
+      },
+      {
        "text": "Got every word. Van is coming to you, and MERIDIAN heard the shooting. Hold the plaza.",
        "original": "Got every word. Van is coming to you, and MERIDIAN heard the shooting. Hold the plaza.",
        "where": "m3b:obj4:done",
        "whisper": false
       }
      ],
-     "script": "Wraith, Watchtower. MERIDIAN is moving something heavy through Port Kaval tonight. We think it is the HALCYON key. <break time=\"1.5s\" />\nThe harbor office has the shipping records. They will tell us which container it is in. Then you tag that container so we can follow it. <break time=\"1.5s\" />\nYou go in alone. No squad, no air, no flag. If you are caught, ORION was never here. <break time=\"1.5s\" />\nHarbor master's office. The manifest is on the ground-floor terminal. Two guards inside. <break time=\"1.5s\" />\nManifest received. Container K-77, berth two... Wraith, you tripped a silent alarm. <break time=\"1.5s\" />\nResponse team at the east gate. Five, maybe more, coming in fast. <break time=\"1.5s\" />\nTracker is live. K-77 is moving. Good work, Wraith. <break time=\"1.5s\" />\nK-77 was flown inland to a MERIDIAN outpost in the Al-Rashid desert. Satellite photos show Dr. Lena Hart there, alive, under guard. <break time=\"1.5s\" />\nDr. Lena Hart built HALCYON. She is the only person alive who knows its launch codes, and MERIDIAN is holding her at this outpost. <break time=\"1.5s\" />\nWithout her the stolen key is a box of wires. With her, they can fire it. Get her out. <break time=\"1.5s\" />\nTechnicals inbound from the north road. Your bird is four minutes out. Dig in. <break time=\"1.5s\" />\nHelo is ninety seconds out. Hostiles converging from the north and east. <break time=\"1.5s\" />\nMERIDIAN has locked down Vel Harat for the sale. Two anti-aircraft guns cover the city, so our helicopters cannot get close. <break time=\"1.5s\" />\nPlant charges on both guns. Then the gunships can come in, and you hold the central plaza for pickup. <break time=\"1.5s\" />\nBoth batteries down. Gunships inbound in sixty seconds. Hold that plaza. <break time=\"1.5s\" />\nWe have his phone. He meets MERIDIAN again tonight, in the city plaza. Bring him in and he will tell us where they mean to fire it from. <break time=\"1.5s\" />\nOskar Brandt is an arms dealer. He is the buyer Vasko was selling the HALCYON strike to, and he knows where they plan to fire it from. <break time=\"1.5s\" />\nHe meets a MERIDIAN contact in the city plaza at midnight, with three bodyguards. We want him alive. <break time=\"1.5s\" />\nGot every word. Van is coming to you, and MERIDIAN heard the shooting. Hold the plaza.",
-     "chars": 2285
+     "script": "Wraith, Watchtower. MERIDIAN is moving something heavy through Port Kaval tonight. We think it is the HALCYON key. <break time=\"1.5s\" />\nThe harbor office has the shipping records. They will tell us which container it is in. Then you tag that container so we can follow it. <break time=\"1.5s\" />\nYou go in alone. No squad, no air, no flag. If you are caught, ORION was never here. <break time=\"1.5s\" />\nHarbor master's office. The manifest is on the ground-floor terminal. Two guards inside. <break time=\"1.5s\" />\nManifest received. Container K-77, berth two... Wraith, you tripped a silent alarm. <break time=\"1.5s\" />\nResponse team at the east gate. Five, maybe more, coming in fast. <break time=\"1.5s\" />\nTracker is live. K-77 is moving. Good work, Wraith. <break time=\"1.5s\" />\nK-77 was flown inland to a MERIDIAN outpost in the Al-Rashid desert. Satellite photos show Dr. Lena Hart there, alive, under guard. <break time=\"1.5s\" />\nDr. Lena Hart built HALCYON. She is the only person alive who knows its launch codes, and MERIDIAN is holding her at this outpost. <break time=\"1.5s\" />\nWithout her the stolen key is a box of wires. With her, they can fire it. Get her out. <break time=\"1.5s\" />\nTechnicals inbound from the north road. Your bird is four minutes out. Dig in. <break time=\"1.5s\" />\nHelo is ninety seconds out. Hostiles converging from the north and east. <break time=\"1.5s\" />\nMERIDIAN has locked down Vel Harat for the sale. Two anti-aircraft guns cover the city, so our helicopters cannot get close. <break time=\"1.5s\" />\nPlant charges on both guns. Then the gunships can come in, and you hold the central plaza for pickup. <break time=\"1.5s\" />\nBoth batteries down. Gunships inbound in sixty seconds. Hold that plaza. <break time=\"1.5s\" />\nWe have his phone. He meets MERIDIAN again tonight, in the city plaza. Bring him in and he will tell us where they mean to fire it from. <break time=\"1.5s\" />\nOskar Brandt is an arms dealer. He is the buyer Vasko was selling the HALCYON strike to, and he knows where they plan to fire it from. <break time=\"1.5s\" />\nHe meets a MERIDIAN contact in the city plaza at midnight, with three bodyguards. We want him alive. <break time=\"1.5s\" />\nBrandt is at the plaza with Vasko's men. Keep him alive. <break time=\"1.5s\" />\nGot every word. Van is coming to you, and MERIDIAN heard the shooting. Hold the plaza.",
+     "chars": 2364
     },
     {
      "file": "watchtower-2.mp3",
@@ -613,7 +619,7 @@
    "speaker": "REYES",
    "role": "ORION team leader",
    "voice": "Gravelly Latino-American man in his 40s. Quiet authority; low and close when sneaking.",
-   "lines": 57,
+   "lines": 60,
    "parts": [
     {
      "file": "reyes-1.mp3",
@@ -727,6 +733,18 @@
        "whisper": false
       },
       {
+       "text": "Market's a few blocks east. We walk the last stretch.",
+       "original": "(low) Market's a few blocks east. We walk the last stretch.",
+       "where": "m3b:van",
+       "whisper": true
+      },
+      {
+       "text": "Out the side. Stay off the street lights.",
+       "original": "Out the side. Stay off the street lights.",
+       "where": "m3b:van",
+       "whisper": false
+      },
+      {
        "text": "Stay low and in the shadows. I'm on your shoulder.",
        "original": "(whisper) Stay low and in the shadows. I'm on your shoulder.",
        "where": "m3b:obj0",
@@ -767,7 +785,14 @@
        "original": "She has been working with Vasko all along. Grab that drive before she wipes it.",
        "where": "m5:obj1:done",
        "whisper": false
-      },
+      }
+     ],
+     "script": "I'll be on the boat with eyes on your feed. Stay off the ground. Rooftops are yours. <break time=\"1.5s\" />\nPatrol on the south road. Stay in the shadows. Fire stairs on the warehouse's west wall will get you up top. <break time=\"1.5s\" />\nShooter on the office roof. A friend left you a rifle up there. Suppressed. Use it. <break time=\"1.5s\" />\nRifle's by the roof edge. Aim at him to tag him, then one quiet shot. <break time=\"1.5s\" />\nClear. Rope's on your rig. Walk to the east edge of the roof, press T and go down the wall. <break time=\"1.5s\" />\nWest door. Two inside. Take them from behind with V. No noise. <break time=\"1.5s\" />\nThey're coming to you. Get high, pick your shots, and keep moving. <break time=\"1.5s\" />\nHold the office. They have to cross open ground to reach you. Make them pay for it. <break time=\"1.5s\" />\nK-77 is under the east crane. Tag it and we are gone. <break time=\"1.5s\" />\nBoat's at the west quay. Lights off. Come home. <break time=\"1.5s\" />\nThe key is useless without her launch codes. If we get Hart back, they can never fire it. We go in at first light. <break time=\"1.5s\" />\nRopes! Go, go, go! <break time=\"1.5s\" />\nSmoke the gate if those towers get a bead on you. ORION, push! <break time=\"1.5s\" />\nCompound's ours. Hart is inside the HQ, and they'll have a gun on her. <break time=\"1.5s\" />\nTell us on the helo, Doctor. Now we hold. <break time=\"1.5s\" />\nBird's down on the west side! Go! <break time=\"1.5s\" />\nThen that is where we go. If we break up the sale, nobody gets their demonstration. <break time=\"1.5s\" />\nStay off the center of the street. Use the cars. <break time=\"1.5s\" />\nMarket's a few blocks east. We walk the last stretch. <break time=\"1.5s\" />\nOut the side. Stay off the street lights. <break time=\"1.5s\" />\nStay low and in the shadows. I'm on your shoulder. <break time=\"1.5s\" />\nBodyguards first. Brandt does not leave this plaza. <break time=\"1.5s\" />\nVan is at the north end of the cross street. Go! <break time=\"1.5s\" />\nThen we take the dish away from them. Tex, pack your rifle. We are going up the mountain. <break time=\"1.5s\" />\nTight corridors. Flashbangs before every door. Let's go. <break time=\"1.5s\" />\nWraith, get on that terminal. We've got your back. <break time=\"1.5s\" />\nShe has been working with Vasko all along. Grab that drive before she wipes it.",
+     "chars": 2330
+    },
+    {
+     "file": "reyes-2.mp3",
+     "lines": [
       {
        "text": "She still knows the codes, and she is going back to the key. We chase her tonight.",
        "original": "She still knows the codes, and she is going back to the key. We chase her tonight.",
@@ -779,14 +804,7 @@
        "original": "Took you long enough. Leg's busted. Hand me a rifle — I can still shoot.",
        "where": "m6:obj1:done",
        "whisper": false
-      }
-     ],
-     "script": "I'll be on the boat with eyes on your feed. Stay off the ground. Rooftops are yours. <break time=\"1.5s\" />\nPatrol on the south road. Stay in the shadows. Fire stairs on the warehouse's west wall will get you up top. <break time=\"1.5s\" />\nShooter on the office roof. A friend left you a rifle up there. Suppressed. Use it. <break time=\"1.5s\" />\nRifle's by the roof edge. Aim at him to tag him, then one quiet shot. <break time=\"1.5s\" />\nClear. Rope's on your rig. Walk to the east edge of the roof, press T and go down the wall. <break time=\"1.5s\" />\nWest door. Two inside. Take them from behind with V. No noise. <break time=\"1.5s\" />\nThey're coming to you. Get high, pick your shots, and keep moving. <break time=\"1.5s\" />\nHold the office. They have to cross open ground to reach you. Make them pay for it. <break time=\"1.5s\" />\nK-77 is under the east crane. Tag it and we are gone. <break time=\"1.5s\" />\nBoat's at the west quay. Lights off. Come home. <break time=\"1.5s\" />\nThe key is useless without her launch codes. If we get Hart back, they can never fire it. We go in at first light. <break time=\"1.5s\" />\nRopes! Go, go, go! <break time=\"1.5s\" />\nSmoke the gate if those towers get a bead on you. ORION, push! <break time=\"1.5s\" />\nCompound's ours. Hart is inside the HQ, and they'll have a gun on her. <break time=\"1.5s\" />\nTell us on the helo, Doctor. Now we hold. <break time=\"1.5s\" />\nBird's down on the west side! Go! <break time=\"1.5s\" />\nThen that is where we go. If we break up the sale, nobody gets their demonstration. <break time=\"1.5s\" />\nStay off the center of the street. Use the cars. <break time=\"1.5s\" />\nStay low and in the shadows. I'm on your shoulder. <break time=\"1.5s\" />\nBodyguards first. Brandt does not leave this plaza. <break time=\"1.5s\" />\nVan is at the north end of the cross street. Go! <break time=\"1.5s\" />\nThen we take the dish away from them. Tex, pack your rifle. We are going up the mountain. <break time=\"1.5s\" />\nTight corridors. Flashbangs before every door. Let's go. <break time=\"1.5s\" />\nWraith, get on that terminal. We've got your back. <break time=\"1.5s\" />\nShe has been working with Vasko all along. Grab that drive before she wipes it. <break time=\"1.5s\" />\nShe still knows the codes, and she is going back to the key. We chase her tonight. <break time=\"1.5s\" />\nTook you long enough. Leg's busted. Hand me a rifle — I can still shoot.",
-     "chars": 2390
-    },
-    {
-     "file": "reyes-2.mp3",
-     "lines": [
+      },
       {
        "text": "Dawn is two hours out. They'll come at us from every side. Make every round count.",
        "original": "Dawn is two hours out. They'll come at us from every side. Make every round count.",
@@ -860,8 +878,8 @@
        "whisper": false
       },
       {
-       "text": "We go in the side door, night vision and lasers, room by room. Rules of engagement are strict: nobody fires on anyone who isn't holding a weapon.",
-       "original": "We go in the side door, night vision and lasers, room by room. Rules of engagement are strict: nobody fires on anyone who isn't holding a weapon.",
+       "text": "Wraith goes in alone through the side door, night vision and laser, room by room. Hatch and I watch the house on thermal from the van. Rules of engagement are strict: nobody fires on anyone who isn't holding a weapon.",
+       "original": "Wraith goes in alone through the side door, night vision and laser, room by room. Hatch and I watch the house on thermal from the van. Rules of engagement are strict: nobody fires on anyone who isn't holding a weapon.",
        "where": "m9:briefing",
        "whisper": false
       },
@@ -872,38 +890,38 @@
        "whisper": true
       },
       {
-       "text": "This is us. Weapons tight: no weapon in their hands, no shot. Out the side, slow.",
-       "original": "This is us. Weapons tight: no weapon in their hands, no shot. Out the side, slow.",
+       "text": "One man makes less noise than three. You're going in alone, Wraith. We're on the thermal. No weapon in their hands, no shot.",
+       "original": "One man makes less noise than three. You're going in alone, Wraith. We're on the thermal. No weapon in their hands, no shot.",
        "where": "m9:van",
        "whisper": false
       },
       {
-       "text": "Comms quiet. Two on the front. Then the side door into the kitchen.",
-       "original": "Comms quiet. Two on the front. Then the side door into the kitchen.",
+       "text": "Comms quiet. Two on the front. Then the side door into the kitchen. We've got eyes on you.",
+       "original": "Comms quiet. Two on the front. Then the side door into the kitchen. We've got eyes on you.",
        "where": "m9:obj0",
        "whisper": false
       },
       {
-       "text": "Kitchen. Eyes on hands.",
-       "original": "(whisper) Kitchen. Eyes on hands.",
+       "text": "You're in. Kitchen. Eyes on hands.",
+       "original": "(low) You're in. Kitchen. Eyes on hands.",
        "where": "m9:obj3:done",
        "whisper": true
       },
       {
        "text": "Bedrooms up there, doors shut, families behind them. Ease them open. Check every corner.",
-       "original": "(whisper) Bedrooms up there, doors shut, families behind them. Ease them open. Check every corner.",
+       "original": "(low) Bedrooms up there, doors shut, families behind them. Ease them open. Check every corner.",
        "where": "m9:obj5",
        "whisper": true
       },
       {
        "text": "Hart's up top with whoever she trusts. If they give up, hold fire. If they move for anything, drop them.",
-       "original": "(whisper) Hart's up top with whoever she trusts. If they give up, hold fire. If they move for anything, drop them.",
+       "original": "(low) Hart's up top with whoever she trusts. If they give up, hold fire. If they move for anything, drop them.",
        "where": "m9:obj7",
        "whisper": true
       },
       {
-       "text": "We'll talk about it on the plane, Doctor.",
-       "original": "We'll talk about it on the plane, Doctor.",
+       "text": "Good work. Bring her down, Wraith. We're pulling up.",
+       "original": "Good work. Bring her down, Wraith. We're pulling up.",
        "where": "m9:obj8:done",
        "whisper": false
       },
@@ -930,7 +948,14 @@
        "original": "Hold fire! He wasn't armed!",
        "where": "src/modes/CampaignMode.js",
        "whisper": false
-      },
+      }
+     ],
+     "script": "She still knows the codes, and she is going back to the key. We chase her tonight. <break time=\"1.5s\" />\nTook you long enough. Leg's busted. Hand me a rifle — I can still shoot. <break time=\"1.5s\" />\nDawn is two hours out. They'll come at us from every side. Make every round count. <break time=\"1.5s\" />\nMy leg is done. Hatch, Tex, Wraith: put that launcher in the ground and find out where she went. <break time=\"1.5s\" />\n(from the medical tent) Kessler. He's mine. <break time=\"1.5s\" />\nThen he's Wraith's. <break time=\"1.5s\" />\nClimb the stacks and hit him from above. Don't let him get close. <break time=\"1.5s\" />\nThen where is the real key? <break time=\"1.5s\" />\nThen we cut it, tonight. Hatch, Tex, Wraith: back up the mountain. <break time=\"1.5s\" />\nEveryone we have. Everything we have. We go down into that vault tonight. <break time=\"1.5s\" />\nTen minutes is plenty. ORION — this is it. We go now. <break time=\"1.5s\" />\nThat armor's rated for fifty-cal. Hit the joints! Semtex, flashbangs, everything! <break time=\"1.5s\" />\nNot today. Watchtower — mission complete. Package secured. <break time=\"1.5s\" />\nShe is hiding in Vel Harat, with what is left of MERIDIAN. Then we go and get her. Quietly. <break time=\"1.5s\" />\nWraith goes in alone through the side door, night vision and laser, room by room. Hatch and I watch the house on thermal from the van. Rules of engagement are strict: nobody fires on anyone who isn't holding a weapon. <break time=\"1.5s\" />\nLights off from here. One block. <break time=\"1.5s\" />\nOne man makes less noise than three. You're going in alone, Wraith. We're on the thermal. No weapon in their hands, no shot. <break time=\"1.5s\" />\nComms quiet. Two on the front. Then the side door into the kitchen. We've got eyes on you. <break time=\"1.5s\" />\nYou're in. Kitchen. Eyes on hands. <break time=\"1.5s\" />\nBedrooms up there, doors shut, families behind them. Ease them open. Check every corner. <break time=\"1.5s\" />\nHart's up top with whoever she trusts. If they give up, hold fire. If they move for anything, drop them. <break time=\"1.5s\" />\nGood work. Bring her down, Wraith. We're pulling up. <break time=\"1.5s\" />\nTask Force ORION was never activated. None of this happened. Good work, Wraith. <break time=\"1.5s\" />\nWe're blown! Weapons free! <break time=\"1.5s\" />\nCHECK FIRE! CHECK FIRE! That was a civilian! <break time=\"1.5s\" />\nHold fire! He wasn't armed!",
+     "chars": 2400
+    },
+    {
+     "file": "reyes-3.mp3",
+     "lines": [
       {
        "text": "Easy. Slow is smooth, smooth is fast.",
        "original": "Easy. Slow is smooth, smooth is fast.",
@@ -950,8 +975,14 @@
        "whisper": false
       },
       {
-       "text": "Movement behind that door. Watch it.",
-       "original": "(whisper) Movement behind that door. Watch it.",
+       "text": "He's going for the rifle!",
+       "original": "He's going for the rifle!",
+       "where": "src/modes/CloseQuarters.js",
+       "whisper": false
+      },
+      {
+       "text": "Thermal's got someone behind that door. Watch it.",
+       "original": "(low) Thermal's got someone behind that door. Watch it.",
        "where": "src/modes/CloseQuarters.js",
        "whisper": true
       },
@@ -968,8 +999,8 @@
        "whisper": false
       }
      ],
-     "script": "Dawn is two hours out. They'll come at us from every side. Make every round count. <break time=\"1.5s\" />\nMy leg is done. Hatch, Tex, Wraith: put that launcher in the ground and find out where she went. <break time=\"1.5s\" />\n(from the medical tent) Kessler. He's mine. <break time=\"1.5s\" />\nThen he's Wraith's. <break time=\"1.5s\" />\nClimb the stacks and hit him from above. Don't let him get close. <break time=\"1.5s\" />\nThen where is the real key? <break time=\"1.5s\" />\nThen we cut it, tonight. Hatch, Tex, Wraith: back up the mountain. <break time=\"1.5s\" />\nEveryone we have. Everything we have. We go down into that vault tonight. <break time=\"1.5s\" />\nTen minutes is plenty. ORION — this is it. We go now. <break time=\"1.5s\" />\nThat armor's rated for fifty-cal. Hit the joints! Semtex, flashbangs, everything! <break time=\"1.5s\" />\nNot today. Watchtower — mission complete. Package secured. <break time=\"1.5s\" />\nShe is hiding in Vel Harat, with what is left of MERIDIAN. Then we go and get her. Quietly. <break time=\"1.5s\" />\nWe go in the side door, night vision and lasers, room by room. Rules of engagement are strict: nobody fires on anyone who isn't holding a weapon. <break time=\"1.5s\" />\nLights off from here. One block. <break time=\"1.5s\" />\nThis is us. Weapons tight: no weapon in their hands, no shot. Out the side, slow. <break time=\"1.5s\" />\nComms quiet. Two on the front. Then the side door into the kitchen. <break time=\"1.5s\" />\nKitchen. Eyes on hands. <break time=\"1.5s\" />\nBedrooms up there, doors shut, families behind them. Ease them open. Check every corner. <break time=\"1.5s\" />\nHart's up top with whoever she trusts. If they give up, hold fire. If they move for anything, drop them. <break time=\"1.5s\" />\nWe'll talk about it on the plane, Doctor. <break time=\"1.5s\" />\nTask Force ORION was never activated. None of this happened. Good work, Wraith. <break time=\"1.5s\" />\nWe're blown! Weapons free! <break time=\"1.5s\" />\nCHECK FIRE! CHECK FIRE! That was a civilian! <break time=\"1.5s\" />\nHold fire! He wasn't armed! <break time=\"1.5s\" />\nEasy. Slow is smooth, smooth is fast. <break time=\"1.5s\" />\nSlow down. Every step counts. <break time=\"1.5s\" />\nSteady. Stay with the team. <break time=\"1.5s\" />\nMovement behind that door. Watch it. <break time=\"1.5s\" />\nTrigger man down. Good shot. <break time=\"1.5s\" />\nHE'S GOING FOR THE TRIGGER!",
-     "chars": 2362
+     "script": "Easy. Slow is smooth, smooth is fast. <break time=\"1.5s\" />\nSlow down. Every step counts. <break time=\"1.5s\" />\nSteady. Stay with the team. <break time=\"1.5s\" />\nHe's going for the rifle! <break time=\"1.5s\" />\nThermal's got someone behind that door. Watch it. <break time=\"1.5s\" />\nTrigger man down. Good shot. <break time=\"1.5s\" />\nHE'S GOING FOR THE TRIGGER!",
+     "chars": 360
     }
    ]
   },
@@ -977,7 +1008,7 @@
    "speaker": "HATCH",
    "role": "ORION breacher",
    "voice": "Dry, laconic American man in his 30s. Slightly sardonic, very calm.",
-   "lines": 30,
+   "lines": 32,
    "parts": [
     {
      "file": "hatch-1.mp3",
@@ -1037,6 +1068,12 @@
        "whisper": false
       },
       {
+       "text": "Out, out, out!",
+       "original": "Out, out, out!",
+       "where": "m6b:insertion",
+       "whisper": false
+      },
+      {
        "text": "Heavy gunner by the north wall. Hit him from cover, don't trade with him in the open.",
        "original": "Heavy gunner by the north wall. Hit him from cover, don't trade with him in the open.",
        "where": "m6b:obj3",
@@ -1058,6 +1095,18 @@
        "text": "No quiet way in. I put a charge on the front door, it goes, we flash and flood. Ground floor with me, then up the stairs.",
        "original": "No quiet way in. I put a charge on the front door, it goes, we flash and flood. Ground floor with me, then up the stairs.",
        "where": "m6c:briefing",
+       "whisper": false
+      },
+      {
+       "text": "Charges are prepped. Flashbangs on your belt, Wraith.",
+       "original": "Charges are prepped. Flashbangs on your belt, Wraith.",
+       "where": "m6c:van",
+       "whisper": false
+      },
+      {
+       "text": "Here we go. Out the side and up the avenue.",
+       "original": "Here we go. Out the side and up the avenue.",
+       "where": "m6c:van",
        "whisper": false
       },
       {
@@ -1127,8 +1176,8 @@
        "whisper": false
       },
       {
-       "text": "Two on the front of the house. Families on every floor. Hart's at the top.",
-       "original": "Two on the front of the house. Families on every floor. Hart's at the top.",
+       "text": "Drone's up. Two on the front of the house, families on every floor, Hart at the top.",
+       "original": "Drone's up. Two on the front of the house, families on every floor, Hart at the top.",
        "where": "m9:van",
        "whisper": false
       },
@@ -1137,34 +1186,35 @@
        "original": "One on the door, one walking the block. Headshots. Nobody hears these.",
        "where": "m9:obj1",
        "whisper": false
-      },
+      }
+     ],
+     "script": "Contact, courtyard! They're dug in behind the sandbags. <break time=\"1.5s\" />\nSouth door. Quick and quiet, Wraith. Don't give them time to think. <break time=\"1.5s\" />\nCharges are prepped. Get me to the guns and I'll do the rest. Actually — you do the rest. I'll watch. <break time=\"1.5s\" />\nRopes out! Move it, Wraith! <break time=\"1.5s\" />\nCharge set... and boom. One down! <break time=\"1.5s\" />\nLab's across the atrium. It's going to be loud. <break time=\"1.5s\" />\nWraith... you alive? Reyes is still in the wreck. We have to get her out. <break time=\"1.5s\" />\nScouts are already picking through the wreck. Drop them! <break time=\"1.5s\" />\nStorm's coming in. They won't see us until we're on top of them. Neither will we, so stay close. <break time=\"1.5s\" />\nOut, out, out! <break time=\"1.5s\" />\nHeavy gunner by the north wall. Hit him from cover, don't trade with him in the open. <break time=\"1.5s\" />\nCharge is on. Back up... and down she goes. Skies are open. <break time=\"1.5s\" />\nCaptain, you can barely walk. <break time=\"1.5s\" />\nNo quiet way in. I put a charge on the front door, it goes, we flash and flood. Ground floor with me, then up the stairs. <break time=\"1.5s\" />\nCharges are prepped. Flashbangs on your belt, Wraith. <break time=\"1.5s\" />\nHere we go. Out the side and up the avenue. <break time=\"1.5s\" />\nThat's the place. Two on the street. Drop them, then we stack on the front door. <break time=\"1.5s\" />\nStacked. Charge goes on the door, then everybody back against the wall. <break time=\"1.5s\" />\nBREACHING! <break time=\"1.5s\" />\nCuffed. Hostages are upstairs. Tex and I hold the stairs, Wraith, top floor is yours. Flash the room. <break time=\"1.5s\" />\nFiles are out. Hostages and prisoner to the van. Move! <break time=\"1.5s\" />\nThen that's where the key is. Good breach, Wraith. <break time=\"1.5s\" />\nRopes out! Let's finish this! <break time=\"1.5s\" />\nWarehouse on the left is crawling. Keep moving! <break time=\"1.5s\" />\nTwo transformers either side of the station, generator inside. Guards on all three. <break time=\"1.5s\" />\nA is cooking. One more. <break time=\"1.5s\" />\nCell three. He's hiding in a cage he built for someone else. <break time=\"1.5s\" />\nDrone's up. Two on the front of the house, families on every floor, Hart at the top. <break time=\"1.5s\" />\nOne on the door, one walking the block. Headshots. Nobody hears these.",
+     "chars": 2365
+    },
+    {
+     "file": "hatch-2.mp3",
+     "lines": [
       {
-       "text": "Stacked. Locked. Your call.",
-       "original": "(whisper) Stacked. Locked. Your call.",
+       "text": "Side door's locked. Kitchen's behind it. Two warm bodies near the counter on thermal.",
+       "original": "Side door's locked. Kitchen's behind it. Two warm bodies near the counter on thermal.",
        "where": "m9:obj2",
-       "whisper": true
+       "whisper": false
       },
       {
-       "text": "Hart's with me. Tenants are staying put till the police come. Move.",
-       "original": "Hart's with me. Tenants are staying put till the police come. Move.",
+       "text": "Van's at the kerb. Bring her out. Tenants stay put till the police come.",
+       "original": "Van's at the kerb. Bring her out. Tenants stay put till the police come.",
        "where": "m9:obj10",
        "whisper": false
       },
       {
-       "text": "He's going for the rifle!",
-       "original": "(whisper) He's going for the rifle!",
-       "where": "src/modes/CloseQuarters.js",
-       "whisper": true
-      },
-      {
-       "text": "WARDROBE!",
-       "original": "WARDROBE!",
+       "text": "Heat in the wardrobe! WARDROBE!",
+       "original": "Heat in the wardrobe! WARDROBE!",
        "where": "src/modes/CloseQuarters.js",
        "whisper": false
       }
      ],
-     "script": "Contact, courtyard! They're dug in behind the sandbags. <break time=\"1.5s\" />\nSouth door. Quick and quiet, Wraith. Don't give them time to think. <break time=\"1.5s\" />\nCharges are prepped. Get me to the guns and I'll do the rest. Actually — you do the rest. I'll watch. <break time=\"1.5s\" />\nRopes out! Move it, Wraith! <break time=\"1.5s\" />\nCharge set... and boom. One down! <break time=\"1.5s\" />\nLab's across the atrium. It's going to be loud. <break time=\"1.5s\" />\nWraith... you alive? Reyes is still in the wreck. We have to get her out. <break time=\"1.5s\" />\nScouts are already picking through the wreck. Drop them! <break time=\"1.5s\" />\nStorm's coming in. They won't see us until we're on top of them. Neither will we, so stay close. <break time=\"1.5s\" />\nHeavy gunner by the north wall. Hit him from cover, don't trade with him in the open. <break time=\"1.5s\" />\nCharge is on. Back up... and down she goes. Skies are open. <break time=\"1.5s\" />\nCaptain, you can barely walk. <break time=\"1.5s\" />\nNo quiet way in. I put a charge on the front door, it goes, we flash and flood. Ground floor with me, then up the stairs. <break time=\"1.5s\" />\nThat's the place. Two on the street. Drop them, then we stack on the front door. <break time=\"1.5s\" />\nStacked. Charge goes on the door, then everybody back against the wall. <break time=\"1.5s\" />\nBREACHING! <break time=\"1.5s\" />\nCuffed. Hostages are upstairs. Tex and I hold the stairs, Wraith, top floor is yours. Flash the room. <break time=\"1.5s\" />\nFiles are out. Hostages and prisoner to the van. Move! <break time=\"1.5s\" />\nThen that's where the key is. Good breach, Wraith. <break time=\"1.5s\" />\nRopes out! Let's finish this! <break time=\"1.5s\" />\nWarehouse on the left is crawling. Keep moving! <break time=\"1.5s\" />\nTwo transformers either side of the station, generator inside. Guards on all three. <break time=\"1.5s\" />\nA is cooking. One more. <break time=\"1.5s\" />\nCell three. He's hiding in a cage he built for someone else. <break time=\"1.5s\" />\nTwo on the front of the house. Families on every floor. Hart's at the top. <break time=\"1.5s\" />\nOne on the door, one walking the block. Headshots. Nobody hears these. <break time=\"1.5s\" />\nStacked. Locked. Your call. <break time=\"1.5s\" />\nHart's with me. Tenants are staying put till the police come. Move. <break time=\"1.5s\" />\nHe's going for the rifle! <break time=\"1.5s\" />\nWARDROBE!",
-     "chars": 2396
+     "script": "Side door's locked. Kitchen's behind it. Two warm bodies near the counter on thermal. <break time=\"1.5s\" />\nVan's at the kerb. Bring her out. Tenants stay put till the police come. <break time=\"1.5s\" />\nHeat in the wardrobe! WARDROBE!",
+     "chars": 234
     }
    ]
   },
@@ -1172,7 +1222,7 @@
    "speaker": "TEX",
    "role": "ORION rifleman",
    "voice": "Texan man in his 30s. Loud, energetic drawl.",
-   "lines": 30,
+   "lines": 31,
    "parts": [
     {
      "file": "tex-1.mp3",
@@ -1310,18 +1360,24 @@
        "whisper": false
       },
       {
-       "text": "One by the door, one walking the front. Take them.",
-       "original": "One by the door, one walking the front. Take them.",
-       "where": "m6c:obj1",
+       "text": "Two on the street out front. Then it's the door.",
+       "original": "Two on the street out front. Then it's the door.",
+       "where": "m6c:van",
        "whisper": false
       }
      ],
-     "script": "Two towers on the south wall. I'll call them out, but you'll want to keep your head down on the approach. <break time=\"1.5s\" />\nThermal shows a body in the HQ, ground floor. More hostiles upstairs. <break time=\"1.5s\" />\nSouth-west battery. Crew of three, and they've got a spotter up high. <break time=\"1.5s\" />\nSniper on that roof. Stay out of his line of sight until you're close. <break time=\"1.5s\" />\nSniper on the tower roof, south-west. Watch the high windows. <break time=\"1.5s\" />\nThe buyer slipped out in the fighting. Arms dealer, name of Oskar Brandt. <break time=\"1.5s\" />\nI'll be on a rooftop with eyes on the plaza. One sentry walks the avenue, another the cross street. Quiet is the whole job. <break time=\"1.5s\" />\nSentry on the avenue, another on the cross street. From behind, or one suppressed round. No noise. <break time=\"1.5s\" />\nThere's Brandt, grey suit, by the monument. Three bodyguards and a MERIDIAN contact. Nobody touches Brandt. <break time=\"1.5s\" />\nI'm on the far ridge with a spotter scope. You're the gun, Wraith. Whiteout's our friend: they can't see far, but neither can we. <break time=\"1.5s\" />\nEast tower first. Hold your scope on him to tag him, and breathe out before you shoot. <break time=\"1.5s\" />\nThen the two at the gate. Suppressor's on, so they won't know where it came from. <break time=\"1.5s\" />\nHangar's full of Rook's people. Stay out of the open. Use the buildings. <break time=\"1.5s\" />\nWalk to the south edge of the rock and press T to rappel down. Then the gate, a gap in the wire, or just climb the fence. <break time=\"1.5s\" />\nStairs inside go up to the roof. Two inside. Take them quietly. <break time=\"1.5s\" />\nThere he is. He knows where you are. He's coming straight at you. <break time=\"1.5s\" />\nKeep the high ground and aim for the head. The armor stops everything else. <break time=\"1.5s\" />\nRook is down. Let's not be here when his friends arrive. <break time=\"1.5s\" />\nAnd Rook was carrying a keycard for it. Somebody on the inside has been helping them. <break time=\"1.5s\" />\nThree on the south edge of the village. Close in slow. Let the dust hide us. <break time=\"1.5s\" />\nThere it is, by the well. Truck-mounted launcher. That is what killed Raven Two-One. <break time=\"1.5s\" />\nContacts! Trucks coming in from the north! <break time=\"1.5s\" />\nOne by the door, one walking the front. Take them.",
-     "chars": 2366
+     "script": "Two towers on the south wall. I'll call them out, but you'll want to keep your head down on the approach. <break time=\"1.5s\" />\nThermal shows a body in the HQ, ground floor. More hostiles upstairs. <break time=\"1.5s\" />\nSouth-west battery. Crew of three, and they've got a spotter up high. <break time=\"1.5s\" />\nSniper on that roof. Stay out of his line of sight until you're close. <break time=\"1.5s\" />\nSniper on the tower roof, south-west. Watch the high windows. <break time=\"1.5s\" />\nThe buyer slipped out in the fighting. Arms dealer, name of Oskar Brandt. <break time=\"1.5s\" />\nI'll be on a rooftop with eyes on the plaza. One sentry walks the avenue, another the cross street. Quiet is the whole job. <break time=\"1.5s\" />\nSentry on the avenue, another on the cross street. From behind, or one suppressed round. No noise. <break time=\"1.5s\" />\nThere's Brandt, grey suit, by the monument. Three bodyguards and a MERIDIAN contact. Nobody touches Brandt. <break time=\"1.5s\" />\nI'm on the far ridge with a spotter scope. You're the gun, Wraith. Whiteout's our friend: they can't see far, but neither can we. <break time=\"1.5s\" />\nEast tower first. Hold your scope on him to tag him, and breathe out before you shoot. <break time=\"1.5s\" />\nThen the two at the gate. Suppressor's on, so they won't know where it came from. <break time=\"1.5s\" />\nHangar's full of Rook's people. Stay out of the open. Use the buildings. <break time=\"1.5s\" />\nWalk to the south edge of the rock and press T to rappel down. Then the gate, a gap in the wire, or just climb the fence. <break time=\"1.5s\" />\nStairs inside go up to the roof. Two inside. Take them quietly. <break time=\"1.5s\" />\nThere he is. He knows where you are. He's coming straight at you. <break time=\"1.5s\" />\nKeep the high ground and aim for the head. The armor stops everything else. <break time=\"1.5s\" />\nRook is down. Let's not be here when his friends arrive. <break time=\"1.5s\" />\nAnd Rook was carrying a keycard for it. Somebody on the inside has been helping them. <break time=\"1.5s\" />\nThree on the south edge of the village. Close in slow. Let the dust hide us. <break time=\"1.5s\" />\nThere it is, by the well. Truck-mounted launcher. That is what killed Raven Two-One. <break time=\"1.5s\" />\nContacts! Trucks coming in from the north! <break time=\"1.5s\" />\nTwo on the street out front. Then it's the door.",
+     "chars": 2364
     },
     {
      "file": "tex-2.mp3",
      "lines": [
+      {
+       "text": "One by the door, one walking the front. Take them.",
+       "original": "One by the door, one walking the front. Take them.",
+       "where": "m6c:obj1",
+       "whisper": false
+      },
       {
        "text": "Door's gone! Flash the lobby, then the rooms. Go, go, go!",
        "original": "Door's gone! Flash the lobby, then the rooms. Go, go, go!",
@@ -1365,8 +1421,8 @@
        "whisper": false
       }
      ],
-     "script": "Door's gone! Flash the lobby, then the rooms. Go, go, go! <break time=\"1.5s\" />\nHostages are safe. Now the files, before anyone else shows up. <break time=\"1.5s\" />\nI'll set up on the office roof. You two go through the yard. <break time=\"1.5s\" />\nIn position. I've got eyes on the yard — I'll thin them out. <break time=\"1.5s\" />\nSnow's thick tonight. Thermal sight will see them before they see us. <break time=\"1.5s\" />\nTwo walking the valley floor. Take them quietly, or the whole station wakes up. <break time=\"1.5s\" />\nTerminal A offline. Two to go.",
-     "chars": 555
+     "script": "One by the door, one walking the front. Take them. <break time=\"1.5s\" />\nDoor's gone! Flash the lobby, then the rooms. Go, go, go! <break time=\"1.5s\" />\nHostages are safe. Now the files, before anyone else shows up. <break time=\"1.5s\" />\nI'll set up on the office roof. You two go through the yard. <break time=\"1.5s\" />\nIn position. I've got eyes on the yard — I'll thin them out. <break time=\"1.5s\" />\nSnow's thick tonight. Thermal sight will see them before they see us. <break time=\"1.5s\" />\nTwo walking the valley floor. Take them quietly, or the whole station wakes up. <break time=\"1.5s\" />\nTerminal A offline. Two to go.",
+     "chars": 628
     }
    ]
   },
@@ -1662,7 +1718,7 @@
    "speaker": "PILOT",
    "role": "Helicopter pilot (intercom)",
    "voice": "Calm American man, pilot on the intercom. Even and professional.",
-   "lines": 6,
+   "lines": 9,
    "parts": [
     {
      "file": "pilot-1.mp3",
@@ -1677,6 +1733,24 @@
        "text": "Coming in low over the avenue. AA is still up, so this is a quick drop!",
        "original": "Coming in low over the avenue. AA is still up, so this is a quick drop!",
        "where": "m3:insertion",
+       "whisper": false
+      },
+      {
+       "text": "Ridge in twenty. I can't set down on those rocks, you're going down the rope.",
+       "original": "Ridge in twenty. I can't set down on those rocks, you're going down the rope.",
+       "where": "m4:insertion",
+       "whisper": false
+      },
+      {
+       "text": "Rope's out. Good hunting, Wraith.",
+       "original": "Rope's out. Good hunting, Wraith.",
+       "where": "m4:insertion",
+       "whisper": false
+      },
+      {
+       "text": "Can't see a thing in this. Setting down on the flat. Two seconds, then I'm gone.",
+       "original": "Can't see a thing in this. Setting down on the flat. Two seconds, then I'm gone.",
+       "where": "m6b:insertion",
        "whisper": false
       },
       {
@@ -1704,8 +1778,8 @@
        "whisper": false
       }
      ],
-     "script": "Thirty seconds! Compound is hot, expect fire from the towers! <break time=\"1.5s\" />\nComing in low over the avenue. AA is still up, so this is a quick drop! <break time=\"1.5s\" />\nPort Kaval in thirty. Last ride, gentlemen. <break time=\"1.5s\" />\nThirty seconds! Get ready on the ropes! <break time=\"1.5s\" />\nRopes out! Go, go, go! <break time=\"1.5s\" />\nRaven Two-One is clear. Good hunting.",
-     "chars": 388
+     "script": "Thirty seconds! Compound is hot, expect fire from the towers! <break time=\"1.5s\" />\nComing in low over the avenue. AA is still up, so this is a quick drop! <break time=\"1.5s\" />\nRidge in twenty. I can't set down on those rocks, you're going down the rope. <break time=\"1.5s\" />\nRope's out. Good hunting, Wraith. <break time=\"1.5s\" />\nCan't see a thing in this. Setting down on the flat. Two seconds, then I'm gone. <break time=\"1.5s\" />\nPort Kaval in thirty. Last ride, gentlemen. <break time=\"1.5s\" />\nThirty seconds! Get ready on the ropes! <break time=\"1.5s\" />\nRopes out! Go, go, go! <break time=\"1.5s\" />\nRaven Two-One is clear. Good hunting.",
+     "chars": 647
     }
    ]
   },

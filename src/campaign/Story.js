@@ -808,33 +808,30 @@ export const MISSIONS = [
     id: 'm9', title: 'Quiet Hours', map: 'downtown', lighting: 'night', weather: 'none',
     fullStrength: true, // scripted rooms: every man stays in place
     location: 'VEL HARAT — OLD QUARTER', time: 'DAY 31 — 03:40 LOCAL',
-    summary: 'Capture Dr. Hart, the last person who could ever rebuild HALCYON, from the townhouse MERIDIAN hides her in. Tenants live on every floor. Clear it room by room on night vision and only shoot what is holding a weapon.',
+    summary: 'Capture Dr. Hart, the last person who could ever rebuild HALCYON, from the townhouse MERIDIAN hides her in. You go in alone. Tenants live on every floor. Clear it room by room on night vision and only shoot what is holding a weapon.',
     recap: 'Vasko is in custody and the satellites are gone. Only Dr. Hart is left, with the last copy of the launch codes, hiding in a narrow Vel Harat townhouse among the families who rent its rooms.',
-    goal: 'Go in quietly through the side door, clear the house floor by floor under strict rules of engagement, and take Hart and her laptop alive.',
+    goal: 'Go in alone and quietly through the side door, clear the house floor by floor under strict rules of engagement, and take Hart and her laptop alive.',
     loadout: { primary: 'viper', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { viper: { muzzle: 'suppressor', optic: 'holo', underbarrel: 'laser' }, p11: { muzzle: 'suppressor' } } },
-    loadoutNote: 'Quiet kit: suppressed K-45 Viper and P-11 with IR lasers, lock picks. Nobody hears your team\'s shots, and one headshot drops a man. Rules of engagement: positive ID before you fire.',
+    loadoutNote: 'Quiet kit: suppressed K-45 Viper and P-11 with IR lasers, lock picks. Nobody hears your shots, and one headshot drops a man. Reyes and Hatch stay in the van on the radio. Rules of engagement: positive ID before you fire.',
     kitHint: 'Positive ID: only shoot people holding a weapon  ·  E: ease a door open  ·  hold E: pick the lock, cuff, pull the drive  ·  N: night vision',
     start: { pos: [6.7, 33.4], yaw: 0 },
     // In by van down the cross street, lights off, to the kerb a block north of the
-    // house; out of the side door and down the wall to the corner.
+    // house. Wraith goes in alone; Reyes and Hatch stay in the van on the radio,
+    // watching the house on a thermal drone.
     van: {
       path: [[5.2, 70], [5.2, 52], [5.0, 41], [4.8, 33]],
       exit: [6.7, 33.4], exitYaw: 0,
-      spots: [[7.7, 30.6], [6.2, 27.6]],
       lines: [
         { t: 0.8, who: 'REYES', text: '(low) Lights off from here. One block.' },
-        { t: 4.8, who: 'HATCH', text: 'Two on the front of the house. Families on every floor. Hart\'s at the top.' },
-        { t: 9.2, who: 'REYES', text: 'This is us. Weapons tight: no weapon in their hands, no shot. Out the side, slow.' },
+        { t: 4.8, who: 'HATCH', text: 'Drone\'s up. Two on the front of the house, families on every floor, Hart at the top.' },
+        { t: 9.2, who: 'REYES', text: 'One man makes less noise than three. You\'re going in alone, Wraith. We\'re on the thermal. No weapon in their hands, no shot.' },
       ],
     },
-    squad: [
-      { name: 'Reyes', weapon: 'rk74', suppressed: true },
-      { name: 'Hatch', weapon: 'rk74', suppressed: true },
-    ],
+    squad: [], // solo: Reyes and Hatch are in the van, on the radio
     stealth: true,
-    silentShots: true, // the team's gunfire makes no noise the enemy can hear
+    silentShots: true, // your gunfire makes no noise the enemy can hear
     headshotKills: true, // any headshot on an enemy kills him outright
-    allSuppressed: true, // every gun here (yours, the squad's, theirs) wears a suppressor: barely audible
+    allSuppressed: true, // every gun here (yours and theirs) wears a suppressor: barely audible
     roe: true, // civilians can be hit; shooting one, or an unarmed or surrendered man, fails the mission
     squadLeash: 6,
     alarmGroup: 'response',
@@ -929,7 +926,7 @@ export const MISSIONS = [
     briefing: [
       { who: 'WATCHTOWER', text: 'Dr. Lena Hart is in a three-storey townhouse on the north-east corner. Her laptop has the last copy of the launch codes.' },
       { who: 'WATCHTOWER', text: 'MERIDIAN rents the house through the families living in it. Tenants on every floor. Expect them to be frightened and unpredictable.' },
-      { who: 'REYES', text: 'We go in the side door, night vision and lasers, room by room. Rules of engagement are strict: nobody fires on anyone who isn\'t holding a weapon.' },
+      { who: 'REYES', text: 'Wraith goes in alone through the side door, night vision and laser, room by room. Hatch and I watch the house on thermal from the van. Rules of engagement are strict: nobody fires on anyone who isn\'t holding a weapon.' },
     ],
     groups: {
       street: { units: [{ pos: [12.2, 11.6] }, { pos: [18, 11.2], patrol: 'safehouse' }] },
@@ -943,28 +940,26 @@ export const MISSIONS = [
     },
     objectives: [
       { type: 'goto', text: 'Move down the side street to the corner of the house — quietly', target: [6.8, 25.4], radius: 2.5,
-        say: [{ who: 'REYES', text: 'Comms quiet. Two on the front. Then the side door into the kitchen.' }] },
+        say: [{ who: 'REYES', text: 'Comms quiet. Two on the front. Then the side door into the kitchen. We\'ve got eyes on you.' }] },
       { type: 'eliminate', text: 'Drop the two door guards without a sound', groups: ['street'],
         say: [{ who: 'HATCH', text: 'One on the door, one walking the block. Headshots. Nobody hears these.' }] },
-      { type: 'goto', text: 'Stack on the side door', target: [7.2, 20.0], radius: 0.9,
-        stack: [[7.2, 22.2], [6.6, 23.0]], stackYaw: -Math.PI / 2,
-        say: [{ who: 'HATCH', text: '(whisper) Stacked. Locked. Your call.' }] },
+      { type: 'goto', text: 'Get to the side door', target: [7.2, 20.0], radius: 0.9,
+        say: [{ who: 'HATCH', text: 'Side door\'s locked. Kitchen\'s behind it. Two warm bodies near the counter on thermal.' }] },
       { type: 'interact', text: 'Pick the lock', target: [7.6, 0, 21.4], label: 'pick the lock', duration: 5, door: 'side',
-        doneSay: [{ who: 'REYES', text: '(whisper) Kitchen. Eyes on hands.' }] },
-      { type: 'eliminate', text: 'Clear the ground floor — only shoot people holding a weapon', groups: ['ground'], squadFollow: true },
-      { type: 'goto', text: 'Stack at the foot of the stairs', target: [21.9, 14.9], radius: 1.1,
-        stack: [[20.6, 15.2], [19.6, 14.8]], stackYaw: -Math.PI / 2,
-        say: [{ who: 'REYES', text: '(whisper) Bedrooms up there, doors shut, families behind them. Ease them open. Check every corner.' }] },
-      { type: 'eliminate', text: 'Clear the first floor — doors are shut, families inside', groups: ['first'], squadFollow: true },
-      { type: 'eliminate', text: 'Top floor: find Hart', groups: ['top'], squadFollow: true,
-        say: [{ who: 'REYES', text: '(whisper) Hart\'s up top with whoever she trusts. If they give up, hold fire. If they move for anything, drop them.' }] },
+        doneSay: [{ who: 'REYES', text: '(low) You\'re in. Kitchen. Eyes on hands.' }] },
+      { type: 'eliminate', text: 'Clear the ground floor — only shoot people holding a weapon', groups: ['ground'] },
+      { type: 'goto', text: 'Get to the foot of the stairs', target: [21.9, 14.9], radius: 1.1,
+        say: [{ who: 'REYES', text: '(low) Bedrooms up there, doors shut, families behind them. Ease them open. Check every corner.' }] },
+      { type: 'eliminate', text: 'Clear the first floor — doors are shut, families inside', groups: ['first'] },
+      { type: 'eliminate', text: 'Top floor: find Hart', groups: ['top'],
+        say: [{ who: 'REYES', text: '(low) Hart\'s up top with whoever she trusts. If they give up, hold fire. If they move for anything, drop them.' }] },
       { type: 'interact', text: 'Detain Dr. Lena Hart', target: [19.8, 6.6, 22.3], label: 'detain Dr. Hart', duration: 3, act: 'detain', modelFrom: 'hart', stopTimer: true,
         say: [{ who: 'HART', text: 'Don\'t shoot! I\'m not armed. I\'m not armed!' }],
-        doneSay: [{ who: 'HART', text: 'You have no idea what you have just done.' }, { who: 'REYES', text: 'We\'ll talk about it on the plane, Doctor.' }] },
+        doneSay: [{ who: 'HART', text: 'You have no idea what you have just done.' }, { who: 'REYES', text: 'Good work. Bring her down, Wraith. We\'re pulling up.' }] },
       { type: 'interact', text: 'Pull the drive from Hart\'s laptop', target: [19.9, 6.6, 23.0], label: 'pull the drive', duration: 4, act: 'drive',
         doneSay: [{ who: 'WATCHTOWER', text: 'That\'s the last copy. HALCYON is finished. Bring them home.' }] },
       { type: 'extract', text: 'Get back to the van', target: [6.8, 32.6], radius: 3.5,
-        say: [{ who: 'HATCH', text: 'Hart\'s with me. Tenants are staying put till the police come. Move.' }] },
+        say: [{ who: 'HATCH', text: 'Van\'s at the kerb. Bring her out. Tenants stay put till the police come.' }] },
     ],
     outro: [
       { who: 'WATCHTOWER', text: 'Dr. Lena Hart is in custody. The last copy of the launch codes is in our hands, and HALCYON is finished.' },
