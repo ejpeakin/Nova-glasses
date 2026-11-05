@@ -465,15 +465,19 @@ export class Soldier {
 
   _integrate(dt) {
     const w = this.game.world;
-    // Separation from nearby actors.
+    // Personal space: men on the move or holding ground keep a couple of metres apart
+    // (a soft push), and only bodily shove apart when actually touching. Stacked on a
+    // door they stand shoulder to shoulder.
+    const R = this.order?.kind === 'hold' || this.scripted ? 0.8 : 1.6;
     for (const a of this.game.actors) {
       if (a === this || !a.alive) continue;
       const dx = this.pos.x - a.pos.x, dz = this.pos.z - a.pos.z;
       const d2 = dx * dx + dz * dz;
-      if (d2 < 0.64 && d2 > 1e-4) {
+      if (d2 < R * R && d2 > 1e-4) {
         const d = Math.sqrt(d2);
-        this.vel.x += (dx / d) * (0.8 - d) * 6;
-        this.vel.z += (dz / d) * (0.8 - d) * 6;
+        const push = d < 0.8 ? (0.8 - d) * 6 + (R - 0.8) * 1.5 : (R - d) * 1.5;
+        this.vel.x += (dx / d) * push;
+        this.vel.z += (dz / d) * push;
       }
     }
     if (this.stationary) { this.vel.set(0, 0, 0); return; }
@@ -522,8 +526,13 @@ export class Soldier {
       if (dt < 5 || dt > 55) continue;
       if (!w.coverProtects(cp, threat)) continue;
       let score = ds * 1.1 + Math.abs(dt - pref) * 0.6 + rand(0, 1.5);
-      // Keep the squad together: cover far from your mates is worth less.
+      // Keep the squad together: cover far from your mates is worth less, but don't
+      // bunch up behind the same bit of wall either (one grenade gets you all).
       if (centre) score += Math.max(0, Math.hypot(cp.x - centre.x, cp.z - centre.z) - 7) * 0.9;
+      for (const m of mates) {
+        const dm = Math.hypot(cp.x - (m.cover?.x ?? m.pos.x), cp.z - (m.cover?.z ?? m.pos.z));
+        if (dm < 3.5) score += (3.5 - dm) * 3;
+      }
       if (dt < dSelfThreat) score -= aggr * 6; // advancing cover preferred by aggressive AI
       // Flankers prefer cover off the line between squad and target.
       if (this.flanker) {
@@ -1055,7 +1064,7 @@ export class Soldier {
     this.runMode = false;
     let lag = 0;
     for (const m of team) if (m !== this) lag = Math.max(lag, m.pos.distanceTo(this.pos));
-    return lag > 6;
+    return lag > 9;
   }
 
   /** A place in a staggered file behind the point man. */
@@ -1064,7 +1073,7 @@ export class Soldier {
     const rank = Math.max(1, team.indexOf(this));
     const fwd = lead.speed > 0.3 ? new THREE.Vector3(lead.vel.x, 0, lead.vel.z).normalize() : new THREE.Vector3(-Math.sin(lead.lookYaw), 0, -Math.cos(lead.lookYaw));
     const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
-    const slot = lead.pos.clone().addScaledVector(fwd, -1.5 * rank).addScaledVector(right, rank % 2 ? 0.7 : -0.7);
+    const slot = lead.pos.clone().addScaledVector(fwd, -2.6 * rank).addScaledVector(right, rank % 2 ? 1.2 : -1.2); // well spread out
     slot.y = 0;
     const w = this.game.world;
     if (!w.walkable(slot.x, slot.z)) { const c = w.nearestWalkable(slot.x, slot.z, 3); if (c >= 0) w.cellCenter(c, slot); }
@@ -1092,14 +1101,14 @@ export class Soldier {
     }
     const ordered = this._obeyOrder(dt, think);
     if (ordered !== null) return this._watchYaw() ?? ordered;
-    // A staggered file trailing behind you, anchored to the way you are moving (not
+    // A well-spaced staggered file trailing behind you, anchored to the way you are moving (not
     // where you happen to look), each man shouldering his rifle into his own sector.
     // Every move is measured: they move out one after another a beat after you do, at
     // a slow tactical walk, don't shuffle for small shifts and take a knee when you halt.
     const now = this.game.time, w = this.game.world;
     const yawF = this._formationHeading();
     const i = this.followIndex % 5;
-    const slot = [[0.9, 2.6], [-0.9, 4.8], [0.9, 7.0], [-0.9, 9.2], [0, 11.4]][i];
+    const slot = [[1.4, 2.9], [-1.4, 5.6], [1.4, 8.3], [-1.4, 11.0], [0, 13.7]][i];
     const sector = [0.55, -0.55, 1.1, -1.1, Math.PI][i];
     const sin = Math.sin(yawF), cos = Math.cos(yawF);
     const goal = new THREE.Vector3(p.pos.x + slot[0] * cos + slot[1] * sin, 0, p.pos.z - slot[0] * sin + slot[1] * cos);
@@ -1285,7 +1294,7 @@ export class Soldier {
           const range = this.weapon.class === 'smg' || this.weapon.class === 'shotgun' ? 9 : this.weapon.class === 'sniper' ? 45 : 20;
           if (distT > range || !this.targetVisible) {
             const toward = lk.clone().sub(this.pos).setY(0).normalize();
-            const side = new THREE.Vector3(-toward.z, 0, toward.x).multiplyScalar(this._lineSlot() * 1.8);
+            const side = new THREE.Vector3(-toward.z, 0, toward.x).multiplyScalar(this._lineSlot() * 3);
             const goal = this.pos.clone().addScaledVector(toward, Math.min(8, distT * 0.4)).add(side);
             this._pathTo(goal, !this.targetVisible && distT > 45);
           }

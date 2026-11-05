@@ -6,6 +6,7 @@ import { Humanoid } from '../ai/Humanoid.js';
 import { spawnSoldier, snapGround, Cinematic, introKeys, ShotSequence, shotKeys } from './Common.js';
 import { MISSIONS } from '../campaign/Story.js';
 import { Insertion } from './Insertion.js';
+import { VanInsertion } from './VanInsertion.js';
 import { Audio } from '../core/Audio.js';
 import { Store } from '../core/Storage.js';
 import { formatTime } from '../core/Utils.js';
@@ -141,6 +142,27 @@ export class CampaignMode {
       // Pick your weapons off the cabin rack before the run in.
       this.insertion.holdFlight = true;
       this.armory = new Armory(game, m, 'heli', (lo) => { this.chosen = lo; this.armory = null; this.insertion.holdFlight = false; });
+    } else if (m.van) {
+      // Ride in quietly in the back of a van and step out onto a side street.
+      const v = m.van;
+      game.stealthGrace = game.time + 9999;
+      this.van = new VanInsertion(game, {
+        path: v.path, exit: v.exit, exitYaw: v.exitYaw, spots: v.spots, lines: v.lines, squad: this.squad,
+        onDone: () => {
+          const p = game.player;
+          p.spawn(v.exit[0], 0, v.exit[1], v.exitYaw ?? 0);
+          this.checkpoint = { pos: p.pos.clone(), yaw: p.yaw };
+          this._gearUp();
+          // They hold their spots on the wall until you move off, then fall in behind you.
+          const exit = p.pos.clone();
+          const release = () => {
+            if (p.pos.distanceTo(exit) > 2.5) { for (const s of this.squad) if (s.order?.kind === 'move') s.order = null; } else this.timers.push({ t: 0.5, fn: release });
+          };
+          this.timers.push({ t: 0.5, fn: release });
+        },
+      });
+      game.cinematic = this.van;
+      game.hud.letterbox(true);
     } else {
       game.cinematic = new Cinematic(introKeys(sp, m.start.yaw, focus), 8, () => this._gearUp());
       game.hud.letterbox(true);
@@ -229,7 +251,7 @@ export class CampaignMode {
   _spawnFriend(s, i) {
     const g = this.game;
     const p = g.player;
-    const off = new THREE.Vector3(-2 + i * 2, 0, 3).applyAxisAngle(new THREE.Vector3(0, 1, 0), p.yaw);
+    const off = new THREE.Vector3((i % 2 ? 1 : -1) * (1.6 + (i % 3) * 0.5), 0, 3 + i * 2.6).applyAxisAngle(new THREE.Vector3(0, 1, 0), p.yaw); // spread out behind you
     const unit = spawnSoldier(g, {
       pos: [p.pos.x + off.x, p.pos.z + off.z], yaw: p.yaw, team: 'a', friendly: true, storyChar: true, name: s.name,
       weapon: s.weapon, difficulty: 'hardened', followIndex: i, faction: 'orion', suppressed: s.suppressed,
@@ -664,6 +686,7 @@ export class CampaignMode {
     for (const d of Object.values(this.doors ?? {})) d.dispose();
     for (const c of this.civilians ?? []) c.model.root.removeFromParent();
     this.insertion?.dispose();
+    this.van?.dispose();
     this.vaskoModel?.dispose();
   }
 }

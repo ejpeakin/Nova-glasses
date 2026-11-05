@@ -74,6 +74,18 @@ function textures() {
         g.fillRect(Math.random() * s, Math.random() * s, 1 + Math.random() * 1.5, 1 + Math.random() * 1.5);
       }
     }, 3),
+    // Mottled polymer: the faint swirl and sheen variation of injection-moulded parts.
+    mottle: make((g, s) => {
+      noise(g, s, 236, 10, 4);
+      for (let i = 0; i < 30; i++) {
+        const x = Math.random() * s, y = Math.random() * s, r = 10 + Math.random() * 40;
+        const gr = g.createRadialGradient(x, y, 0, x, y, r);
+        const v = Math.random() < 0.5 ? 255 : 200;
+        gr.addColorStop(0, `rgba(${v},${v},${v},0.25)`); gr.addColorStop(1, `rgba(${v},${v},${v},0)`);
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill();
+      }
+      for (let i = 0; i < 90; i++) { g.strokeStyle = 'rgba(255,255,255,0.25)'; g.lineWidth = 0.5; const x = Math.random() * s, y = Math.random() * s; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.random() * 14, y + (Math.random() - 0.5) * 4); g.stroke(); }
+    }, 4),
     // Aggressive grip stipple.
     stipple: make((g, s) => {
       g.fillStyle = '#888'; g.fillRect(0, 0, s, s);
@@ -123,6 +135,63 @@ function textures() {
   return TEX;
 }
 
+/**
+ * Rattle-can camouflage sprayed over a black gun through netting and leaves:
+ * soft-edged blotches in three or four colours, overspray speckle, leaf stencils,
+ * and paint worn back to the black finish on the edges and where hands go.
+ */
+const GUN_CAMO = {};
+function gunCamo(kind) {
+  if (GUN_CAMO[kind]) return GUN_CAMO[kind];
+  const pal = kind === 'woodland' ? ['#7a7656', '#4e5638', '#5e4a34', '#2c2f26'] : ['#b5a37c', '#7d7a55', '#8a6c4a', '#5d5a44'];
+  const c = document.createElement('canvas');
+  c.width = c.height = 512;
+  const g = c.getContext('2d');
+  g.fillStyle = pal[0]; g.fillRect(0, 0, 512, 512);
+  const blob = (col, n, rMin, rMax, blur) => {
+    g.filter = `blur(${blur}px)`;
+    g.fillStyle = col;
+    for (let i = 0; i < n; i++) {
+      const x = Math.random() * 512, y = Math.random() * 512, r = rMin + Math.random() * (rMax - rMin);
+      g.beginPath();
+      for (let k = 0; k <= 10; k++) {
+        const a = (k / 10) * 6.283, rr = r * (0.6 + Math.random() * 0.6);
+        const px = x + Math.cos(a) * rr * 1.5, py = y + Math.sin(a) * rr;
+        if (k === 0) g.moveTo(px, py); else g.lineTo(px, py);
+      }
+      g.fill();
+      // Wrap the edges so the tile repeats cleanly.
+      for (const [dx, dy] of [[512, 0], [-512, 0], [0, 512], [0, -512]]) { g.save(); g.translate(dx, dy); g.fill(); g.restore(); }
+    }
+  };
+  blob(pal[1], 16, 28, 70, 5);
+  blob(pal[2], 12, 20, 55, 4);
+  blob(pal[3], 10, 10, 30, 3);
+  g.filter = 'none';
+  // Leaf stencils and overspray.
+  for (let i = 0; i < 40; i++) {
+    g.save(); g.translate(Math.random() * 512, Math.random() * 512); g.rotate(Math.random() * 6.28);
+    g.fillStyle = pal[Math.floor(Math.random() * pal.length)];
+    g.globalAlpha = 0.7;
+    g.beginPath(); g.ellipse(0, 0, 14 + Math.random() * 10, 5 + Math.random() * 3, 0, 0, 6.283); g.fill();
+    g.restore();
+  }
+  g.globalAlpha = 1;
+  for (let i = 0; i < 5000; i++) { g.fillStyle = pal[Math.floor(Math.random() * pal.length)]; g.fillRect(Math.random() * 512, Math.random() * 512, 1.2, 1.2); }
+  // Worn back to the black finish: chips and rubbed scratches.
+  g.fillStyle = 'rgba(28,29,30,0.85)';
+  for (let i = 0; i < 160; i++) { g.beginPath(); g.ellipse(Math.random() * 512, Math.random() * 512, 0.8 + Math.random() * 3.5, 0.6 + Math.random() * 2, Math.random() * 3, 0, 6.283); g.fill(); }
+  g.strokeStyle = 'rgba(30,31,32,0.6)';
+  for (let i = 0; i < 70; i++) { g.lineWidth = 0.5 + Math.random(); const x = Math.random() * 512, y = Math.random() * 512; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (Math.random() - 0.5) * 40, y + (Math.random() - 0.5) * 8); g.stroke(); }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(2.2, 2.2);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  GUN_CAMO[kind] = t;
+  return t;
+}
+
 const matCache = new Map();
 function material(kind, color, extra = {}) {
   const key = `${kind}:${color}:${JSON.stringify(extra)}`;
@@ -140,8 +209,14 @@ function material(kind, color, extra = {}) {
     case 'park': // parkerised steel (AK, shotgun)
       m = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(1.6), map: t.wear, roughness: 0.62, metalness: 0.6, roughnessMap: t.finish, bumpMap: t.finish, bumpScale: 0.8 });
       break;
-    case 'poly': // polymer furniture
-      m = new THREE.MeshStandardMaterial({ color, roughness: 0.78, metalness: 0.04, bumpMap: t.finish, bumpScale: 0.5 });
+    case 'poly': // polymer furniture, with the faint mottling of moulded parts
+      m = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(1.08), map: t.mottle, roughness: 0.78, metalness: 0.04, bumpMap: t.finish, bumpScale: 0.5 });
+      break;
+    case 'camo': // rattle-can camouflage (color is the pattern name's index, unused)
+      m = new THREE.MeshStandardMaterial({ map: gunCamo(extra.pattern ?? 'arid'), roughness: 0.84, metalness: 0.08, bumpMap: t.finish, bumpScale: 0.7 });
+      break;
+    case 'tape': // cloth tape wraps
+      m = new THREE.MeshStandardMaterial({ color, roughness: 0.97, metalness: 0, bumpMap: t.cloth, bumpScale: 1.2 });
       break;
     case 'grip': // stippled grips
       m = new THREE.MeshStandardMaterial({ color, roughness: 0.88, metalness: 0.02, bumpMap: t.stipple, bumpScale: 1.6 });
@@ -444,19 +519,22 @@ function sling(host, a, b, sag, fabric, metal) {
   return parent;
 }
 
-let SLING = null;
-function slingMaterial() {
-  return (SLING ??= new THREE.MeshStandardMaterial({ color: 0x3f4232, roughness: 0.95, metalness: 0, bumpMap: textures().cloth, bumpScale: 0.8, side: THREE.DoubleSide }));
+const SLINGS = new Map();
+function slingMaterial(color = 0x3f4232) {
+  if (!SLINGS.has(color)) SLINGS.set(color, new THREE.MeshStandardMaterial({ color, roughness: 0.95, metalness: 0, bumpMap: textures().cloth, bumpScale: 0.8, side: THREE.DoubleSide }));
+  return SLINGS.get(color);
 }
 
 /** The detail pass for one weapon body. k: materials and key dimensions. */
 function addDetail(g, body, k) {
   const { alu, park, steel, bright, dark, poly, rubber, mag, magM, brass, furn, def, muzzleY, leftHand } = k;
+  const f = def.model.finish ?? {};
+  const tape = material('tape', 0x4a5032);
   const cal = { ar: '5.56x45mm', ak: '5.45x39mm', scar: '7.62x51mm', smg: def.name.includes('45') ? '.45 ACP' : '9x19mm', vector: '.45 ACP', bolt: '.338 LAPUA MAG', dmr: '7.62x51mm', pump: '12 GA 3"', autoshotgun: '12 GA', lmg: '5.56 NATO', pistol: '9x19mm', deagle: '.50 AE' }[body] ?? '';
   const serial = `OA-${(1000 + (def.name.length * 7919) % 9000)}${String.fromCharCode(65 + def.name.length % 26)}`;
   const roll = rollMark(def.name, cal, serial);
   const sel = selectorMark(body === 'ak' ? 'ak' : (def.modes ?? []).includes('burst') ? 'burst' : 'auto');
-  const fabric = slingMaterial();
+  const fabric = slingMaterial(f.sling);
   const inner = material('inner', 0x070707);
   const V = (x, y, z) => new THREE.Vector3(x, y, z);
   switch (body) {
@@ -533,6 +611,7 @@ function addDetail(g, body, k) {
       tube(g, 0.016, 0.014, 0.11, 0.135, 0, 0.022, steel, 14); // bolt shroud
       qd(g, -0.023, -0.07, 0.36, -1, alu, dark);
       qd(g, -0.029, -0.03, -0.55, -1, alu, dark);
+      if (f.tape) for (const z of [-0.47, -0.505]) box(g, 0.062, 0.061, 0.03, 0, -0.0165, z, tape); // tape wraps on the forend
       sling(g, V(-0.032, -0.03, -0.55), V(-0.026, -0.07, 0.36), 0.07, fabric, bright);
       break;
     }
@@ -540,6 +619,7 @@ function addDetail(g, body, k) {
       stamp(g, roll, 0.08, 0.034, 0.034, 0.015, -0.06);
       stamp(g, sel, 0.034, 0.027, 0.034, -0.012, 0.04);
       box(g, 0.02, 0.008, 0.012, 0, 0.092, 0.07, alu); // feed cover latch
+      if (f.tape) { box(g, 0.02, 0.019, 0.05, 0, 0.0825, -0.27, tape); tube(g, 0.0255, 0.0255, -0.43, -0.465, 0, 0.022, tape, 20); } // grip tape on the handle and jacket
       for (const side of [-1, 1]) for (let i = 0; i < 3; i++) screw(g, side * 0.034, 0.045, 0.05 - i * 0.08, side, dark, 0.0026, bright);
       sling(g, V(-0.03, 0.02, -0.46), V(-0.024, -0.04, 0.31), 0.08, fabric, bright);
       break;
@@ -602,16 +682,20 @@ export function buildWeaponModel(def, att = {}) {
   const body = m.body;
   const wood = m.accent === 0x6b4a2e || m.accent === 0x5a3f28;
   const tan = (m.color >> 16) > 0x70; // FDE / stainless finishes
-  const alu = material('alu', m.color);
+  // Finish: two-tone furniture (FDE, OD), coloured mags, rattle-can camo, accents.
+  const f = m.finish ?? {};
+  const camo = f.camo ? material('camo', 0, { pattern: f.camo }) : null;
+  const alu = camo ?? material('alu', f.color ?? m.color);
   const park = material('park', 0x26272a);
   const steel = material('steel', 0x2b2d30);
   const bright = material('steel', 0x5c6066);
   const dark = material('alu', 0x111213);
-  const poly = material('poly', wood ? 0x1c1c1d : (tan ? 0x1d1e1f : m.accent));
-  const furn = wood ? material('wood', 0x8a5f42) : material('poly', tan ? m.color : 0x202123);
-  const gripM = material('grip', tan && body !== 'deagle' ? m.color : 0x1b1c1d);
+  const poly = material('poly', f.furniture ?? (wood ? 0x1c1c1d : (tan ? 0x1d1e1f : m.accent)));
+  const furn = camo ?? (wood ? material('wood', 0x8a5f42) : material('poly', f.furniture ?? (tan ? m.color : 0x202123)));
+  const gripM = material('grip', f.grip ?? f.furniture ?? (tan && body !== 'deagle' ? m.color : 0x1b1c1d));
   const rubber = material('rubber', 0x141414);
-  const magM = body === 'ak' ? material('park', 0x3b2a1e) : material('poly', tan ? 0x7d6a50 : 0x26282a);
+  const magM = f.mag != null ? material('poly', f.mag) : body === 'ak' ? material('park', 0x3b2a1e) : material('poly', tan ? 0x7d6a50 : 0x26282a);
+  const trigM = f.trigger === 'gold' ? material('brass', 0xc8a24c) : steel; // flat-blade match trigger
   const brass = material('brass', 0xb8903c);
   const info = {
     group: g, sightY: 0.07, leftHand: new THREE.Vector3(0, -0.03, -0.3), rightHand: new THREE.Vector3(0, -0.055, 0.05),
@@ -674,7 +758,7 @@ export function buildWeaponModel(def, att = {}) {
       }
       box(g, 0.043, 0.112, 0.012, 0, -0.008, body === 'dmr' ? 0.356 : 0.327, rubber); // butt pad
       pistolGrip(g, gripM);
-      triggerGroup(g, 0.0, -0.024, steel, alu);
+      triggerGroup(g, 0.0, -0.024, trigM, alu);
       // Charging handle (racked on empty reloads).
       action = new THREE.Group();
       box(action, 0.012, 0.007, 0.03, 0, 0, 0, alu);
@@ -740,7 +824,7 @@ export function buildWeaponModel(def, att = {}) {
       box(g, 0.032, 0.014, 0.12, 0, 0.056, 0.25, poly);
       box(g, 0.042, 0.11, 0.012, 0, -0.016, 0.346, rubber);
       pistolGrip(g, gripM);
-      triggerGroup(g, 0.0, -0.024, steel, poly);
+      triggerGroup(g, 0.0, -0.024, trigM, poly);
       // Left-side reciprocating charging handle.
       action = new THREE.Group();
       knobX(action, 0.007, 0.022, -0.011, 0, 0, poly, 10);
@@ -912,7 +996,7 @@ export function buildWeaponModel(def, att = {}) {
       action.position.set(0.034, 0.02, -0.06);
       g.add(action);
       // Soft ammo pouch with a belt feeding into the gun.
-      prism(mag, [[-0.06, 0.0], [0.06, 0.0], [0.065, -0.11], ['q', 0.06, -0.125, 0.045, -0.125], [-0.05, -0.125], ['q', -0.065, -0.12, -0.064, -0.1]], 0.1, material('poly', 0x4c5139), { bevel: 0.01 });
+      prism(mag, [[-0.06, 0.0], [0.06, 0.0], [0.065, -0.11], ['q', 0.06, -0.125, 0.045, -0.125], [-0.05, -0.125], ['q', -0.065, -0.12, -0.064, -0.1]], 0.1, material('tape', f.pouch ?? 0x4c5139), { bevel: 0.01 });
       for (let i = 0; i < 6; i++) {
         tube(mag, 0.0045, 0.0045, 0.022, -0.022, 0.03 + i * 0.01, 0.006 + i * 0.009, brass, 6);
       }
@@ -1014,6 +1098,7 @@ export function buildWeaponModel(def, att = {}) {
       box(g, 0.022, 0.006, 0.022, 0, recvTop + 0.003, fz, dark);
       for (const s of [-1, 1]) box(g, 0.004, 0.024, 0.012, s * 0.011, recvTop + 0.015, fz, dark);
       box(g, 0.003, 0.016, 0.003, 0, recvTop + 0.013, fz, dark);
+      if (f.fiber) box(g, 0.0026, 0.0026, 0.005, 0, recvTop + 0.0215, fz, material('emissive', f.fiber)); // fibre-optic front post
       info.sightY = recvTop + 0.019;
     } else if (irons === 'ak') {
       const fz = muzzleZ + 0.07;
@@ -1044,7 +1129,7 @@ export function buildWeaponModel(def, att = {}) {
   if (att.barrel === 'short' && !pistol) muzzleZ += 0.06;
   if (att.muzzle === 'suppressor') {
     const r = pistol ? 0.016 : 0.021, L = pistol ? 0.13 : 0.18;
-    const sup = material('alu', 0x1c1d1e);
+    const sup = material('alu', f.suppressor ?? 0x1c1d1e);
     tube(g, r * 0.7, r, muzzleZ, muzzleZ - 0.012, 0, muzzleY, sup, 18);
     tube(g, r, r, muzzleZ - 0.012, muzzleZ - L + 0.012, 0, muzzleY, sup, 18);
     tube(g, r, r * 0.6, muzzleZ - L + 0.012, muzzleZ - L, 0, muzzleY, sup, 18);

@@ -822,6 +822,7 @@ class AudioEngine {
   /**
    * Continuous loops whose level the game drives every frame.
    * kind: 'rotor' (blade slap + turbine whine) | 'rope' (friction hiss while fast-roping)
+   *       | 'engine' (a van's diesel idle and tyre roar; pitch opens the rumble up)
    */
   startLoop(name, kind) {
     if (!this.ready) return;
@@ -854,6 +855,24 @@ class AudioEngine {
       const hg = c.createGain(); hg.gain.value = 0.09;
       hiss.connect(hp); hp.connect(hg); hg.connect(out);
       for (const n of [src, lfo, osc, hiss]) { n.start(); nodes.push(n); }
+    } else if (kind === 'engine') {
+      // Diesel idle: a low sawtooth throb and brown-noise rumble under a lowpass the
+      // throttle opens; tyre roar on top.
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 180; lp.Q.value = 0.8;
+      const osc = c.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 34;
+      const og = c.createGain(); og.gain.value = 0.22;
+      osc.connect(og); og.connect(lp);
+      const rum = c.createBufferSource(); rum.buffer = this.brown; rum.loop = true;
+      const rg = c.createGain(); rg.gain.value = 1.4;
+      rum.connect(rg); rg.connect(lp);
+      lp.connect(out);
+      const tyre = c.createBufferSource(); tyre.buffer = this.noise; tyre.loop = true;
+      const tb = c.createBiquadFilter(); tb.type = 'bandpass'; tb.frequency.value = 420; tb.Q.value = 0.6;
+      const tg = c.createGain(); tg.gain.value = 0.05;
+      tyre.connect(tb); tb.connect(tg); tg.connect(out);
+      for (const n of [osc, rum, tyre]) { n.start(); nodes.push(n); }
+      out._filter = lp;
+      out._engine = true;
     } else {
       const src = c.createBufferSource();
       src.buffer = this.noise; src.loop = true;
@@ -870,7 +889,7 @@ class AudioEngine {
     const l = this.loops?.get(name);
     if (!l) return;
     l.out.gain.setTargetAtTime(Math.max(0, gain), this.now, 0.08);
-    if (l.out._filter) l.out._filter.frequency.setTargetAtTime(1000 + pitch * 1200, this.now, 0.1);
+    if (l.out._filter) l.out._filter.frequency.setTargetAtTime(l.out._engine ? 140 + pitch * 260 : 1000 + pitch * 1200, this.now, 0.1);
   }
 
   stopLoop(name) {

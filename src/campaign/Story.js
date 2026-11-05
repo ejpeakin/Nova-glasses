@@ -733,7 +733,19 @@ export const MISSIONS = [
     loadout: { primary: 'viper', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { viper: { muzzle: 'suppressor', optic: 'holo', underbarrel: 'laser' }, p11: { muzzle: 'suppressor' } } },
     loadoutNote: 'Quiet kit: suppressed K-45 Viper and P-11, lock picks, flashbangs for the rooms. The squad carries suppressed weapons too. Nobody hears your team\'s shots, and one headshot drops a man.',
     kitHint: 'Crouch to move quietly  ·  V from behind: silent takedown  ·  Y: squad radio  ·  hold E: pick the lock, cut ties, cuff',
-    start: { pos: [-3, 11], yaw: -Math.PI / 2 },
+    start: { pos: [6.7, 33.4], yaw: 0 },
+    // In by van down the cross street, lights off, to the kerb a block north of the
+    // safehouse; out of the side door and down the wall to the corner.
+    van: {
+      path: [[5.2, 70], [5.2, 52], [5.0, 41], [4.8, 33]],
+      exit: [6.7, 33.4], exitYaw: 0,
+      spots: [[7.7, 30.6], [6.2, 27.6], [7.7, 24.6]],
+      lines: [
+        { t: 0.8, who: 'REYES', text: '(low) Lights off from here. One block.' },
+        { t: 4.8, who: 'HATCH', text: 'Street\'s dead. Two on her door, one walking the block.' },
+        { t: 9.2, who: 'REYES', text: 'This is us. Out the side, spread out on the wall, and slow.' },
+      ],
+    },
     squad: [
       { name: 'Reyes', weapon: 'rk74', suppressed: true },
       { name: 'Hatch', weapon: 'rk74', suppressed: true },
@@ -776,7 +788,7 @@ export const MISSIONS = [
       b.light(12, 2.8, 16.5, 0xffc890, 7, 9);
       b.light(11.5, 2.8, 21.5, 0xffb070, 5, 7);
       b.light(19.5, 2.8, 21.5, 0xfff0d0, 6, 8);
-      b.car(-8, 13, 'x', 'carWhite');
+      b.world.add(3.8, 0, 30.35, 5.8, 2.35, 35.65, 'metal'); // the team van, parked at the kerb
       b.patrol('safehouse', [[6, 11.2], [22, 11.2]]);
     },
     briefing: [
@@ -814,7 +826,7 @@ export const MISSIONS = [
       { type: 'interact', text: 'Detain Dr. Lena Hart', target: [19.6, 0, 21.6], label: 'detain Dr. Hart', duration: 3, detainee: 'civilian',
         say: [{ who: 'HART', text: 'Don\'t shoot! I\'m not armed. I\'m not armed!' }],
         doneSay: [{ who: 'HART', text: 'You have no idea what you have just done.' }, { who: 'REYES', text: 'We\'ll talk about it on the plane, Doctor. Hatch, she\'s yours.' }] },
-      { type: 'extract', text: 'Get back to the van', target: [-4, 11], radius: 3.5,
+      { type: 'extract', text: 'Get back to the van', target: [6.8, 32.6], radius: 3.5,
         say: [{ who: 'WATCHTOWER', text: 'Street is still asleep. Clean work, ORION. Bring them home.' }] },
     ],
     outro: [

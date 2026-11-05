@@ -21,7 +21,7 @@ export const WEAPONS = {
     recoil: { v: 0.62, h: 0.32, pattern: [0.2, 0.4, 0.1, -0.3, -0.5, -0.2, 0.3, 0.5], recover: 9, kick: 0.035 },
     spread: { hip: 3.2, ads: 0.12, move: 2.2 },
     sound: { pitch: 1.0, body: 2400, thump: 140, crack: 0.9, tail: 0.6, sample: 'ar' },
-    model: { len: 0.82, barrel: 0.36, body: 'ar', color: 0x2a2c2e, accent: 0x3b3f42, magType: 'curved' },
+    model: { len: 0.82, barrel: 0.36, body: 'ar', color: 0x2a2c2e, accent: 0x3b3f42, magType: 'curved', finish: { furniture: 0x7d6a4c, mag: 0x7a6748, suppressor: 0x6a5d4b, trigger: 'gold', fiber: 0x40ff70, sling: 0x6b5a40 } },
     desc: 'Balanced 5.56 carbine. Predictable climb, fast handling — the operator\'s default.',
   },
   rk74: {
@@ -31,7 +31,7 @@ export const WEAPONS = {
     recoil: { v: 0.95, h: 0.55, pattern: [0.4, 0.6, 0.2, -0.6, -0.8, 0.3, 0.7, -0.4], recover: 7, kick: 0.045 },
     spread: { hip: 3.6, ads: 0.16, move: 2.4 },
     sound: { pitch: 0.88, body: 1900, thump: 120, crack: 1.0, tail: 0.75, gain: 1.1, sample: 'ar', samplePitch: 0.93 },
-    model: { len: 0.88, barrel: 0.4, body: 'ak', color: 0x2b2522, accent: 0x6b4a2e, magType: 'banana' },
+    model: { len: 0.88, barrel: 0.4, body: 'ak', color: 0x2b2522, accent: 0x6b4a2e, magType: 'banana', finish: { mag: 0x5b2a24, sling: 0x3f4232 } },
     desc: 'Hard-hitting 7.62 rifle. Brutal at range if you can tame the kick.',
   },
   hx30: {
@@ -41,7 +41,7 @@ export const WEAPONS = {
     recoil: { v: 1.6, h: 0.4, pattern: [0.3, -0.3], recover: 8, kick: 0.06 },
     spread: { hip: 4, ads: 0.05, move: 2.5 },
     sound: { pitch: 0.8, body: 1700, thump: 110, crack: 1.1, tail: 0.85, gain: 1.15 },
-    model: { len: 0.98, barrel: 0.48, body: 'scar', color: 0x9a8a66, accent: 0x2a2a28, magType: 'box' },
+    model: { len: 0.98, barrel: 0.48, body: 'scar', color: 0x9a8a66, accent: 0x2a2a28, magType: 'box', finish: { trigger: 'gold', fiber: 0xff5a30, sling: 0x6b5a40 } },
     desc: 'Semi-automatic battle rifle. Two-tap kills and a scope-ready rail.',
     defaultOptic: 'acog',
   },
@@ -52,7 +52,7 @@ export const WEAPONS = {
     recoil: { v: 0.42, h: 0.42, pattern: [0.3, -0.3, 0.5, -0.5, 0.2, -0.2], recover: 12, kick: 0.025 },
     spread: { hip: 2.4, ads: 0.25, move: 1.4 },
     sound: { pitch: 1.25, body: 3000, thump: 170, crack: 0.6, tail: 0.4, gain: 0.85, sample: 'smg' },
-    model: { len: 0.55, barrel: 0.16, body: 'smg', color: 0x1e2022, accent: 0x2d3033, magType: 'straight' },
+    model: { len: 0.55, barrel: 0.16, body: 'smg', color: 0x1e2022, accent: 0x2d3033, magType: 'straight', finish: { furniture: 0x4b5236, grip: 0x4b5236, sling: 0x3f4232 } },
     desc: 'Compact 9 mm buzzsaw. Owns hallways, struggles past 30 metres.',
   },
   viper: {
@@ -62,7 +62,7 @@ export const WEAPONS = {
     recoil: { v: 0.36, h: 0.2, pattern: [0.1, 0.1, -0.1, -0.1], recover: 14, kick: 0.02 },
     spread: { hip: 2.2, ads: 0.28, move: 1.3 },
     sound: { pitch: 1.1, body: 2600, thump: 190, crack: 0.55, tail: 0.35, gain: 0.85, sample: 'smg', samplePitch: 1.05 },
-    model: { len: 0.6, barrel: 0.18, body: 'vector', color: 0x34383a, accent: 0x1a1a1a, magType: 'straight' },
+    model: { len: 0.6, barrel: 0.18, body: 'vector', color: 0x34383a, accent: 0x1a1a1a, magType: 'straight', finish: { color: 0x55595b, furniture: 0x7d6a4c, grip: 0x7d6a4c, sling: 0x1c1c1c } },
     desc: 'Recoil-mitigating .45 SMG. Shreds anything up close.',
   },
   longbow: {
@@ -72,7 +72,7 @@ export const WEAPONS = {
     recoil: { v: 4.5, h: 0.8, pattern: [0.5], recover: 5, kick: 0.12 },
     spread: { hip: 6, ads: 0, move: 4 },
     sound: { pitch: 0.65, body: 1400, thump: 90, crack: 1.4, tail: 1.2, gain: 1.35 },
-    model: { len: 1.22, barrel: 0.62, body: 'bolt', color: 0x3a4232, accent: 0x1c1d1e, magType: 'box' },
+    model: { len: 1.22, barrel: 0.62, body: 'bolt', color: 0x3a4232, accent: 0x1c1d1e, magType: 'box', finish: { camo: 'arid', tape: true, sling: 0x6b5a40 } },
     desc: '.338 bolt-action. One shot to the chest at any range. Hold Shift to steady.',
     defaultOptic: 'sniper8',
   },
@@ -83,7 +83,7 @@ export const WEAPONS = {
     recoil: { v: 2.8, h: 0.6, pattern: [0.4, -0.4], recover: 6, kick: 0.09 },
     spread: { hip: 5.5, ads: 0, move: 4 },
     sound: { pitch: 0.72, body: 1500, thump: 100, crack: 1.3, tail: 1.0, gain: 1.25 },
-    model: { len: 1.12, barrel: 0.55, body: 'dmr', color: 0x2c2e30, accent: 0x50483a, magType: 'box' },
+    model: { len: 1.12, barrel: 0.55, body: 'dmr', color: 0x2c2e30, accent: 0x50483a, magType: 'box', finish: { camo: 'woodland', furniture: 0x4b5236, mag: 0x7a6748, trigger: 'gold', sling: 0x3f4232 } },
     desc: 'Semi-auto precision rifle. Faster follow-ups, slightly less punch.',
     defaultOptic: 'sniper8',
   },
@@ -94,7 +94,7 @@ export const WEAPONS = {
     recoil: { v: 3.5, h: 0.9, pattern: [0.4], recover: 6, kick: 0.1 },
     spread: { hip: 5.5, ads: 4.2, move: 1, pelletSpread: 4.5 },
     sound: { pitch: 0.7, body: 1300, thump: 80, crack: 0.9, tail: 0.9, gain: 1.3 },
-    model: { len: 0.95, barrel: 0.5, body: 'pump', color: 0x232323, accent: 0x5a3f28, magType: 'tube' },
+    model: { len: 0.95, barrel: 0.5, body: 'pump', color: 0x232323, accent: 0x5a3f28, magType: 'tube', finish: { sling: 0x5a4a34 } },
     desc: '12-gauge pump. Nine pellets of room clearing.',
   },
   havoc: {
@@ -104,7 +104,7 @@ export const WEAPONS = {
     recoil: { v: 2.4, h: 1.1, pattern: [0.6, -0.5, 0.4], recover: 7, kick: 0.08 },
     spread: { hip: 6.5, ads: 5.2, move: 1, pelletSpread: 5.5 },
     sound: { pitch: 0.75, body: 1400, thump: 85, crack: 0.8, tail: 0.8, gain: 1.25 },
-    model: { len: 0.85, barrel: 0.38, body: 'autoshotgun', color: 0x2a2c2a, accent: 0x111111, magType: 'drum' },
+    model: { len: 0.85, barrel: 0.38, body: 'autoshotgun', color: 0x2a2c2a, accent: 0x111111, magType: 'drum', finish: { furniture: 0x4b5236, grip: 0x2a2c2a, mag: 0x4b5236, sling: 0x3f4232 } },
     desc: 'Drum-fed automatic shotgun. Panic button for breaching.',
   },
   juggernaut: {
@@ -114,7 +114,7 @@ export const WEAPONS = {
     recoil: { v: 0.68, h: 0.5, pattern: [0.3, 0.5, -0.2, -0.6, 0.4, -0.1], recover: 7, kick: 0.04 },
     spread: { hip: 4.5, ads: 0.2, move: 3.4 },
     sound: { pitch: 0.92, body: 2000, thump: 125, crack: 1.0, tail: 0.8, gain: 1.15 },
-    model: { len: 1.0, barrel: 0.48, body: 'lmg', color: 0x2c2f2a, accent: 0x5a5e4a, magType: 'boxmag' },
+    model: { len: 1.0, barrel: 0.48, body: 'lmg', color: 0x2c2f2a, accent: 0x5a5e4a, magType: 'boxmag', finish: { furniture: 0x7d6a4c, pouch: 0x7a6a4c, tape: true, sling: 0x6b5a40 } },
     desc: 'Belt-fed suppression. A hundred rounds before you have to stop talking.',
   },
   p11: {
@@ -124,7 +124,7 @@ export const WEAPONS = {
     recoil: { v: 1.1, h: 0.4, pattern: [0.3, -0.3], recover: 12, kick: 0.05 },
     spread: { hip: 1.8, ads: 0.25, move: 1 },
     sound: { pitch: 1.2, body: 2800, thump: 160, crack: 0.7, tail: 0.45, gain: 0.85 },
-    model: { len: 0.2, barrel: 0.1, body: 'pistol', color: 0x222324, accent: 0x111111, magType: 'pistol' },
+    model: { len: 0.2, barrel: 0.1, body: 'pistol', color: 0x222324, accent: 0x111111, magType: 'pistol', finish: { furniture: 0x7d6a4c, grip: 0x7d6a4c } },
     desc: 'Reliable 9 mm sidearm. Fast draw, fast reload.',
   },
   raptor: {
