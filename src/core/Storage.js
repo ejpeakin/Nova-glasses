@@ -21,6 +21,7 @@ const DEFAULTS = {
     nvgPhosphor: 'green', // green | white
     nvgAuto: true, // goggles down at the start of night missions
     squadVoice: true, // squadmates' radio replies are spoken (speech synthesis)
+    thirdPerson: true, // over-the-shoulder camera (P switches to first person)
     difficulty: 'regular', // recruit | regular | hardened | veteran
   },
   stats: {

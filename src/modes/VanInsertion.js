@@ -200,7 +200,7 @@ export class VanInsertion {
     this.done = true;
     // (Skipped: park the van and put everyone where they would be.)
     this._place(1, DRIVE + SETTLE + DOOR + STEP);
-    this.van.door.position.set(1.1, 1.42, 1.45);
+    this.van.door.position.set(1.0, 1.42, 0.2); // Reyes slides the door shut behind you
     this.van.brake.emissiveIntensity = 0.15;
     this.squad.forEach((s, i) => {
       if (!s.scripted) return;

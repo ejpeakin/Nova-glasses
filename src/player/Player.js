@@ -572,6 +572,26 @@ export class Player {
     cam.rotation.z = bobX * 0.3 + (this.sliding > 0 ? 0.06 : 0) + this.deathRoll + (this.mantleRoll ?? 0);
     cam.rotation.x += this.climbPitch ?? 0;
     if (weaponOffset) { cam.rotation.x += weaponOffset.x; cam.rotation.y += weaponOffset.y; }
+    // Third person: the camera sits back over the right shoulder and orbits with your
+    // aim (in tighter when aiming down sights), pulled in short of any wall behind you.
+    const k = this.tpsK ?? 0;
+    if (k > 0.001) {
+      cam.rotation.z *= 1 - k;
+      cam.updateMatrixWorld();
+      const ads = this.tpsAds ?? 0;
+      const crouch = this.stance === 'stand' ? 0 : 1;
+      const off = new THREE.Vector3(0.62 - ads * 0.16, 0.24 - ads * 0.1 + crouch * 0.1, 2.7 - ads * 1.35).multiplyScalar(k).applyQuaternion(cam.quaternion);
+      const L = off.length();
+      if (L > 1e-3) {
+        off.divideScalar(L);
+        const o = cam.position;
+        const hit = this.world.raycast(o.x, o.y, o.z, off.x, off.y, off.z, L + 0.3);
+        const want = hit ? Math.max(0.15, hit.t - 0.3) : L;
+        // Pull in at once, ease back out.
+        this._camDist = this._camDist == null || want < this._camDist ? want : this._camDist + (want - this._camDist) * 0.12;
+        cam.position.addScaledVector(off, this._camDist);
+      }
+    }
     if (cam.fov !== fov) { cam.fov = fov; cam.updateProjectionMatrix(); }
     cam.updateMatrixWorld();
   }

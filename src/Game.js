@@ -13,11 +13,11 @@ import { Player } from './player/Player.js';
 import { WeaponSystem } from './weapons/WeaponSystem.js';
 import { Grenades } from './weapons/Grenades.js';
 import { WEAPONS } from './weapons/WeaponData.js';
-import { buildLowGun } from './ai/Humanoid.js';
+import { buildLowGun, Humanoid } from './ai/Humanoid.js';
 import { Audio } from './core/Audio.js';
 import { TakedownClip } from './modes/Takedown.js';
 import { Store } from './core/Storage.js';
-import { clamp, lerp, rand, damp, dampAngle } from './core/Utils.js';
+import { clamp, lerp, rand, damp, dampAngle, wrapAngle } from './core/Utils.js';
 import { Comms } from './player/Comms.js';
 
 export class Game {
@@ -157,8 +157,9 @@ export class Game {
     this.laserBeam.visible = this.laserDot.visible = !!on;
     if (!on) return;
     const cam = this.camera;
-    // Muzzle: the viewmodel muzzle carried into world space by the camera.
-    const from = w.muzzleView.clone().applyMatrix4(cam.matrixWorld);
+    // Muzzle: the viewmodel muzzle carried into world space by the camera (or, in
+    // third person, the muzzle of the rifle in your soldier's hands).
+    const from = (p.tpsK ?? 0) > 0.35 && this.avatar ? this.avatar.muzzle.getWorldPosition(new THREE.Vector3()) : w.muzzleView.clone().applyMatrix4(cam.matrixWorld);
     // The dot lands where shots go: along the line of sight, on the first wall or body.
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
     const o = cam.position;
@@ -794,6 +795,9 @@ export class Game {
     this.effects.update(dt, this.world);
     this.mode.update(dt);
 
+    // Third person: you, on screen, doing what you do (P switches view).
+    this._updateAvatar(dt, input);
+
     // Camera.
     const baseV = this.verticalFov();
     const fov = this.weapons.currentFov(baseV);
@@ -813,6 +817,51 @@ export class Game {
     this._updateWeaponLaser();
     this.hud?.update(this, dt);
     this.render();
+  }
+
+  /**
+   * The third-person view and the soldier who stands in for you in it. First person
+   * returns for scopes, rappels and climbs, and when you switch with P.
+   */
+  _updateAvatar(dt, input) {
+    const p = this.player, w = this.weapons;
+    if (input.pressed('KeyP') && !this.cinematic) {
+      Store.settings.thirdPerson = !(Store.settings.thirdPerson !== false);
+      Store.saveSoon?.();
+      this.hud?.toast(Store.settings.thirdPerson ? 'THIRD PERSON' : 'FIRST PERSON');
+    }
+    const scoped = w.scopeInfo?.().active;
+    const want = Store.settings.thirdPerson !== false && p.alive && !scoped && !p.rappel && !p.climbing && !p.mantle && !this.mode.armory;
+    p.tpsK = damp(p.tpsK ?? 0, want ? 1 : 0, 9, dt);
+    if (p.tpsK < 0.02 && !want) p.tpsK = 0;
+    p.tpsAds = w.ads ?? 0;
+    const show = p.tpsK > 0.35 && p.alive;
+    const wid = w.weapon?.id ?? 'vx4';
+    if (show && (!this.avatar || this.avatarWeapon !== wid)) {
+      if (this.avatar) this.avatar.root.removeFromParent();
+      this.avatar = new Humanoid(this.mode.playerFaction ?? 'orion', wid, { seed: 5 });
+      this.avatar.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+      this.scene.add(this.avatar.root);
+      this.avatarWeapon = wid;
+    }
+    const a = this.avatar;
+    if (!a) return;
+    a.root.visible = show && !this.cinematic;
+    if (!a.root.visible) return;
+    a.root.position.copy(p.pos);
+    a.root.rotation.y = p.yaw;
+    const speed = Math.hypot(p.vel.x, p.vel.z);
+    a.moveRel = speed > 0.3 ? wrapAngle(Math.atan2(-p.vel.x, -p.vel.z) - p.yaw) : 0;
+    // Reloads, shots and objective work show on the body.
+    if (w.state === 'reload' && !this._avatarReloading) { this._avatarReloading = true; a.reload(w.weapon.stats.reload ?? 2.2, { empty: w.reloadEmpty, drop: w.weapon.stats.class !== 'shotgun', shells: w.weapon.stats.class === 'shotgun' }); }
+    if (w.state !== 'reload') this._avatarReloading = false;
+    if (w.lastFire && w.lastFire !== this._avatarShot) { this._avatarShot = w.lastFire; a.fire(); }
+    const working = (this.action?.blend ?? 0) > 0.5;
+    if (working && !a.inMove) a.playMove('Interact', { loop: true });
+    if (!working && a.move?.loop) a.move = null;
+    const crouch = p.stance === 'stand' ? 0 : 1;
+    const aim = w.ads > 0.3 || this.time - (w.lastFire ?? -9) < 1.5 || !p.sprinting ? 1 : 0;
+    a.update(dt, speed, crouch, p.pitch, this.time - (w.lastFire ?? -9) < 0.08, aim);
   }
 
   verticalFov() {
@@ -841,7 +890,7 @@ export class Game {
     r.clear();
     r.render(this.scene, this.camera);
     // (Not while gearing up at the armory: the weapon in hand is about to change.)
-    if (!this.cinematic && this.player.alive && !this.mode.armory) {
+    if (!this.cinematic && this.player.alive && !this.mode.armory && (this.player.tpsK ?? 0) < 0.35) {
       r.clearDepth();
       r.render(this.weapons.viewScene, this.weapons.viewCam);
     } else if (this.cinematic?.showHands && this.cinematic.viewScene) {

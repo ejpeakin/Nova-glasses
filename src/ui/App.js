@@ -29,7 +29,7 @@ const CONTROLS = [
   ['W A S D', 'Move'], ['Mouse', 'Look / aim'], ['Left click', 'Fire'], ['Right click / Left Alt', 'Aim down sights / scope'],
   ['R', 'Reload'], ['Shift', 'Sprint · hold breath (scoped)'], ['Space', 'Jump · vault / climb ledges · stand up'], ['T', 'Rappel down from a roof edge (campaign)'], ['L', 'Weapon laser (SMGs & rifles)'], ['C', 'Crouch · slide while sprinting'],
   ['Ctrl / Z', 'Prone'], ['E', 'Interact · pick up'], ['1 / 2 · wheel', 'Switch weapon'], ['G', 'Lethal (hold to cook)'],
-  ['Q', 'Tactical'], ['V', 'Melee · silent takedown from behind'], ['B', 'Fire mode'], ['Y then 1-6', 'Squad radio: orders to your team'], ['H', 'Squad: "On me!"'], ['K (hold)', 'Talk to your squad (microphone)'], ['F', 'Flashlight'], ['N', 'Night vision'], ['Tab', 'Scoreboard'], ['Esc', 'Pause'],
+  ['Q', 'Tactical'], ['V', 'Melee · silent takedown from behind'], ['B', 'Fire mode'], ['Y then 1-6', 'Squad radio: orders to your team'], ['H', 'Squad: "On me!"'], ['K (hold)', 'Talk to your squad (microphone)'], ['F', 'Flashlight'], ['N', 'Night vision'], ['P', 'Third / first person view'], ['Tab', 'Scoreboard'], ['Esc', 'Pause'],
 ];
 
 const TIPS = [

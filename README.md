@@ -51,6 +51,7 @@ Use a desktop browser (Chrome, Edge or Firefox) with a keyboard and mouse. Headp
 | Mouse wheel (scoped) | Zoom variable scopes: sniper 6×, 10× or 14×; thermal 3×, 5× or 8× |
 | F | Flashlight. With night vision down it becomes an IR illuminator that enemies can't see |
 | N | Night vision goggles (flip down / up) |
+| P | Switch between third person (over the shoulder, the default) and first person |
 | E (at a shut door) | Ease an interior door open (on missions with shut doors, like *Quiet Hours*) |
 | Tab | Scoreboard |
 | Esc | Pause |
@@ -61,6 +62,7 @@ Browsers reserve Ctrl+W, so it can close the tab. The game goes fullscreen with 
 
 **Core gameplay**
 - First-person movement: walk, sprint, slide, jump, crouch and prone. Stance changes check for headroom, you can climb stairs, and you can use multi-storey buildings with roof access.
+- Third-person camera by default (P switches to first person). The camera sits back over your right shoulder, orbits with your aim, comes in tight when you aim down sights and pulls in short of walls behind you. Your soldier is on screen: he walks, runs, strafes and crouches, kicks when you fire, swaps magazines when you reload and works with his hands on objectives. Shots go where the crosshair is but start level with you, and the laser and muzzle flash come from his rifle. Scoped aiming, rappelling and climbing switch to first person while you do them.
 - Weapon handling: hip-fire spread and bloom, aim down sights with optic zoom, per-weapon recoil patterns with recovery, and camera kick (all kept light), and a small, quick muzzle flash that doesn't block the sight picture.
 - Weapon animation: sway and bob, reloads where the magazine drops out and a new one goes in, empty reloads that pull the charging handle, per-shell shotgun reloads you can interrupt, bolt and pump cycling, a pistol slide that locks back, sprint pose, raise and lower on weapon switch, and a melee bash.
 - Health regenerates CoD-style. There are hit direction indicators, a low-health vignette and heartbeat, suppression when bullets whiz past, a flashbang blind effect and tinnitus.

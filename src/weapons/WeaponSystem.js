@@ -396,6 +396,12 @@ export class WeaponSystem {
     const cam = this.game.camera;
     const origin = cam.getWorldPosition(new THREE.Vector3());
     const fwd = cam.getWorldDirection(new THREE.Vector3());
+    // Third person: shots still go where the crosshair is, but start level with you,
+    // not back at the camera (nothing behind you gets hit).
+    if ((player.tpsK ?? 0) > 0.35) {
+      const eye = new THREE.Vector3(player.pos.x, player.pos.y + player.eye, player.pos.z);
+      origin.addScaledVector(fwd, Math.max(0, eye.sub(origin).dot(fwd)));
+    }
     const right = new THREE.Vector3().crossVectors(fwd, cam.up).normalize();
     const up = new THREE.Vector3().crossVectors(right, fwd).normalize();
     const pellets = s.pellets ?? 1;
@@ -461,6 +467,8 @@ export class WeaponSystem {
   }
 
   muzzleWorld() {
+    // Third person: the muzzle of the rifle in your soldier's hands.
+    if ((this.game.player.tpsK ?? 0) > 0.35 && this.game.avatar?.root.visible) return this.game.avatar.muzzle.getWorldPosition(new THREE.Vector3());
     // Map the viewmodel muzzle (camera space, own FOV) into world space.
     const m = this.weapon.model.muzzle;
     this.rig.updateMatrixWorld();
@@ -605,6 +613,7 @@ export class WeaponSystem {
         const cam = this.game.camera;
         const dir = cam.getWorldDirection(new THREE.Vector3());
         const origin = cam.getWorldPosition(new THREE.Vector3()).addScaledVector(dir, 0.4);
+        if ((player.tpsK ?? 0) > 0.35) origin.set(player.pos.x, player.pos.y + player.eye, player.pos.z).addScaledVector(dir, 0.5); // thrown from your hand, not the camera
         // Throw speed 18.25 m/s: about 27 m at the best angle (was 17 m/s, about 24 m).
         const vel = dir.multiplyScalar(18.25).add(new THREE.Vector3(0, 3, 0)).add(player.vel.clone().multiplyScalar(0.5));
         const g = this.game.grenades.throw(c.id, origin, vel, player, def.cook ? c.t : 0);
