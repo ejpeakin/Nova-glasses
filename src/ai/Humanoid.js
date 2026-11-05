@@ -1086,7 +1086,28 @@ export class Humanoid {
     this.gunPivot.quaternion.copy(gq);
     this._poseArms(dt);
     this._applyMove(dt);
+    if (this.handOverride) this._handOverride();
     if (this.rig) this.rig.pose(this);
+  }
+
+  /**
+   * Scripted hands for a scene (a takedown grab): handOverride = { right, left },
+   * each { p: world point, w: 0..1 }, blended over wherever the hands would be.
+   */
+  _handOverride() {
+    this.torso.updateWorldMatrix(true, false);
+    for (const arm of this.arms) {
+      const o = this.handOverride[arm.side > 0 ? 'right' : 'left'];
+      if (!o || !(o.w > 0)) continue;
+      const local = this.torso.worldToLocal(tmpV2.copy(o.p));
+      arm.target.lerp(local, Math.min(1, o.w));
+      this._solveArm(arm, tmpV1.copy(arm.target));
+    }
+  }
+
+  /** The right hand's bone (skinned model) or forearm, to hang a prop from. */
+  rightHandNode() {
+    return this.rig?.b?.RightHand ?? this.arms.find((a) => a.side > 0)?.fore ?? this.torso;
   }
 
   /**

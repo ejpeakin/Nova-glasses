@@ -15,6 +15,7 @@ import { Grenades } from './weapons/Grenades.js';
 import { WEAPONS } from './weapons/WeaponData.js';
 import { buildLowGun } from './ai/Humanoid.js';
 import { Audio } from './core/Audio.js';
+import { TakedownClip } from './modes/Takedown.js';
 import { Store } from './core/Storage.js';
 import { clamp, lerp, rand, damp, dampAngle } from './core/Utils.js';
 import { Comms } from './player/Comms.js';
@@ -465,6 +466,13 @@ export class Game {
       const toP = p.pos.clone().sub(best.pos).setY(0).normalize();
       const behind = facing.dot(toP) < 0.25;
       if (!engaged && (behind || best.state === 'idle' || best.state === 'patrol' || best.state === 'alert')) {
+        // In the campaign it plays as a short clip (in multiplayer it's instant).
+        if (this.mode.type === 'campaign' && !this.cinematic && !p.climbing && !p.rappel && Math.abs(best.pos.y - p.pos.y) < 0.8) {
+          this.cinematic = new TakedownClip(this, best, () => { if (this.cinematic?.constructor === TakedownClip) this.cinematic = null; });
+          this.hud?.toast('SILENT TAKEDOWN', 'xp');
+          Store.stats.meleeKills++;
+          return;
+        }
         best.takeDamage(99999, null, attacker, false, 'melee');
         Audio.impact('flesh', best.chest);
         this.hud?.toast('SILENT TAKEDOWN', 'xp');
