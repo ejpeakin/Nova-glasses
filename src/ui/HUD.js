@@ -310,6 +310,7 @@ export class HUD {
 
   /** Drop queued and current subtitles (a clip cuts in with its own dialogue). */
   clearSubs() {
+    Audio.stopVoice();
     this.subQueue.length = 0;
     this.curSub = null;
     this.el.subs.innerHTML = '';
@@ -531,6 +532,9 @@ export class HUD {
       const l = this.subQueue.shift();
       this.curSub = l;
       this.subT = 1.6 + l.text.length * 0.055;
+      // A recorded line plays with its subtitle (over the radio, except the narrator).
+      const vd = Audio.voice(l.who, l.text, { radio: l.who !== 'NARRATOR' && !/^(HART|VASKO|KESSLER|BRANDT|LEADER|TECHNICIAN|CIVILIAN|HOSTAGE|SUSPECT)$/.test(l.who) });
+      if (vd) this.subT = Math.max(this.subT, vd + 0.45);
       const who = SPEAKER[l.who] ?? l.who;
       const fr = !['VASKO', 'KESSLER', 'HART'].includes(l.who);
       this.el.subs.innerHTML = Store.settings.subtitles ? `<div class="sub"><b class="${fr ? 'fr' : 'en'}">${escapeHtml(who)}:</b> ${escapeHtml(l.text)}</div>` : '';

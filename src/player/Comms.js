@@ -222,7 +222,11 @@ export class Comms {
 
   /** Voice a radio line with the browser's speech synthesis (Settings → Squad voices). */
   speak(text, who) {
-    if (!Store.settings.squadVoice || this.game.app?.testMode) return;
+    if (this.game.app?.testMode) return;
+    // Recorded voices first (you, the squad, Watchtower), then the browser's voice.
+    const sp = who === 'self' ? 'WRAITH' : who === 'hq' ? 'WATCHTOWER' : 'SQUAD';
+    if (Audio.voice(sp, text, { radio: true })) return;
+    if (!Store.settings.squadVoice) return;
     const ss = typeof window !== 'undefined' ? window.speechSynthesis : null;
     if (!ss || typeof SpeechSynthesisUtterance === 'undefined') return;
     try {

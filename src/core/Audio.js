@@ -4,6 +4,7 @@
 import { Store } from './Storage.js';
 import { clamp, rand, pick } from './Utils.js';
 import { AR_SHOTS_MP3, SMG_SHOTS_MP3 } from '../assets/gunfire.js';
+import { VOICE_LINES } from '../assets/voice/index.js';
 
 /**
  * Level acoustics: the reverb impulse is generated from these. early = discrete
@@ -156,6 +157,72 @@ class AudioEngine {
     };
     Promise.all([load('ar', AR_SHOTS_MP3), load('smg', SMG_SHOTS_MP3)])
       .catch((e) => console.warn('Recorded gunfire failed to decode; using synthesized shots.', e));
+  }
+
+  // ---------- recorded dialogue ----------
+
+  /** The clip for a speaker's line, if one was recorded ({ f, d } or null). */
+  voiceClip(who, text) {
+    return VOICE_LINES[`${String(who ?? '').toUpperCase()}|${text}`] ?? null;
+  }
+
+  _voiceBuffer(file) {
+    this._voiceCache ??= new Map();
+    if (!this._voiceCache.has(file)) {
+      const url = new URL(`../assets/voice/${file}`, import.meta.url);
+      this._voiceCache.set(file, fetch(url).then((r) => { if (!r.ok) throw new Error(`${r.status} ${file}`); return r.arrayBuffer(); })
+        .then((ab) => new Promise((ok, no) => this.ctx.decodeAudioData(ab, ok, no)))
+        .catch((e) => { console.warn('Voice clip failed to load', file, e); return null; }));
+    }
+    return this._voiceCache.get(file);
+  }
+
+  /** Fetch every clip for these speakers ahead of time (e.g. the film's narrator). */
+  preloadVoices(...who) {
+    if (!this.ready) return;
+    const want = who.map((w) => `${w}|`);
+    for (const [k, v] of Object.entries(VOICE_LINES)) if (want.some((w) => k.startsWith(w))) this._voiceBuffer(v.f);
+  }
+
+  /**
+   * Play a recorded line. radio: band-limited and a touch crunchy, like a headset.
+   * Returns the clip's length in seconds (0 when there is no recording), so
+   * subtitles can stay up for as long as the line takes.
+   */
+  voice(who, text, o = {}) {
+    const clip = this.voiceClip(who, text);
+    if (!clip || !this.ready) return 0;
+    const token = (this._voiceToken = (this._voiceToken ?? 0) + 1);
+    this.stopVoice(token);
+    this._voiceBuffer(clip.f).then((buf) => {
+      if (!buf || token !== this._voiceToken) return;
+      const c = this.ctx;
+      const src = c.createBufferSource();
+      src.buffer = buf;
+      const g = c.createGain();
+      g.gain.value = (o.gain ?? 1) * (Store.settings.voiceVolume ?? 1);
+      let head = src;
+      if (o.radio) {
+        const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 320;
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3600;
+        const sh = c.createWaveShaper(); sh.curve = this._satCurve(1.6);
+        src.connect(hp); hp.connect(lp); lp.connect(sh); head = sh;
+        g.gain.value *= 1.15;
+      }
+      head.connect(g);
+      g.connect(this.master); // dialogue sits above the mix, unaffected by the muffle of a nearby blast
+      src.start();
+      this._voiceSrc = { src, token };
+      src.onended = () => { if (this._voiceSrc?.src === src) this._voiceSrc = null; };
+    });
+    return clip.d;
+  }
+
+  /** Cut off whatever line is playing (a new line, a skipped clip). */
+  stopVoice(keep = null) {
+    const v = this._voiceSrc;
+    if (v && v.token !== keep) { try { v.src.stop(); } catch { /* already stopped */ } this._voiceSrc = null; }
+    if (keep === null) this._voiceToken = (this._voiceToken ?? 0) + 1;
   }
 
   applyVolumes() {

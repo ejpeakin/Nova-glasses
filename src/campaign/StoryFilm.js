@@ -376,6 +376,7 @@ export class StoryFilm {
     ];
     this.total = this.shots.reduce((a, s) => a + s.dur, 0);
     Audio.playMusic('tension');
+    Audio.preloadVoices('NARRATOR');
     this._next();
   }
 
@@ -402,6 +403,8 @@ export class StoryFilm {
     void s.offsetWidth;
     s.textContent = text;
     s.classList.add('on');
+    // The recorded narrator, or the browser's voice where a line has no recording.
+    if (Audio.voice('NARRATOR', text)) return;
     if (Store.settings.squadVoice && !this.app.testMode && window.speechSynthesis && typeof SpeechSynthesisUtterance !== 'undefined') {
       try {
         const ss = window.speechSynthesis;
@@ -1421,6 +1424,7 @@ export class StoryFilm {
     this.done = true;
     this.r.domElement.style.filter = '';
     try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
+    Audio.stopVoice();
     Audio.stopLoop('film');
     this.el.classList.add('out');
     setTimeout(() => this.dispose(), 400);
