@@ -430,7 +430,7 @@ function driveProp(game, o, pos, n, kind) {
 export function buildDoor(game, spec) {
   const w = spec.w ?? 1.7, h = spec.h ?? 2.35, out = spec.out ?? -1;
   const g = new THREE.Group();
-  g.position.set(spec.x, 0, spec.z);
+  g.position.set(spec.x, spec.y ?? 0, spec.z);
   g.rotation.y = spec.axis === 'z' ? -Math.PI / 2 : 0;
   const pivot = new THREE.Group();
   pivot.position.set(-w / 2 + 0.04, 0, 0);
@@ -461,7 +461,7 @@ export function buildDoor(game, spec) {
     block(p) {
       if (door.open && Math.abs(door.angle) > 0.6) return;
       const lp = g.worldToLocal(p.pos.clone());
-      if (Math.abs(lp.x) > w / 2 + 0.1 || Math.abs(lp.z) > 0.45 || lp.y > h) { if (Math.abs(lp.z) > 0.45) door.side = Math.sign(lp.z); return; }
+      if (Math.abs(lp.x) > w / 2 + 0.1 || Math.abs(lp.z) > 0.45 || lp.y > h || lp.y < -0.6) { if (Math.abs(lp.z) > 0.45) door.side = Math.sign(lp.z); return; }
       lp.z = (door.side ?? Math.sign(lp.z || out)) < 0 ? -0.45 : 0.45; // back to the side you came from
       const wp = g.localToWorld(lp);
       p.pos.x = wp.x;

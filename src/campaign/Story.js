@@ -727,111 +727,166 @@ export const MISSIONS = [
   {
     id: 'm9', title: 'Quiet Hours', map: 'downtown', lighting: 'night', weather: 'none',
     location: 'VEL HARAT — OLD QUARTER', time: 'DAY 31 — 03:40 LOCAL',
-    summary: 'Capture Dr. Hart, the last person who could ever rebuild HALCYON, in a quiet night raid on her hideout. Save the hostages she is hiding behind.',
-    recap: 'Vasko is in custody and the satellites are gone. Only Dr. Hart is left, with the last copy of the launch codes, hiding in a Vel Harat apartment block.',
-    goal: 'Raid her hideout without making a sound: stack on the door, pick the lock, clear it room by room, free the hostages and arrest Hart.',
+    summary: 'Capture Dr. Hart, the last person who could ever rebuild HALCYON, from the townhouse MERIDIAN hides her in. Tenants live on every floor. Clear it room by room on night vision and only shoot what is holding a weapon.',
+    recap: 'Vasko is in custody and the satellites are gone. Only Dr. Hart is left, with the last copy of the launch codes, hiding in a narrow Vel Harat townhouse among the families who rent its rooms.',
+    goal: 'Go in quietly through the side door, clear the house floor by floor under strict rules of engagement, and take Hart and her laptop alive.',
     loadout: { primary: 'viper', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { viper: { muzzle: 'suppressor', optic: 'holo', underbarrel: 'laser' }, p11: { muzzle: 'suppressor' } } },
-    loadoutNote: 'Quiet kit: suppressed K-45 Viper and P-11, lock picks, flashbangs for the rooms. The squad carries suppressed weapons too. Nobody hears your team\'s shots, and one headshot drops a man.',
-    kitHint: 'Crouch to move quietly  ·  V from behind: silent takedown  ·  Y: squad radio  ·  hold E: pick the lock, cut ties, cuff',
+    loadoutNote: 'Quiet kit: suppressed K-45 Viper and P-11 with IR lasers, lock picks. Nobody hears your team\'s shots, and one headshot drops a man. Rules of engagement: positive ID before you fire.',
+    kitHint: 'Positive ID: only shoot people holding a weapon  ·  E: ease a door open  ·  hold E: pick the lock, cuff, pull the drive  ·  N: night vision',
     start: { pos: [6.7, 33.4], yaw: 0 },
     // In by van down the cross street, lights off, to the kerb a block north of the
-    // safehouse; out of the side door and down the wall to the corner.
+    // house; out of the side door and down the wall to the corner.
     van: {
       path: [[5.2, 70], [5.2, 52], [5.0, 41], [4.8, 33]],
       exit: [6.7, 33.4], exitYaw: 0,
-      spots: [[7.7, 30.6], [6.2, 27.6], [7.7, 24.6]],
+      spots: [[7.7, 30.6], [6.2, 27.6]],
       lines: [
         { t: 0.8, who: 'REYES', text: '(low) Lights off from here. One block.' },
-        { t: 4.8, who: 'HATCH', text: 'Street\'s dead. Two on her door, one walking the block.' },
-        { t: 9.2, who: 'REYES', text: 'This is us. Out the side, spread out on the wall, and slow.' },
+        { t: 4.8, who: 'HATCH', text: 'Two on the front of the house. Families on every floor. Hart\'s at the top.' },
+        { t: 9.2, who: 'REYES', text: 'This is us. Weapons tight: no weapon in their hands, no shot. Out the side, slow.' },
       ],
     },
     squad: [
       { name: 'Reyes', weapon: 'rk74', suppressed: true },
       { name: 'Hatch', weapon: 'rk74', suppressed: true },
-      { name: 'Tex', weapon: 'rk74', suppressed: true },
     ],
     stealth: true,
     silentShots: true, // the team's gunfire makes no noise the enemy can hear
     headshotKills: true, // any headshot on an enemy kills him outright
-    squadLeash: 7,
+    roe: true, // civilians can be hit; shooting one, or an unarmed or surrendered man, fails the mission
+    squadLeash: 6,
     alarmGroup: 'response',
     alarmTimer: 60,
-    timerText: 'HOSTAGES',
-    timerFail: ['The hostages were executed.', 'They heard ORION coming. Crouch, stay suppressed and take them from behind.'],
-    // The safehouse: the ground floor of the brick block on the north-east corner,
-    // partitioned into a hallway, a bedroom where the hostages are held and an office.
-    doors: { south: { x: 13, z: 14.15, w: 1.7, h: 2.35, axis: 'x', out: -1 } },
-    civilians: [{ pos: [9.5, 23.0], yaw: Math.PI * 0.85 }, { pos: [11.6, 23.1], yaw: -Math.PI * 0.85 }],
+    timerText: 'TENANTS',
+    timerFail: ['They started killing the tenants.', 'They heard ORION coming. Stay quiet, take the door guards first and move slowly.'],
+    // The townhouse: the brick block on the north-east corner (x 8..24, z 14..24),
+    // three floors and stairs. Ground floor: kitchen (north-west, side door), an
+    // office (north-east) and the front room. First floor: a corridor and three shut
+    // doors (two bedrooms and a bathroom). Top floor: Hart's workshop.
+    doors: {
+      front: { x: 13, z: 14.15, w: 1.7, h: 2.35, axis: 'x', out: -1 },
+      side: { x: 8.15, z: 21, w: 1.6, h: 2.35, axis: 'z', out: 1 },
+    },
+    civilians: [
+      { pos: [20.6, 0, 22.2], yaw: Math.PI, pose: 'head' }, // a tenant hiding behind the office desk
+      { pos: [10.4, 3.3, 21.2], yaw: Math.PI * 0.9, pose: 'side' }, // a father sitting up on the bed
+      { pos: [9.3, 3.3, 23.0], yaw: Math.PI * 0.75, pose: 'head' }, // his wife in the corner
+      { id: 'hart', pos: [19.8, 6.6, 22.3], yaw: Math.PI, pose: 'head', stand: true, faction: 'suit' },
+    ],
+    cqb: {
+      doors: {
+        bedA: { x: 11.0, y: 3.3, z: 18.8, w: 1.0, axis: 'x', out: 1 },
+        bath: { x: 15.4, y: 3.3, z: 18.8, w: 0.9, axis: 'x', out: 1 },
+        bedB: { x: 20.0, y: 3.3, z: 18.8, w: 1.0, axis: 'x', out: 1 },
+      },
+      reach: [{ unit: 'ground:0', weapon: [12.7, 0.92, 23.25], weaponYaw: 0.3, trigger: 'side', radius: 4.5 }],
+      blind: [{ unit: 'first:0', door: 'bath', ear: 4.2 }],
+      wardrobes: [{ x: 17.45, y: 3.3, z: 22.4, yaw: Math.PI / 2, unit: 'first:2', radius: 3.4 }],
+      surrender: [{ unit: 'top:1', who: 'TECHNICIAN', line: 'Okay! Okay! Hands up! Don\'t shoot!', radius: 7.5, feint: { bench: [16.0, 7.5, 23.3], delay: [2.6, 4.4], window: 1.7 } }],
+      startle: [
+        { civ: 0, to: [23.0, 19.4], face: Math.PI * 0.75, radius: 6, time: 0.8, say: 'Please! Please! I live here!' },
+        { civ: 1, to: [13.2, 23.1], face: Math.PI * 0.8, radius: 5, time: 0.7, say: 'No! No, no, don\'t—' },
+      ],
+    },
     build(b) {
       b.keepClear(8, 14, 24, 24);
-      const h = 3.05, t = 0.15;
+      const h = 3.05, t = 0.15, f1 = 3.3, f2 = 6.6;
+      // Ground floor: kitchen (side door) | office, over the front room.
       b.wall('x', 8.3, 23.7, 18.8, 0, h, t, 'plaster', [{ at: 11.2, w: 1.1, top: 2.2 }, { at: 19.5, w: 1.1, top: 2.2 }]);
       b.wall('z', 18.95, 23.7, 15.8, 0, h, t, 'plaster', [{ at: 21.3, w: 1.0, top: 2.2 }]);
-      b.box(8.15, 0, 21, 0.5, 2.4, 1.8, 'woodDark'); // back door, barricaded from inside
-      // Hallway: living area and kitchen.
-      b.box(10.2, 0, 15.0, 2.2, 0.8, 0.85, 'fabric');
-      b.box(10.2, 0, 16.4, 1.2, 0.45, 0.6, 'wood');
-      b.box(17.4, 0, 16.6, 1.8, 0.76, 1.0, 'wood');
-      b.box(16.3, 0, 16.6, 0.45, 0.9, 0.45, 'woodDark');
-      b.box(18.5, 0, 16.6, 0.45, 0.9, 0.45, 'woodDark');
-      b.box(21.6, 0, 18.35, 1.6, 0.92, 0.6, 'tiles');
-      b.box(8.6, 0, 17.0, 0.5, 1.8, 1.4, 'woodDark');
-      // Bedroom: beds and a wardrobe.
-      b.box(13.6, 0, 22.7, 1.8, 0.55, 1.9, 'fabric');
-      b.box(8.7, 0, 19.6, 0.6, 2.0, 1.2, 'woodDark');
-      // Office: desk and filing cabinets.
+      // Kitchen: counter and cupboards along the back wall, fridge, table.
+      b.box(12.0, 0, 23.3, 4.4, 0.92, 0.65, 'tiles');
+      b.box(12.0, 1.55, 23.45, 4.4, 0.7, 0.35, 'woodDark', false);
+      b.box(9.0, 0, 23.2, 0.8, 1.9, 0.75, 'metal');
+      b.box(12.4, 0, 20.4, 1.4, 0.76, 0.9, 'wood');
+      // Office: desk, cabinets, a chair on its side.
       b.box(21.0, 0, 23.0, 1.8, 0.76, 0.8, 'wood');
-      b.box(23.2, 0, 19.6, 0.5, 1.3, 0.9, 'metalDark');
-      b.box(23.2, 0, 20.6, 0.5, 1.3, 0.9, 'metalDark');
-      // Low warm lamps inside, and the team van.
-      b.light(12, 2.8, 16.5, 0xffc890, 7, 9);
-      b.light(11.5, 2.8, 21.5, 0xffb070, 5, 7);
-      b.light(19.5, 2.8, 21.5, 0xfff0d0, 6, 8);
+      b.box(23.2, 0, 21.6, 0.5, 1.3, 0.9, 'metalDark');
+      b.box(18.0, 0, 23.3, 1.2, 1.8, 0.45, 'woodDark');
+      // Front room: sofa, coffee table, dining table and chairs, TV.
+      b.box(10.4, 0, 15.0, 2.2, 0.8, 0.85, 'fabric');
+      b.box(10.4, 0, 16.4, 1.2, 0.45, 0.6, 'wood');
+      b.box(16.4, 0, 16.6, 1.8, 0.76, 1.0, 'wood');
+      b.box(15.3, 0, 16.6, 0.45, 0.9, 0.45, 'woodDark');
+      b.box(17.5, 0, 16.6, 0.45, 0.9, 0.45, 'woodDark');
+      b.box(13.6, 0, 18.5, 1.4, 0.55, 0.4, 'woodDark');
+      b.box(13.6, 0.55, 18.6, 1.1, 0.65, 0.06, 'screen', false);
+      // First floor: the corridor, three shut doors (bedroom, bathroom, bedroom).
+      b.wall('x', 8.3, 23.7, 18.8, f1, h, t, 'plaster', [{ at: 11.0, w: 1.1, top: 2.2 }, { at: 15.4, w: 1.0, top: 2.2 }, { at: 20.0, w: 1.1, top: 2.2 }]);
+      b.wall('z', 18.95, 23.7, 13.8, f1, h, t, 'plaster');
+      b.wall('z', 18.95, 23.7, 17.0, f1, h, t, 'plaster');
+      b.box(10.9, f1, 22.6, 1.8, 0.55, 2.0, 'fabric'); // double bed
+      b.box(13.0, f1, 20.0, 0.5, 0.6, 0.5, 'wood'); // bedside table
+      b.box(15.4, f1, 23.15, 1.6, 0.6, 0.75, 'tiles'); // bath
+      b.box(14.3, f1, 19.4, 0.5, 0.85, 0.45, 'tiles'); // basin
+      b.box(21.6, f1, 22.6, 1.6, 0.55, 2.0, 'fabric'); // bed
+      b.box(23.2, f1, 19.8, 0.45, 1.1, 0.9, 'woodDark'); // chest of drawers
+      b.box(12.0, f1, 15.2, 1.6, 0.9, 0.45, 'woodDark'); // corridor dresser
+      // Top floor: Hart's workshop. Workbench with the detonator, explosives along
+      // the walls, her desk and laptop; crates block the stairs to the roof.
+      b.box(16.0, f2, 23.3, 2.4, 0.9, 0.7, 'woodDark');
+      b.box(16.0, f2 + 0.9, 23.25, 0.2, 0.07, 0.13, 'black', false); // the detonator
+      b.box(16.08, f2 + 0.98, 23.25, 0.03, 0.03, 0.03, 'lightRed', false);
+      b.box(19.9, f2, 23.3, 1.4, 0.76, 0.7, 'wood');
+      b.box(19.9, f2 + 0.76, 23.3, 0.36, 0.02, 0.26, 'black', false);
+      b.box(19.9, f2 + 0.78, 23.42, 0.36, 0.24, 0.02, 'screenBlue', false);
+      for (const [x, z] of [[9.2, 23.1], [10.1, 23.1], [12.6, 23.2], [23.1, 20.4], [23.1, 21.3]]) b.box(x, f2, z, 0.8, 0.6, 0.6, 'olive');
+      for (const [x, z] of [[9.6, 22.3], [23.1, 22.4]]) b.barrel(x, z, 'olive', f2);
+      for (let i = 0; i < 6; i++) b.box(13.0 + i * 1.6, f2 + 0.05, 23.62, 1.4, 0.02, 0.02, 'black', false); // detonation cord
+      b.box(14.2, f2, 16.6, 1.2, 1.0, 1.0, 'wood'); // crates (cover)
+      b.box(23.2, f2, 15.2, 1.3, 1.6, 1.4, 'wood'); // blocking the roof stairs
+      // The house is dark: ceiling lights off (shades over the panels), a lamp or two left on.
+      for (const sy of [3.3, 6.6, 9.9]) b.box(16, sy - 0.345, 19, 1.32, 0.05, 0.72, 'panelDark', false);
+      b.light(12.2, 2.6, 21.6, 0xffc890, 3, 6);
+      b.light(17.0, 2.6, 16.4, 0xffb070, 3, 6);
+      b.light(16.0, 5.9, 16.4, 0xffd0a0, 2, 6);
+      b.light(17.5, 9.1, 21.5, 0xfff0d0, 3, 7);
       b.world.add(3.8, 0, 30.35, 5.8, 2.35, 35.65, 'metal'); // the team van, parked at the kerb
       b.patrol('safehouse', [[6, 11.2], [22, 11.2]]);
     },
     briefing: [
-      { who: 'WATCHTOWER', text: 'Dr. Lena Hart is hiding on the ground floor of the brick block on the north-east corner. Her laptop has the last copy of the launch codes.' },
-      { who: 'WATCHTOWER', text: 'They are holding the building\'s tenants as a shield. If they hear you coming, the hostages die.' },
-      { who: 'REYES', text: 'Suppressed weapons, lock picks, hand signals. We clear it room by room and nobody on that street wakes up.' },
+      { who: 'WATCHTOWER', text: 'Dr. Lena Hart is in a three-storey townhouse on the north-east corner. Her laptop has the last copy of the launch codes.' },
+      { who: 'WATCHTOWER', text: 'MERIDIAN rents the house through the families living in it. Tenants on every floor. Expect them to be frightened and unpredictable.' },
+      { who: 'REYES', text: 'We go in the side door, night vision and lasers, room by room. Rules of engagement are strict: nobody fires on anyone who isn\'t holding a weapon.' },
     ],
     groups: {
       street: { units: [{ pos: [12.2, 11.6] }, { pos: [18, 11.2], patrol: 'safehouse' }] },
-      hall: { units: [{ pos: [17.6, 15.4] }, { pos: [21.0, 16.2], weapon: 'wasp' }] },
-      bedroom: { units: [{ pos: [13.8, 20.1] }, { pos: [10.1, 20.0], weapon: 'rk74' }] },
-      office: { units: [{ pos: [17.3, 22.8], weapon: 'breaker' }] },
+      // 0: the man at the kitchen counter who goes for the rifle; two in the front room.
+      ground: { units: [{ pos: [12.4, 22.4], weapon: 'rk74' }, { pos: [17.6, 15.4], stationary: true }, { pos: [21.2, 16.0], weapon: 'wasp', stationary: true }] },
+      // 0: behind the bathroom door; 1: in the far bedroom; 2: hiding in its wardrobe.
+      first: { units: [{ pos: [15.4, 3.3, 21.0], weapon: 'wasp' }, { pos: [21.4, 3.3, 20.3], weapon: 'rk74' }, { pos: [17.45, 3.3, 22.4], weapon: 'wasp' }] },
+      // 0: Hart's bodyguard behind the crates; 1: the technician by the bench.
+      top: { units: [{ pos: [13.6, 6.6, 17.6], weapon: 'wasp' }, { pos: [16.2, 6.6, 22.2], weapon: 'p11' }] },
       response: { spawnOn: 'alarm', hunter: true, units: [{ pos: [44, 10], weapon: 'rk74' }, { pos: [40, -8] }, { pos: [-14, 12] }, { pos: [20, 40] }, { pos: [32, 28], weapon: 'breaker' }] },
     },
     objectives: [
-      { type: 'goto', text: 'Move up to the corner of the block — quietly', target: [2, 12.5], radius: 2.5,
-        say: [{ who: 'REYES', text: 'Comms quiet from here. Hand signals. Wraith, you have point. Crouch and keep it slow.' }] },
-      { type: 'eliminate', text: 'Take down the two sentries without a sound', groups: ['street'],
-        say: [{ who: 'HATCH', text: 'Two on the door, one walking the block. From behind, or one suppressed round each.' }] },
-      { type: 'goto', text: 'Stack up on the south door', target: [13.2, 13.2], radius: 1.0,
-        stack: [[11.7, 13.5], [11.1, 13.3], [10.5, 13.5]], stackYaw: -Math.PI / 2,
-        say: [{ who: 'TEX', text: '(whisper) Stacked on the door. It\'s locked. Your call.' }] },
-      { type: 'interact', text: 'Pick the lock', target: [13.6, 0, 13.6], label: 'pick the lock', duration: 5, door: 'south',
-        doneSay: [{ who: 'REYES', text: '(whisper) We\'re in. Slow is smooth. Two in the hall.' }] },
-      { type: 'eliminate', text: 'Clear the hallway', groups: ['hall'], squadFollow: true,
-        say: [{ who: 'HATCH', text: '(whisper) Left man\'s yours. I\'ve got the kitchen.' }] },
-      { type: 'goto', text: 'Stack on the bedroom door', target: [11.2, 17.9], radius: 0.9,
-        stack: [[10.2, 18.15], [9.6, 18.15], [12.3, 18.15]], stackYaw: Math.PI,
-        say: [{ who: 'REYES', text: '(whisper) Hostages are in there with two guards. Flash it or go in quiet. On you.' }] },
-      { type: 'eliminate', text: 'Clear the bedroom — don\'t hit the hostages', groups: ['bedroom'], squadFollow: true },
-      { type: 'interact', text: 'Cut the hostages free', target: [10.6, 0, 21.9], label: 'cut the hostages free', duration: 3, freeCivilians: true, stopTimer: true,
-        doneSay: [{ who: 'HOSTAGE', text: 'Thank you... thank you. She is in the office. She has a gun.' }, { who: 'TEX', text: 'Stay down. You\'re safe now.' }] },
-      { type: 'eliminate', text: 'Clear the office', groups: ['office'],
-        say: [{ who: 'REYES', text: '(whisper) One bodyguard and Hart. I want her breathing.' }] },
-      { type: 'interact', text: 'Detain Dr. Lena Hart', target: [19.6, 0, 21.6], label: 'detain Dr. Hart', duration: 3, detainee: 'civilian',
+      { type: 'goto', text: 'Move down the side street to the corner of the house — quietly', target: [6.8, 25.4], radius: 2.5,
+        say: [{ who: 'REYES', text: 'Comms quiet. Two on the front. Then the side door into the kitchen.' }] },
+      { type: 'eliminate', text: 'Drop the two door guards without a sound', groups: ['street'],
+        say: [{ who: 'HATCH', text: 'One on the door, one walking the block. Headshots. Nobody hears these.' }] },
+      { type: 'goto', text: 'Stack on the side door', target: [7.2, 20.0], radius: 0.9,
+        stack: [[7.2, 22.2], [6.6, 23.0]], stackYaw: -Math.PI / 2,
+        say: [{ who: 'HATCH', text: '(whisper) Stacked. Locked. Your call.' }] },
+      { type: 'interact', text: 'Pick the lock', target: [7.6, 0, 21.4], label: 'pick the lock', duration: 5, door: 'side',
+        doneSay: [{ who: 'REYES', text: '(whisper) Kitchen. Eyes on hands.' }] },
+      { type: 'eliminate', text: 'Clear the ground floor — only shoot people holding a weapon', groups: ['ground'], squadFollow: true },
+      { type: 'goto', text: 'Stack at the foot of the stairs', target: [21.9, 14.9], radius: 1.1,
+        stack: [[20.6, 15.2], [19.6, 14.8]], stackYaw: -Math.PI / 2,
+        say: [{ who: 'REYES', text: '(whisper) Bedrooms up there, doors shut, families behind them. Ease them open. Check every corner.' }] },
+      { type: 'eliminate', text: 'Clear the first floor — doors are shut, families inside', groups: ['first'], squadFollow: true },
+      { type: 'eliminate', text: 'Top floor: find Hart', groups: ['top'], squadFollow: true,
+        say: [{ who: 'REYES', text: '(whisper) Hart\'s up top with whoever she trusts. If they give up, hold fire. If they move for anything, drop them.' }] },
+      { type: 'interact', text: 'Detain Dr. Lena Hart', target: [19.8, 6.6, 22.3], label: 'detain Dr. Hart', duration: 3, act: 'detain', modelFrom: 'hart', stopTimer: true,
         say: [{ who: 'HART', text: 'Don\'t shoot! I\'m not armed. I\'m not armed!' }],
-        doneSay: [{ who: 'HART', text: 'You have no idea what you have just done.' }, { who: 'REYES', text: 'We\'ll talk about it on the plane, Doctor. Hatch, she\'s yours.' }] },
+        doneSay: [{ who: 'HART', text: 'You have no idea what you have just done.' }, { who: 'REYES', text: 'We\'ll talk about it on the plane, Doctor.' }] },
+      { type: 'interact', text: 'Pull the drive from Hart\'s laptop', target: [19.9, 6.6, 23.0], label: 'pull the drive', duration: 4, act: 'drive',
+        doneSay: [{ who: 'WATCHTOWER', text: 'That\'s the last copy. HALCYON is finished. Bring them home.' }] },
       { type: 'extract', text: 'Get back to the van', target: [6.8, 32.6], radius: 3.5,
-        say: [{ who: 'WATCHTOWER', text: 'Street is still asleep. Clean work, ORION. Bring them home.' }] },
+        say: [{ who: 'HATCH', text: 'Hart\'s with me. Tenants are staying put till the police come. Move.' }] },
     ],
     outro: [
-      { who: 'WATCHTOWER', text: 'Dr. Lena Hart is in custody. The last copy of the launch codes was on her laptop. It no longer exists. HALCYON is finished.' },
-      { who: 'WATCHTOWER', text: 'Eleven tenants walked out of that building at dawn. None of them will ever know who you were.' },
+      { who: 'WATCHTOWER', text: 'Dr. Lena Hart is in custody. The last copy of the launch codes is in our hands, and HALCYON is finished.' },
+      { who: 'WATCHTOWER', text: 'Every family in that house walked out at dawn. None of them will ever know who you were.' },
       { who: 'REYES', text: 'Task Force ORION was never activated. None of this happened. Good work, Wraith.' },
     ],
     finale: true,

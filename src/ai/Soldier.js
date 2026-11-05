@@ -605,7 +605,7 @@ export class Soldier {
 
   _shootAt(target, dt, suppressive = false, at = null) {
     const now = this.game.time;
-    if (this.reloadT > 0) return false;
+    if (this.reloadT > 0 || this.unarmed) return false; // (a suspect who hasn't got to his weapon yet)
     // Weapons tight: the squad only fires on the player's shot, or when hit.
     const g = this.game;
     if (g.comms?.holdFire && this.team === g.player.team && (this.friendly || this.mpBot) && now - (g.player.lastShotTime ?? -99) > 3 && now - this.lastHit > 3) return false;

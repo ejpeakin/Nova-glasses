@@ -302,7 +302,18 @@ export class Game {
   fireBullet(origin, dir, o) {
     const maxDist = o.maxDist ?? 300;
     const shooter = o.shooter;
-    const wHit = this.world.raycast(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, maxDist);
+    let wHit = this.world.raycast(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, maxDist);
+    // Thin wood (interior doors, wardrobes) doesn't stop a round: it punches through,
+    // throwing splinters both sides, and carries on with less energy.
+    let pen = null;
+    if (wHit?.collider?.pen) {
+      pen = wHit;
+      const s = wHit.t + 0.1;
+      const w2 = this.world.raycast(origin.x + dir.x * s, origin.y + dir.y * s, origin.z + dir.z * s, dir.x, dir.y, dir.z, maxDist - s);
+      wHit = w2 ? { ...w2, t: w2.t + s } : null;
+      this.effects.impact(pen.point, pen.normal, 'wood');
+      if (Math.random() < 0.6) Audio.impact('wood', pen.point);
+    }
     let maxT = wHit ? wHit.t : maxDist;
     let hitActor = null, head = false;
     const test = (a) => {
@@ -313,6 +324,17 @@ export class Game {
     };
     test(this.player);
     for (const a of this.actors) test(a);
+    // Civilians (people the mission places) can be hit too, and the mission decides
+    // what that costs you.
+    if (shooter === this.player && this.mode.civilianRay) {
+      const c = this.mode.civilianRay(origin, dir, maxT);
+      if (c) {
+        const at = origin.clone().addScaledVector(dir, c.t);
+        this.effects.blood(at, dir, true);
+        this.mode.onCivilianShot?.(c.civ);
+        return { point: at, normal: dir.clone().negate(), t: c.t };
+      }
+    }
     const point = origin.clone().addScaledVector(dir, maxT);
     // Near-miss: whiz past the player's head / suppress AI near the line.
     if (shooter !== this.player && hitActor !== this.player && this.player.alive && this.hostile(shooter, this.player)) {
@@ -339,7 +361,9 @@ export class Game {
       const d = origin.distanceTo(point);
       const r = o.range;
       const base = d <= r[0] ? o.damage[0] : d >= r[1] ? o.damage[1] : lerp(o.damage[0], o.damage[1], (d - r[0]) / (r[1] - r[0]));
-      let dmg = base * (head ? o.headMult : 1) * (o.dmgMult ?? 1);
+      let dmg = base * (head ? o.headMult : 1) * (o.dmgMult ?? 1) * (pen && pen.t < maxT ? 0.65 : 1);
+      // Shooting a man who has surrendered is a rules-of-engagement violation.
+      if (hitActor.surrendered && shooter === this.player) this.mode.onRoeViolation?.(hitActor);
       // Missions can make any headshot on an enemy (by you or your squad) a kill.
       if (head && this.mode.mission?.headshotKills && !hitActor.isPlayer && !hitActor.storyChar && shooter && this.hostile(this.player, hitActor) && !this.hostile(this.player, shooter)) {
         dmg = Math.max(dmg, (hitActor.health + 1) / Math.max(0.05, hitActor.armor ?? 1));
@@ -647,6 +671,7 @@ export class Game {
         it.progress = 0;
       }
     }
+    if (!prompt && this.mode.interactPrompt) prompt = this.mode.interactPrompt(p, this.input) ?? null;
     if (!prompt && p.vaultPlan && !p.mantle) prompt = `Press <b>SPACE</b> to ${p.vaultPlan.vault ? 'vault over' : 'climb up'}`;
     this.hud?.prompt(prompt, progress);
     this._updateAction(dt, acting);

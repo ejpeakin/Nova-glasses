@@ -32,6 +32,7 @@ const MATS = {
   rockDark: { tex: 'rock', color: 0x6a6660, scale: 5, rough: 1, sound: 'concrete' },
   dirt: { tex: 'dirt', color: 0xe0c8a0, scale: 5, rough: 1, sound: 'sand' },
   sandbag: { tex: 'fabric', color: 0xb8a77c, scale: 1.2, rough: 1, sound: 'soft' },
+  fabric: { tex: 'fabric', color: 0x5d5249, scale: 1.4, rough: 1, sound: 'soft' },
   hesco: { tex: 'dirt', color: 0xb0a07a, scale: 2, rough: 1, sound: 'soft' },
   canvas: { tex: 'fabric', color: 0x8a8a62, scale: 3, rough: 1, sound: 'soft' },
   olive: { tex: 'metal', color: 0x5a6340, scale: 3, rough: 0.7, metal: 0.3, sound: 'metal' },

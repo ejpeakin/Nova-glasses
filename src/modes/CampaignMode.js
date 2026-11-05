@@ -7,6 +7,7 @@ import { spawnSoldier, snapGround, Cinematic, introKeys, ShotSequence, shotKeys 
 import { MISSIONS } from '../campaign/Story.js';
 import { Insertion } from './Insertion.js';
 import { VanInsertion } from './VanInsertion.js';
+import { CloseQuarters } from './CloseQuarters.js';
 import { Audio } from '../core/Audio.js';
 import { Store } from '../core/Storage.js';
 import { formatTime } from '../core/Utils.js';
@@ -116,6 +117,8 @@ export class CampaignMode {
       game.scene.add(h.root);
       return { id: c.id, model: h, crouch: c.stand ? 0 : 1, freed: false, yaw: c.yaw ?? 0 };
     });
+    // Close-quarters set pieces: shut doors, blind fire, hidden gunmen, surrenders.
+    if (m.cqb) this.cqb = new CloseQuarters(this, m.cqb);
     // Weapon caches (e.g. a suppressed rifle left on a rooftop by an asset).
     for (const c of m.caches ?? []) game.addPickup('weapon', new THREE.Vector3(c.pos[0], c.pos[1], c.pos[2]), c.weapon, c.attachments ?? null);
     // Intro cinematic, then hand control to the player.
@@ -512,6 +515,7 @@ export class CampaignMode {
       return;
     }
     if (this.done) return;
+    this.cqb?.update(dt);
     this.elapsed += dt;
     // Sneaking in: the team lead reins you in if you rush ahead.
     const lead = this.squad.find((s) => s.alive && s.storyChar);
@@ -624,6 +628,49 @@ export class CampaignMode {
     }, 1600);
   }
 
+  /** Shut interior doors you can ease open (E). */
+  interactPrompt(p, input) {
+    return this.cqb && !this.frozen ? this.cqb.interactPrompt(p, input) : null;
+  }
+
+  /** Rules of engagement: the people placed in the mission can be hit (only where they apply). */
+  civilianRay(o, d, maxT) {
+    if (!this.mission.roe) return null;
+    let best = null;
+    for (const c of this.civilians ?? []) {
+      if (c.shot) continue;
+      const p = c.model.root.position;
+      const h = c.crouch > 0.5 ? 1.15 : 1.75, r = 0.3;
+      // Ray against the person's box.
+      let t0 = 0, t1 = maxT;
+      for (const [oo, dd, lo, hi] of [[o.x, d.x, p.x - r, p.x + r], [o.y, d.y, p.y, p.y + h], [o.z, d.z, p.z - r, p.z + r]]) {
+        if (Math.abs(dd) < 1e-6) { if (oo < lo || oo > hi) { t0 = Infinity; break; } continue; }
+        let a = (lo - oo) / dd, b = (hi - oo) / dd;
+        if (a > b) [a, b] = [b, a];
+        t0 = Math.max(t0, a); t1 = Math.min(t1, b);
+      }
+      if (t0 <= t1 && t0 < maxT && (!best || t0 < best.t)) best = { t: t0, civ: c };
+    }
+    return best;
+  }
+
+  onCivilianShot(c) {
+    if (this.done || c.shot) return;
+    c.shot = true;
+    c.taken = false;
+    c.model.die(1);
+    this.game.hud.say([{ who: 'REYES', text: 'CHECK FIRE! CHECK FIRE! That was a civilian!' }]);
+    this.timers.push({ t: 1.4, fn: () => this._fail('Civilian casualty.', 'Positive ID before you fire: never shoot anyone who isn\'t holding a weapon.') });
+  }
+
+  onRoeViolation(a) {
+    if (this.done || this._roe) return;
+    this._roe = true;
+    const why = a.surrendered === 'hands' ? ['You shot a man who had surrendered.', 'Hands up means hold your fire, right up until he moves for a weapon.'] : ['You shot an unarmed man.', 'Positive ID before you fire: no weapon in his hands, no shot.'];
+    this.game.hud.say([{ who: 'REYES', text: 'Hold fire! He wasn\'t armed!' }]);
+    this.timers.push({ t: 1.4, fn: () => this._fail(why[0], why[1]) });
+  }
+
   _fail(title, reason) {
     if (this.done) return;
     this.done = true;
@@ -687,6 +734,7 @@ export class CampaignMode {
     for (const c of this.civilians ?? []) c.model.root.removeFromParent();
     this.insertion?.dispose();
     this.van?.dispose();
+    this.cqb?.dispose();
     this.vaskoModel?.dispose();
   }
 }
