@@ -274,7 +274,7 @@ export class CampaignMode {
       const unit = spawnSoldier(g, {
         pos: u.pos, team: 'b', name: u.name ?? 'MERIDIAN', role: u.role ?? 'rifleman', weapon: u.weapon,
         difficulty: this.difficulty, patrol: u.patrol ? g.builder.patrols[u.patrol] : null, squad: grp.squad,
-        stationary: u.stationary, hunter: grp.def.hunter, health: u.health ? Math.round(u.health * ({ recruit: 0.7, regular: 1, hardened: 1.2, veteran: 1.4 }[this.difficulty] ?? 1)) : undefined,
+        stationary: u.stationary, hunter: grp.def.hunter, suppressed: u.suppressed ?? this.mission.allSuppressed, health: u.health ? Math.round(u.health * ({ recruit: 0.7, regular: 1, hardened: 1.2, veteran: 1.4 }[this.difficulty] ?? 1)) : undefined,
         faction, yaw: Math.random() * Math.PI * 2,
       });
       if (grp.def.hunter) {

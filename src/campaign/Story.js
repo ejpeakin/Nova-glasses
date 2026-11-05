@@ -753,6 +753,7 @@ export const MISSIONS = [
     stealth: true,
     silentShots: true, // the team's gunfire makes no noise the enemy can hear
     headshotKills: true, // any headshot on an enemy kills him outright
+    allSuppressed: true, // every gun here (yours, the squad's, theirs) wears a suppressor: barely audible
     roe: true, // civilians can be hit; shooting one, or an unarmed or surrendered man, fails the mission
     squadLeash: 6,
     alarmGroup: 'response',

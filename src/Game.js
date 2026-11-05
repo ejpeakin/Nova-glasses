@@ -121,6 +121,7 @@ export class Game {
       if (tips.length) this.hud?.hint(tips.join('   ·   '), 6);
     }
     Audio.setAmbience(mode.ambience ?? this.mapInfo.ambience);
+    Audio.suppressAll = !!mode.mission?.allSuppressed; // every gun in this mission wears a suppressor
     Audio.setAcoustics(this.world.indoor ? 'indoor' : this.mapId);
     this.smokeColumns = mode.smokeColumns ?? [];
     mode.setup(this);

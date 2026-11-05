@@ -188,7 +188,7 @@ export class CloseQuarters {
           if (a.alive) {
             a.hidden = false; a.stunT = 0; a.stationary = false;
             a.state = 'combat'; a.target = p; a.lastKnown = p.pos.clone(); a.lastSeenT = now; a.acquiredT = now + 0.45;
-            g.hud.say([{ who: 'TEX', text: 'WARDROBE!' }]);
+            g.hud.say([{ who: 'HATCH', text: 'WARDROBE!' }]);
           }
         }
       }

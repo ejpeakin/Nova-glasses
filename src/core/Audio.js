@@ -352,6 +352,9 @@ class AudioEngine {
    */
   gunshot(profile, pos = null, suppressed = false, source = null) {
     if (!this.ready) return;
+    // Missions fought entirely with suppressed weapons: every report is a muffled thwap,
+    // and quieter still (this.suppressAll, set per mission).
+    if (this.suppressAll) suppressed = true;
     const p = profile;
     const now = this.now;
     const own = !pos;
@@ -364,7 +367,8 @@ class AudioEngine {
       this._gunVoices.push(now);
     }
     if (suppressed) {
-      const out = this._out(pos, { gain: own ? 0.6 : 0.55, ref: 2.5, rolloff: 1.5, maxDist: 70, verb: 0.25, ownVerb: 0.3, bus: this.guns });
+      const q = this.suppressAll ? 0.45 : 1;
+      const out = this._out(pos, { gain: (own ? 0.6 : 0.55) * q, ref: 2.5, rolloff: 1.5, maxDist: this.suppressAll ? 45 : 70, verb: 0.25 * q, ownVerb: 0.3 * q, bus: this.guns });
       if (!out) return;
       const t = now + (own ? 0 : out._dist / SPEED_OF_SOUND);
       // A suppressed rifle is still a sharp crack and a muffled thwap, plus the action slamming.

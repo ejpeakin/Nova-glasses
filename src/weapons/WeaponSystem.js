@@ -194,7 +194,9 @@ export class WeaponSystem {
   }
 
   _makeInstance(id, chosenAtt) {
-    const att = resolveAttachments(id, chosenAtt ?? Store.getAttachments(id));
+    let att = resolveAttachments(id, chosenAtt ?? Store.getAttachments(id));
+    // Suppressed-only missions: whatever you carry or pick up has a suppressor on it.
+    if (this.game.mode?.mission?.allSuppressed && att.muzzle !== 'suppressor') att = { ...att, muzzle: 'suppressor' };
     const stats = computeStats(id, att);
     const model = buildWeaponModel(WEAPONS[id], att);
     if (model.sling) model.sling.visible = false; // slung on soldiers, out of the way in your hands
