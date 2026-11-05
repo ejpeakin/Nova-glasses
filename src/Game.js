@@ -522,6 +522,11 @@ export class Game {
       Store.saveSoon();
     }
     this.mode.onKill?.(killer, victim, weaponId, head);
+    // Losing a squadmate: the team calls it.
+    if (victim.storyChar && victim.friendly && this.mode.squad) {
+      const mate = this.mode.squad.find((s) => s.alive && s !== victim);
+      this.hud?.say([{ who: (mate?.name ?? 'WATCHTOWER').toUpperCase(), text: `${victim.name} is down! ${victim.name}'s down!` }]);
+    }
     if (!victim.isPlayer) {
       this.effects.bloodPool(victim);
       this.bodies.push({ pos: victim.pos.clone(), team: victim.team, t: this.time, actor: victim });

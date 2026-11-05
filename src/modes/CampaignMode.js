@@ -7,6 +7,8 @@ import { spawnSoldier, snapGround, Cinematic, introKeys, ShotSequence, shotKeys 
 import { MISSIONS } from '../campaign/Story.js';
 import { Insertion } from './Insertion.js';
 import { VanInsertion } from './VanInsertion.js';
+import { DriveIn } from './DriveIn.js';
+import { LiftArrival } from './LiftArrival.js';
 import { CloseQuarters } from './CloseQuarters.js';
 import { Audio } from '../core/Audio.js';
 import { Store } from '../core/Storage.js';
@@ -57,6 +59,15 @@ export class CampaignMode {
 
   beforeMap(b) {
     const m = this.mission;
+    // Arrival vehicles that stay parked where they stopped (van, armoured truck).
+    const run = m.van ?? (m.drive && m.drive.vehicle !== 'boat' ? m.drive : null);
+    if (run) {
+      const P = run.path, a = P[P.length - 2], z = P[P.length - 1];
+      const dx = z[0] - a[0], dz = z[1] - a[1], d = Math.hypot(dx, dz) || 1;
+      const [L, W] = m.van ? [5.3, 2.0] : run.vehicle === 'truck' ? [8.2, 2.5] : [6.6, 2.6];
+      const hx = Math.abs(dx / d) * L / 2 + Math.abs(dz / d) * W / 2, hz = Math.abs(dz / d) * L / 2 + Math.abs(dx / d) * W / 2;
+      b.world.add(z[0] - hx, 0, z[1] - hz, z[0] + hx, 2.4, z[1] + hz, 'metal');
+    }
     if (m.crash) {
       const [x, z] = m.crash;
       b.box(x, 0, z, 3.2, 2.4, 9, 'burnt');
@@ -151,20 +162,17 @@ export class CampaignMode {
       game.stealthGrace = game.time + 9999;
       this.van = new VanInsertion(game, {
         path: v.path, exit: v.exit, exitYaw: v.exitYaw, spots: v.spots, lines: v.lines, squad: this.squad,
-        onDone: () => {
-          const p = game.player;
-          p.spawn(v.exit[0], 0, v.exit[1], v.exitYaw ?? 0);
-          this.checkpoint = { pos: p.pos.clone(), yaw: p.yaw };
-          this._gearUp();
-          // They hold their spots on the wall until you move off, then fall in behind you.
-          const exit = p.pos.clone();
-          const release = () => {
-            if (p.pos.distanceTo(exit) > 2.5) { for (const s of this.squad) if (s.order?.kind === 'move') s.order = null; } else this.timers.push({ t: 0.5, fn: release });
-          };
-          this.timers.push({ t: 0.5, fn: release });
-        },
+        onDone: () => this._arrived(v.exit, v.exitYaw),
       });
       game.cinematic = this.van;
+      game.hud.letterbox(true);
+    } else if (m.drive || m.lift) {
+      // In by armoured truck or boat (filmed from outside), or down in the service lift.
+      game.stealthGrace = game.time + 9999;
+      const a = m.drive ?? m.lift;
+      const Kind = m.drive ? DriveIn : LiftArrival;
+      this.arrival = new Kind(game, { ...a, squad: this.squad, onDone: () => this._arrived(a.exit, a.exitYaw ?? a.facing ?? m.start.yaw) });
+      game.cinematic = this.arrival;
       game.hud.letterbox(true);
     } else {
       game.cinematic = new Cinematic(introKeys(sp, m.start.yaw, focus), 8, () => this._gearUp());
@@ -172,6 +180,20 @@ export class CampaignMode {
     }
     game.hud.locationCard([m.title.toUpperCase(), m.location, m.time, 'Sgt. Elias "Wraith" Cole — Task Force ORION']);
     Audio.playMusic('tension');
+  }
+
+  /** Off the vehicle / out of the lift: on your feet at the exit, gear up, go. */
+  _arrived(exit, yaw) {
+    const p = this.game.player;
+    if (exit.length === 3) p.spawn(exit[0], exit[1], exit[2], yaw ?? 0); else p.spawn(exit[0], 0, exit[1], yaw ?? 0);
+    this.checkpoint = { pos: p.pos.clone(), yaw: p.yaw };
+    this._gearUp();
+    // The squad holds its spots until you move off, then falls in behind you.
+    const at = p.pos.clone();
+    const release = () => {
+      if (p.pos.distanceTo(at) > 2.5) { for (const s of this.squad) if (s.order?.kind === 'move') s.order = null; } else this.timers.push({ t: 0.5, fn: release });
+    };
+    this.timers.push({ t: 0.5, fn: release });
   }
 
   /** On-foot starts: gear up from the armory after the intro, then go. */
@@ -260,6 +282,7 @@ export class CampaignMode {
       weapon: s.weapon, difficulty: 'hardened', followIndex: i, faction: 'orion', suppressed: s.suppressed,
     });
     unit.outMult = 0.5;
+    unit.spec = s;
     this.squad.push(unit);
     return unit;
   }
@@ -270,7 +293,18 @@ export class CampaignMode {
     grp.spawned = true;
     const g = this.game;
     const faction = this.mapId === 'snowfall' ? 'snowEnemy' : this.mapId === 'desert' && !this.mission.lighting?.includes('night') ? 'desertEnemy' : 'meridian';
-    for (const u of grp.def.units) {
+    // Fewer, more deliberate enemies: bigger groups field about half their men
+    // (spread across the group's posts; bosses always come). Tightly scripted raids
+    // keep every man in place.
+    let units = grp.def.units;
+    if (!this.mission.fullStrength && units.length >= 3) {
+      const keep = Math.max(2, Math.round(units.length * 0.55));
+      const picked = new Set(units.map((u, i) => [u, i]).filter(([u]) => u.role === 'boss' || u.keep).map(([, i]) => i));
+      for (let k = 0; picked.size < keep && k < keep * 3; k++) picked.add(Math.min(units.length - 1, Math.round((k * (units.length - 1)) / Math.max(1, keep - 1))));
+      for (let i = 0; picked.size < keep && i < units.length; i++) picked.add(i);
+      units = units.filter((_, i) => picked.has(i));
+    }
+    for (const u of units) {
       const unit = spawnSoldier(g, {
         pos: u.pos, team: 'b', name: u.name ?? 'MERIDIAN', role: u.role ?? 'rifleman', weapon: u.weapon,
         difficulty: this.difficulty, patrol: u.patrol ? g.builder.patrols[u.patrol] : null, squad: grp.squad,
@@ -495,6 +529,7 @@ export class CampaignMode {
     const g = this.game;
     // Helicopter keeps flying (squad roping, departure) after the player is down.
     if (this.insertion && g.cinematic !== this.insertion) this.insertion.tick(dt);
+    if (this.arrival && g.cinematic !== this.arrival) this.arrival.tick?.(dt);
     // The armory takes the keys first, so locking in does not also skip the flight.
     this.armory?.update(dt, g.input);
     for (const d of Object.values(this.doors ?? {})) { d.update(dt); d.block(g.player); }
@@ -686,6 +721,13 @@ export class CampaignMode {
     g.player.invulnerable = 3;
     g.stealthGrace = g.time + 3;
     g.weapons.addAmmo(1, true);
+    // Squadmates who fell come back with you from the checkpoint.
+    for (const s of [...this.squad]) {
+      if (s.alive) continue;
+      this.squad.splice(this.squad.indexOf(s), 1);
+      g.removeActor(s);
+      if (s.spec) this._spawnFriend(s.spec, s.followIndex);
+    }
     for (const s of this.squad) {
       if (s.pos.distanceTo(c.pos) > 15) s.pos.copy(snapGround(g.world, c.pos.x + 2, c.pos.z + 2));
       s.health = s.maxHealth;
@@ -734,6 +776,7 @@ export class CampaignMode {
     for (const c of this.civilians ?? []) c.model.root.removeFromParent();
     this.insertion?.dispose();
     this.van?.dispose();
+    this.arrival?.dispose();
     this.cqb?.dispose();
     this.vaskoModel?.dispose();
   }

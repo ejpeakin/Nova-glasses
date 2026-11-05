@@ -13,7 +13,7 @@ import { buildTools, actionHands, handQuat } from './Actions.js';
 const ZERO3 = new THREE.Vector3();
 // Overall recoil feel: how hard each shot pushes the view (RECOIL_VIEW) and how far
 // the gun jumps in the hands (RECOIL_GUN), applied on top of every weapon's stats.
-const RECOIL_VIEW = 0.36, RECOIL_GUN = 0.42;
+const RECOIL_VIEW = 0.24, RECOIL_GUN = 0.3;
 // Support hand on a handguard (gun-local offset from the model's hand point) and
 // where its elbow sits below the view.
 const CRADLE_OFF = new THREE.Vector3(-0.004, 0.004, -0.03);
@@ -432,12 +432,13 @@ export class WeaponSystem {
     if (!s.noFlash) {
       this.flashSprite.visible = true;
       this.flashSprite.material.rotation = Math.random() * Math.PI;
-      const fs = (s.suppressed ? 0.06 : 0.16) * (s.class === 'shotgun' || s.class === 'sniper' ? 1.4 : 1) * rand(0.8, 1.2);
+      // A small, quick flash (it shouldn't white out the sight picture).
+      const fs = (s.suppressed ? 0.035 : 0.085) * (s.class === 'shotgun' || s.class === 'sniper' ? 1.3 : 1) * rand(0.8, 1.15);
       this.flashSprite.scale.set(fs, fs, fs);
-      this.flashTime = 0.045;
-      this.viewFlashLight.intensity = s.suppressed ? 0.5 : 3;
+      this.flashTime = 0.03;
+      this.viewFlashLight.intensity = s.suppressed ? 0.2 : 1.1;
     }
-    this.game.effects.muzzle(muzzleWorld, fwd, 1, !s.suppressed && !s.noFlash);
+    this.game.effects.muzzle(muzzleWorld, fwd, s.suppressed ? 0.35 : 0.55, !s.suppressed && !s.noFlash);
     // Barrel heat: a burst leaves smoke curling off the muzzle (more through a can).
     this.heat = Math.min(3, (this.heat ?? 0) + (s.class === 'shotgun' ? 0.55 : s.class === 'sniper' ? 0.7 : 0.16) * (s.suppressed ? 1.6 : 1));
     if (s.class !== 'shotgun' && s.mode !== 'bolt') {

@@ -170,11 +170,9 @@ export class Soldier {
     if (!this.alive) return;
     let dmg = amount * this.armor;
     this.lastHit = this.game.time;
-    if (this.storyChar) {
-      this.health = Math.max(25, this.health - dmg);
-    } else {
-      this.health -= dmg;
-    }
+    // Your squad can be killed like anyone else (a little harder to put down: armour
+    // plates and experience), and they patch themselves up once out of the fight.
+    this.health -= this.storyChar ? dmg * 0.8 : dmg;
     if (this.role !== 'boss') {
       let side = 0;
       if (fromPos) {

@@ -20,11 +20,14 @@ function avoidList(b, mapId) {
     add(m.start.pos[0], m.start.pos[m.start.pos.length === 3 ? 2 : 1], 4);
     if (m.insertion) add(m.insertion.lz[0], m.insertion.lz[1], 7);
     // A van's run in: keep its road clear.
-    if (m.van) {
-      const P = m.van.path;
-      for (let i = 0; i + 1 < P.length; i++) for (let k = 0; k <= 1; k += 0.2) add(P[i][0] + (P[i + 1][0] - P[i][0]) * k, P[i][1] + (P[i + 1][1] - P[i][1]) * k, 3.2);
-      for (const s of m.van.spots ?? []) add(s[0], s[1], 1.4);
+    const run = m.van ?? m.drive;
+    if (run) {
+      const P = run.path;
+      for (let i = 0; i + 1 < P.length; i++) for (let k = 0; k <= 1; k += 0.2) add(P[i][0] + (P[i + 1][0] - P[i][0]) * k, P[i][1] + (P[i + 1][1] - P[i][1]) * k, run.vehicle === 'truck' || run.vehicle === 'mrap' ? 4 : 3.2);
+      for (const s of run.spots ?? []) add(s[0], s[1], 1.4);
+      add(run.exit[0], run.exit[run.exit.length - 1], 2);
     }
+    if (m.lift) { add(m.lift.at[0], m.lift.at[1], 2.6); add(m.lift.exit[0], m.lift.exit[1], 2); for (const s of m.lift.spots ?? []) add(s[0], s[1], 1.2); }
     for (const o of m.objectives) if (o.target) add(o.target[0], o.target.length === 3 ? o.target[2] : o.target[1], 3.5);
     for (const g of Object.values(m.groups)) for (const u of g.units) add(u.pos[0], u.pos.length === 3 ? u.pos[2] : u.pos[1], 1.6);
     // Breach doors (both sides), hostages and weapon caches.

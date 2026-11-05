@@ -56,7 +56,18 @@ export const MISSIONS = [
     goal: 'Go in alone and unseen. Find out which container holds the key, and tag it with a tracker so we can follow it.',
     loadout: { primary: 'wasp', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { wasp: { muzzle: 'suppressor', optic: 'reflex' }, p11: { muzzle: 'suppressor' } } },
     loadoutNote: 'Spy kit: rappel rope (T at a roof edge). A suppressed SR-7 is cached on the west warehouse roof.',
-    start: { pos: [-64, 10], yaw: -0.6 },
+    start: { pos: [-67, 44.4], yaw: -0.35 },
+    // Dropped at the quay by boat: Hatch at the console, Reyes at the bow.
+    drive: {
+      vehicle: 'boat', crew: 2, water: -1.2,
+      path: [[-150, 70], [-118, 60], [-90, 52], [-70, 49]],
+      exit: [-67, 44.4], exitYaw: -0.35,
+      lines: [
+        { t: 1.0, who: 'HATCH', text: 'Two minutes. Engines low, lights off.' },
+        { t: 5.2, who: 'REYES', text: 'A patrol walks the quay. Wait for him to turn, then go.' },
+        { t: 9.0, who: 'REYES', text: 'This is your stop, Wraith. Up the ladder. From here you\'re on your own.' },
+      ],
+    },
     squad: [],
     stealth: true,
     alarmGroup: 'response',
@@ -238,7 +249,17 @@ export const MISSIONS = [
     loadout: { primary: 'wasp', secondary: 'p11', lethal: 'frag', tactical: 'smoke', attachments: { wasp: { muzzle: 'suppressor', optic: 'reflex' }, p11: { muzzle: 'suppressor' } } },
     loadoutNote: 'Quiet kit: suppressed MP-9 and P-11. Reyes is with you, suppressed. Tex is on a rooftop with a rifle.',
     kitHint: 'Crouch to move quietly  ·  V from behind: silent takedown  ·  aim at enemies to tag them  ·  Y: squad radio',
-    start: { pos: [-57, 0], yaw: -Math.PI / 2 },
+    start: { pos: [-57.2, 5.3], yaw: -Math.PI / 2 },
+    van: {
+      path: [[-95, 3.4], [-80, 3.4], [-66, 3.4], [-57, 3.4]],
+      exit: [-57.2, 5.3], exitYaw: -Math.PI / 2,
+      spots: [[-55.2, 6.8]],
+      lines: [
+        { t: 0.8, who: 'REYES', text: '(low) Market\'s a few blocks east. We walk the last stretch.' },
+        { t: 5.0, who: 'WATCHTOWER', text: 'Brandt is at the plaza with Vasko\'s men. Keep him alive.' },
+        { t: 9.0, who: 'REYES', text: 'Out the side. Stay off the street lights.' },
+      ],
+    },
     squad: [{ name: 'Reyes', weapon: 'rk74', suppressed: true }],
     squadLeash: 8,
     stealth: true,
@@ -289,6 +310,9 @@ export const MISSIONS = [
     loadout: { primary: 'longbow', secondary: 'wasp', lethal: 'c4', tactical: 'smoke', attachments: { longbow: { muzzle: 'suppressor' }, wasp: { muzzle: 'suppressor' } } },
     loadoutNote: 'Secondary: MP-9 Wasp (suppressed). Spy kit: rappel rope (T at a roof edge).',
     start: { pos: [-45, 6.7, -61.5], yaw: -0.95 },
+    // Roped onto the sniper perch on the ridge (no squad on this one).
+    insertion: { lz: [-45, -61.5], from: [-1, -0.7], hover: 9,
+      lines: { approach: { who: 'PILOT', text: 'Ridge in twenty. I can\'t set down on those rocks, you\'re going down the rope.' }, ropes: { who: 'PILOT', text: 'Rope\'s out. Good hunting, Wraith.' } } },
     squad: [],
     stealth: true,
     alarmGroup: 'alarm',
@@ -357,7 +381,16 @@ export const MISSIONS = [
     recap: 'The dish led us to Facility 6, an underground lab where MERIDIAN works on the key. Rook\'s keycard opens it. Someone on the inside is helping them.',
     goal: 'Hack the server room to find out who the inside helper is, pull the drive with MERIDIAN\'s copy of the launch codes, and get out by the lift.',
     loadout: { primary: 'viper', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { viper: { optic: 'holo', underbarrel: 'laser' } } },
-    start: { pos: [-39.5, 0], yaw: -Math.PI / 2 },
+    start: { pos: [-37.6, 0], yaw: -Math.PI / 2 },
+    // Down in the service lift with the team.
+    lift: {
+      at: [-40.3, 0], facing: -Math.PI / 2, exit: [-37.6, 0],
+      spots: [[-37.2, -3.0], [-37.2, 3.0]], floors: ['G', 'B1', 'B2', 'B3'],
+      lines: [
+        { t: 0.8, who: 'REYES', text: 'Three floors down. Cameras are looped for ten minutes.' },
+        { t: 4.2, who: 'HATCH', text: 'When those doors open, we move. Server room first.' },
+      ],
+    },
     squad: SQUAD_RH,
     briefing: [
       { who: 'WATCHTOWER', text: 'Rook\'s keycard opens Facility 6. MERIDIAN has a copy of the launch codes down there, on a drive in the lab.' },
@@ -398,7 +431,19 @@ export const MISSIONS = [
     recap: 'Hart was the traitor all along, and she escaped. Chasing her convoy across the desert at night, our helicopter Raven 2-1 was hit by a missile.',
     goal: 'Get Captain Reyes out of the wreck, then hold the crash site against MERIDIAN until the rescue helicopter arrives at dawn.',
     loadout: { primary: 'juggernaut', secondary: 'raptor', lethal: 'frag', tactical: 'stim', attachments: { juggernaut: { optic: 'holo' } } },
-    start: { pos: [-34, -64], yaw: Math.PI * 0.8 },
+    start: { pos: [-36.2, -63.2], yaw: Math.PI * 0.8 },
+    // Hatch and Wraith come up from the south in an MRAP, lights off.
+    drive: {
+      vehicle: 'mrap', color: 0x6e6a58,
+      path: [[-37, -112], [-36, -94], [-34.5, -78], [-34, -65]],
+      exit: [-36.2, -63.2], exitYaw: Math.PI * 0.8,
+      spots: [[-31.8, -60.6]],
+      lines: [
+        { t: 1.0, who: 'HATCH', text: 'Crash site\'s two klicks north. Driving dark from here.' },
+        { t: 5.5, who: 'WATCHTOWER', text: 'Reyes is alive in the wreck. MERIDIAN is closing on it from the east.' },
+        { t: 9.0, who: 'HATCH', text: 'End of the road. Let\'s go get him.' },
+      ],
+    },
     squad: [{ name: 'Hatch', weapon: 'rk74' }],
     crash: [-50, -46],
     smoke: [[-50, -46]],
@@ -444,6 +489,9 @@ export const MISSIONS = [
     loadout: { primary: 'rk74', secondary: 'raptor', lethal: 'semtex', tactical: 'smoke', attachments: { rk74: { optic: 'acog', muzzle: 'compensator' } } },
     loadoutNote: 'Reyes is at the medical tent with a broken leg. Hatch and Tex are with you.',
     start: { pos: [30, -55], yaw: Math.PI },
+    // The helicopter flares low in the storm; you hop off the skids.
+    insertion: { lz: [30, -55], from: [0.4, -1], hover: 2.6,
+      lines: { approach: { who: 'PILOT', text: 'Can\'t see a thing in this. Setting down on the flat. Two seconds, then I\'m gone.' }, ropes: { who: 'HATCH', text: 'Out, out, out!' } } },
     squad: [{ name: 'Hatch', weapon: 'rk74' }, { name: 'Tex', weapon: 'rk74' }],
     briefing: [
       { who: 'WATCHTOWER', text: 'Hart\'s convoy stopped for the night at a village east of the outpost. They left the missile launcher that hit Raven Two-One there.' },
@@ -484,6 +532,7 @@ export const MISSIONS = [
   // ------------------------------------------------------------------ 6c
   {
     id: 'm6c', title: 'Hard Breach', map: 'downtown', lighting: 'overcast', weather: 'none',
+    fullStrength: true, // scripted rooms: every man stays in place
     location: 'PORT KAVAL — OLD TOWN', time: 'DAY 15 — 06:20 LOCAL',
     summary: 'Raid MERIDIAN\'s shipping office: blow the front door, clear it floor by floor, arrest the cell leader, free their hostages and take the files that say which ship carries the key.',
     recap: 'The convoy\'s route ends in Port Kaval\'s old town, at an office block MERIDIAN uses to run everything that moves through the port. Two dock workers who saw too much are held on the top floor.',
@@ -491,7 +540,17 @@ export const MISSIONS = [
     loadout: { primary: 'vx4', secondary: 'p11', lethal: 'frag', tactical: 'flash', attachments: { vx4: { optic: 'holo', underbarrel: 'vgrip' } } },
     loadoutNote: 'Entry kit: breaching charge for the door, flashbangs for the rooms. Hatch and Tex stack with you.',
     kitHint: 'G: throw a flashbang into the room before you go in  ·  hold E: place the charge, cuff, cut ties, copy files  ·  Y: squad radio',
-    start: { pos: [-42, -7], yaw: -Math.PI / 2 },
+    start: { pos: [-42.2, -2.6], yaw: -Math.PI / 2 },
+    van: {
+      path: [[-95, -4.6], [-75, -4.6], [-55, -4.6], [-42, -4.6]],
+      exit: [-42.2, -2.6], exitYaw: -Math.PI / 2,
+      spots: [[-40.4, -1.4], [-38.4, -2.8]],
+      lines: [
+        { t: 0.8, who: 'HATCH', text: 'Charges are prepped. Flashbangs on your belt, Wraith.' },
+        { t: 5.0, who: 'TEX', text: 'Two on the street out front. Then it\'s the door.' },
+        { t: 9.0, who: 'HATCH', text: 'Here we go. Out the side and up the avenue.' },
+      ],
+    },
     squad: [{ name: 'Hatch', weapon: 'rk74' }, { name: 'Tex', weapon: 'rk74' }],
     squadLeash: 9,
     alarmTimer: 75,
@@ -531,7 +590,6 @@ export const MISSIONS = [
       b.light(-20.0, 2.7, -21.0, 0xffe0b8, 6, 8);
       b.light(-11.5, 2.7, -20.5, 0xfff0d8, 5, 8);
       b.light(-19.5, 6.0, -19.0, 0xffd0a0, 6, 9);
-      b.car(-33, -10.5, 'x', 'carWhite');
       b.patrol('office', [[-27, -11.5], [-10, -11.5]]);
     },
     briefing: [
@@ -547,7 +605,7 @@ export const MISSIONS = [
       response: { spawnOn: 'files', hunter: true, units: [{ pos: [-50, 0], weapon: 'rk74' }, { pos: [0, -40] }, { pos: [-30, 10], weapon: 'breaker' }, { pos: [10, -25] }, { pos: [-45, -30], weapon: 'rk74' }] },
     },
     objectives: [
-      { type: 'goto', text: 'Move up behind the van', target: [-30, -9], radius: 3,
+      { type: 'goto', text: 'Move up the avenue to the office block', target: [-30, -9], radius: 3,
         say: [{ who: 'HATCH', text: 'That\'s the place. Two on the street. Drop them, then we stack on the front door.' }] },
       { type: 'eliminate', text: 'Drop the two sentries on the street', groups: ['street'],
         say: [{ who: 'TEX', text: 'One by the door, one walking the front. Take them.' }] },
@@ -634,7 +692,19 @@ export const MISSIONS = [
     goal: 'Sneak up to the power station, blow up both transformers and shut off the backup generator. When the power dies, the vault doors fail open.',
     loadout: { primary: 'hx30', secondary: 'p11', lethal: 'c4', tactical: 'smoke', attachments: { hx30: { optic: 'thermal', muzzle: 'suppressor' }, p11: { muzzle: 'suppressor' } } },
     loadoutNote: 'Thermal sight for the snow. Hatch and Tex are with you, suppressed.',
-    start: { pos: [-55, -30], yaw: -Math.PI / 2 },
+    start: { pos: [-60.6, -28.4], yaw: -Math.PI / 2 },
+    // A covered truck drops the team at the edge of the camp in the dark.
+    drive: {
+      vehicle: 'truck', color: 0x7d8278,
+      path: [[-118, -30], [-96, -30], [-80, -30], [-66, -30]],
+      exit: [-60.6, -28.4], exitYaw: -Math.PI / 2,
+      spots: [[-58.4, -31.6], [-57.6, -26.6]],
+      lines: [
+        { t: 1.0, who: 'TEX', text: 'Cold enough to freeze the rounds in the mag.' },
+        { t: 5.0, who: 'HATCH', text: 'Power station runs the whole camp. We kill it, they\'re blind.' },
+        { t: 9.0, who: 'HATCH', text: 'Everybody out. Suppressors on, keep it quiet.' },
+      ],
+    },
     squad: [{ name: 'Hatch', weapon: 'rk74', suppressed: true }, { name: 'Tex', weapon: 'rk74', suppressed: true }],
     squadLeash: 10,
     stealth: true,
@@ -681,7 +751,17 @@ export const MISSIONS = [
     recap: 'With the mountain power cut, the vault doors under Facility 6 are open. Inside, Hart and Vasko are minutes from firing HALCYON with the real key.',
     goal: 'Before the countdown hits zero, shut down the three terminals that send the launch order. Then defeat Goliath and arrest Anton Vasko.',
     loadout: { primary: 'vx4', secondary: 'raptor', lethal: 'semtex', tactical: 'flash', attachments: { vx4: { optic: 'acog', muzzle: 'compensator', underbarrel: 'vgrip', magazine: 'extended' } } },
-    start: { pos: [-39.5, 0], yaw: -Math.PI / 2 },
+    start: { pos: [-37.6, 0], yaw: -Math.PI / 2 },
+    // Back down the same lift, all four of you this time.
+    lift: {
+      at: [-40.3, 0], facing: -Math.PI / 2, exit: [-37.6, 0],
+      spots: [[-37.2, -3.0], [-37.2, 3.0], [-34.6, -4.4]], floors: ['G', 'B1', 'B2', 'B3', 'B4'],
+      lines: [
+        { t: 0.8, who: 'REYES', text: 'Last time down here. We finish it.' },
+        { t: 3.6, who: 'TEX', text: 'Feels like the walls are humming.' },
+        { t: 5.4, who: 'HATCH', text: 'That\'s the uplink. Doors open, we go loud.' },
+      ],
+    },
     squad: SQUAD_FULL,
     timer: 600,
     timerText: 'HALCYON LAUNCH',
@@ -726,6 +806,7 @@ export const MISSIONS = [
   // ------------------------------------------------------------------ 9
   {
     id: 'm9', title: 'Quiet Hours', map: 'downtown', lighting: 'night', weather: 'none',
+    fullStrength: true, // scripted rooms: every man stays in place
     location: 'VEL HARAT — OLD QUARTER', time: 'DAY 31 — 03:40 LOCAL',
     summary: 'Capture Dr. Hart, the last person who could ever rebuild HALCYON, from the townhouse MERIDIAN hides her in. Tenants live on every floor. Clear it room by room on night vision and only shoot what is holding a weapon.',
     recap: 'Vasko is in custody and the satellites are gone. Only Dr. Hart is left, with the last copy of the launch codes, hiding in a narrow Vel Harat townhouse among the families who rent its rooms.',
